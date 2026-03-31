@@ -1,0 +1,30 @@
+version: 1.0.0
+
+# terraform 目录的全局参数定义
+# 这些参数适用于 terraform 目录下的所有组件（如果没有被组件级参数覆盖）
+
+parameters:
+  # 全局参数
+  global:
+    OrganizationID:
+      type: string
+      description: "GCP Organization ID. Set to \"0\" to disable org_id rendering in templates."
+      required: false
+      default: "0"
+      example: "123456789012"
+      pattern: "^[0-9]+$"
+    
+    BillingAccountID:
+      type: string
+      description: "GCP Billing Account ID"
+      required: true
+      example: "01ABCD-2EFGH3-4IJKL5"
+      pattern: "^[0-9A-Z-]+$"
+    
+    ProjectName:
+      type: string
+      description: "Project name used for resource naming"
+      required: false
+      example: "my-project"
+      pattern: "^[a-z0-9-]+$"
+

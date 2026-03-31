@@ -1,0 +1,446 @@
+version: 1.0.0
+
+# kubernetes/components/istio 组件的参数定义
+
+parameters:
+  # 组件级参数
+  components:
+    istio:
+      description: "Istio Operator configuration parameters"
+      
+      # 基础配置
+      IstioOperatorYaml:
+        type: string
+        description: "Path to IstioOperator YAML file (default: operator.yaml)"
+        required: false
+        default: "operator.yaml"
+        example: "operator.yaml"
+      
+      IstioOperatorName:
+        type: string
+        description: "IstioOperator resource name"
+        required: false
+        default: "istio-default"
+        example: "istio-default"
+      
+      IstioSystemNamespace:
+        type: string
+        description: "Istio system namespace"
+        required: false
+        default: "istio-system"
+        example: "istio-system"
+      
+      IstioProfile:
+        type: string
+        description: "Istio installation profile (default, demo, minimal, remote, empty)"
+        required: false
+        default: "default"
+        enum: ["default", "demo", "minimal", "remote", "empty"]
+        example: "default"
+      
+      IstioVersion:
+        type: string
+        description: "Istio version tag"
+        required: false
+        default: "1.27.0"
+        example: "1.27.0"
+      
+      # 安装脚本会检查 istioctl 是否存在；若设置 minIstioctlVersion 则同时校验最低版本
+      minIstioctlVersion:
+        type: string
+        description: "Minimum istioctl version required by install script (e.g. 1.20.0). Empty = only check presence"
+        required: false
+        default: ""
+        example: "1.20.0"
+      
+      IstioHub:
+        type: string
+        description: "Istio image registry hub"
+        required: false
+        default: "docker.io/istio"
+        example: "docker.io/istio"
+      
+      # 访问日志配置
+      AccessLogFile:
+        type: string
+        description: "Access log file path"
+        required: false
+        default: "/dev/stdout"
+        example: "/dev/stdout"
+      
+      AccessLogEncoding:
+        type: string
+        description: "Access log encoding format (JSON, TEXT)"
+        required: false
+        default: "JSON"
+        enum: ["JSON", "TEXT"]
+        example: "JSON"
+      
+      # 追踪配置
+      TracingEnabled:
+        type: boolean
+        description: "Enable distributed tracing"
+        required: false
+        default: false
+        example: true
+      
+      TracingProvider:
+        type: string
+        description: "Tracing provider (zipkin, jaeger)"
+        required: false
+        default: "zipkin"
+        enum: ["zipkin", "jaeger"]
+        example: "zipkin"
+      
+      TracingAddress:
+        type: string
+        description: "Tracing collector address"
+        required: false
+        default: "jaeger-collector.istio-system:9411"
+        example: "jaeger-collector.istio-system:9411"
+      
+      # 代理统计配置
+      ProxyStatsEnabled:
+        type: boolean
+        description: "Enable Envoy proxy statistics"
+        required: false
+        default: true
+        example: true
+      
+      ProxyStatsRegexps:
+        type: list[string]
+        description: "Proxy statistics inclusion regexps"
+        required: false
+        default: [".*"]
+        example: [".*"]
+      
+      # 网络配置
+      EnableAutoMtls:
+        type: boolean
+        description: "Enable automatic mTLS"
+        required: false
+        default: false
+        example: false
+      
+      OutboundTrafficPolicy:
+        type: string
+        description: "Outbound traffic policy mode (ALLOW_ANY, REGISTRY_ONLY)"
+        required: false
+        default: "ALLOW_ANY"
+        enum: ["ALLOW_ANY", "REGISTRY_ONLY"]
+        example: "ALLOW_ANY"
+      
+      DefaultServiceExportTo:
+        type: list[string]
+        description: "Default service export targets"
+        required: false
+        default: ["*"]
+        example: ["*"]
+      
+      DefaultVirtualServiceExportTo:
+        type: list[string]
+        description: "Default virtual service export targets"
+        required: false
+        default: ["*"]
+        example: ["*"]
+      
+      DefaultDestinationRuleExportTo:
+        type: list[string]
+        description: "Default destination rule export targets"
+        required: false
+        default: ["*"]
+        example: ["*"]
+      
+      # Pilot 配置
+      PilotEnabled:
+        type: boolean
+        description: "Enable Pilot (istiod) component"
+        required: false
+        default: true
+        example: true
+      
+      PilotReplicaCount:
+        type: integer
+        description: "Pilot replica count"
+        required: false
+        default: 1
+        minimum: 1
+        example: 1
+      
+      PilotCpuRequest:
+        type: string
+        description: "Pilot CPU request"
+        required: false
+        default: "200m"
+        example: "200m"
+      
+      PilotMemoryRequest:
+        type: string
+        description: "Pilot memory request"
+        required: false
+        default: "1Gi"
+        example: "1Gi"
+      
+      PilotCpuLimit:
+        type: string
+        description: "Pilot CPU limit"
+        required: false
+        default: "1000m"
+        example: "1000m"
+      
+      PilotMemoryLimit:
+        type: string
+        description: "Pilot memory limit"
+        required: false
+        default: "2Gi"
+        example: "2Gi"
+      
+      PilotEnv:
+        type: map[string]string
+        description: "Pilot environment variables (overrides defaults if provided)"
+        required: false
+        example:
+          PILOT_ENABLE_STATUS: "true"
+          PILOT_ENABLE_PROTOCOL_SNIFFING_FOR_OUTBOUND: "true"
+      
+      PilotAutoscaleEnabled:
+        type: boolean
+        description: "Enable Pilot autoscaling"
+        required: false
+        default: false
+        example: false
+      
+      # Ingress Gateway 配置
+      IngressGatewayEnabled:
+        type: boolean
+        description: "Enable Ingress Gateway"
+        required: false
+        default: true
+        example: true
+      
+      IngressGatewayName:
+        type: string
+        description: "Ingress Gateway name"
+        required: false
+        default: "istio-ingressgateway"
+        example: "istio-ingressgateway"
+      
+      IngressGatewayNamespace:
+        type: string
+        description: "Ingress Gateway namespace"
+        required: false
+        default: "istio-ingress"
+        example: "istio-ingress"
+      
+      IngressGatewayReplicaCount:
+        type: integer
+        description: "Ingress Gateway replica count"
+        required: false
+        default: 1
+        minimum: 1
+        example: 1
+      
+      IngressGatewayCpuRequest:
+        type: string
+        description: "Ingress Gateway CPU request"
+        required: false
+        default: "100m"
+        example: "100m"
+      
+      IngressGatewayMemoryRequest:
+        type: string
+        description: "Ingress Gateway memory request"
+        required: false
+        default: "256Mi"
+        example: "256Mi"
+      
+      IngressGatewayCpuLimit:
+        type: string
+        description: "Ingress Gateway CPU limit"
+        required: false
+        default: "1000m"
+        example: "1000m"
+      
+      IngressGatewayMemoryLimit:
+        type: string
+        description: "Ingress Gateway memory limit"
+        required: false
+        default: "1Gi"
+        example: "1Gi"
+      
+      IngressGatewayServiceType:
+        type: string
+        description: "Ingress Gateway service type (LoadBalancer, NodePort, ClusterIP)"
+        required: false
+        default: "LoadBalancer"
+        enum: ["LoadBalancer", "NodePort", "ClusterIP"]
+        example: "LoadBalancer"
+      
+      IngressGatewayPorts:
+        type: list[object]
+        description: "Ingress Gateway service ports configuration"
+        required: false
+        default: []
+        example:
+          - name: "http2"
+            port: 80
+            protocol: "TCP"
+            targetPort: 8080
+          - name: "https"
+            port: 443
+            protocol: "TCP"
+            targetPort: 8443
+      
+      IngressGatewayAutoscaleEnabled:
+        type: boolean
+        description: "Enable Ingress Gateway autoscaling"
+        required: false
+        default: false
+        example: false
+      
+      # Egress Gateway 配置
+      EgressGatewayEnabled:
+        type: boolean
+        description: "Enable Egress Gateway"
+        required: false
+        default: false
+        example: false
+      
+      EgressGatewayName:
+        type: string
+        description: "Egress Gateway name"
+        required: false
+        default: "istio-egressgateway"
+        example: "istio-egressgateway"
+      
+      EgressGatewayNamespace:
+        type: string
+        description: "Egress Gateway namespace"
+        required: false
+        default: "istio-egress"
+        example: "istio-egress"
+      
+      EgressGatewayReplicaCount:
+        type: integer
+        description: "Egress Gateway replica count"
+        required: false
+        default: 1
+        minimum: 1
+        example: 1
+      
+      EgressGatewayCpuRequest:
+        type: string
+        description: "Egress Gateway CPU request"
+        required: false
+        default: "100m"
+        example: "100m"
+      
+      EgressGatewayMemoryRequest:
+        type: string
+        description: "Egress Gateway memory request"
+        required: false
+        default: "256Mi"
+        example: "256Mi"
+      
+      EgressGatewayCpuLimit:
+        type: string
+        description: "Egress Gateway CPU limit"
+        required: false
+        default: "1000m"
+        example: "1000m"
+      
+      EgressGatewayMemoryLimit:
+        type: string
+        description: "Egress Gateway memory limit"
+        required: false
+        default: "1Gi"
+        example: "1Gi"
+      
+      # 全局代理配置
+      ProxyCpuRequest:
+        type: string
+        description: "Proxy CPU request"
+        required: false
+        default: "100m"
+        example: "100m"
+      
+      ProxyMemoryRequest:
+        type: string
+        description: "Proxy memory request"
+        required: false
+        default: "128Mi"
+        example: "128Mi"
+      
+      ProxyCpuLimit:
+        type: string
+        description: "Proxy CPU limit"
+        required: false
+        default: "2000m"
+        example: "2000m"
+      
+      ProxyMemoryLimit:
+        type: string
+        description: "Proxy memory limit"
+        required: false
+        default: "1024Mi"
+        example: "1024Mi"
+      
+      ProxyLogLevel:
+        type: string
+        description: "Proxy log level"
+        required: false
+        default: "warning"
+        enum: ["trace", "debug", "info", "warning", "error", "critical", "off"]
+        example: "warning"
+      
+      ProxyComponentLogLevel:
+        type: string
+        description: "Proxy component log level"
+        required: false
+        default: "misc:error"
+        example: "misc:error"
+      
+      # 全局配置
+      GlobalLogLevel:
+        type: string
+        description: "Global logging level"
+        required: false
+        default: "default:info"
+        example: "default:info"
+      
+      MultiClusterEnabled:
+        type: boolean
+        description: "Enable multi-cluster configuration"
+        required: false
+        default: false
+        example: false
+      
+      NetworkName:
+        type: string
+        description: "Network name for multi-cluster"
+        required: false
+        default: ""
+        example: ""
+      
+      # Telemetry 配置
+      TelemetryEnabled:
+        type: boolean
+        description: "Enable telemetry"
+        required: false
+        default: true
+        example: true
+      
+      TelemetryV2Enabled:
+        type: boolean
+        description: "Enable telemetry v2"
+        required: false
+        default: true
+        example: true
+      
+      TelemetryPrometheusEnabled:
+        type: boolean
+        description: "Enable Prometheus telemetry"
+        required: false
+        default: true
+        example: true
+

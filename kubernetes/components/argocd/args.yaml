@@ -1,0 +1,231 @@
+version: 1.0.0
+
+# kubernetes/components/argocd 组件的参数定义
+
+parameters:
+  # 组件级参数
+  components:
+    argocd:
+      description: "ArgoCD GitOps configuration parameters"
+      
+      # 基础配置
+      Namespace:
+        type: string
+        description: "ArgoCD namespace"
+        required: false
+        default: "argocd"
+        example: "argocd"
+
+      AppNamespace:
+        type: string
+        description: "Application runtime namespace to create alongside ArgoCD"
+        required: false
+        default: "app"
+        example: "app"
+      
+      ArgoCDVersion:
+        type: string
+        description: "ArgoCD version (used in manifest URL)"
+        required: false
+        default: "v2.11.7"
+        example: "v2.11.7"
+      
+      # Server 配置
+      ServerInsecure:
+        type: boolean
+        description: "Enable insecure mode for ArgoCD server (for development/testing)"
+        required: false
+        default: true
+        example: true
+      
+      ServerBaseHref:
+        type: string
+        description: "Base href path for ArgoCD server UI"
+        required: false
+        default: "/argocd"
+        example: "/argocd"
+      
+      ServerRootPath:
+        type: string
+        description: "Root path for ArgoCD server"
+        required: false
+        default: "/argocd"
+        example: "/argocd"
+      
+      # RBAC 配置
+      PolicyDefault:
+        type: string
+        description: "Default RBAC role for users without explicit role assignment"
+        required: false
+        default: "role:readonly"
+        example: "role:readonly"
+      
+      RBACScopes:
+        type: string
+        description: "OIDC scopes to examine during RBAC enforcement"
+        required: false
+        default: "[groups]"
+        example: "[groups]"
+      
+      # 组织配置
+      OrganizationName:
+        type: string
+        description: "Organization name used in RBAC policies (e.g., alva-ai)"
+        required: false
+        default: ""
+        example: "alva-ai"
+      
+      # RBAC 角色和策略配置
+      RBACPolicies:
+        type: list[object]
+        description: "Custom RBAC policies in CSV format. If not provided, default policies will be used."
+        required: false
+        default: []
+        example:
+          - policy: "p, role:org-admin, applications, *, default/*, allow"
+          - policy: "p, role:org-admin, clusters, get, *, allow"
+          - policy: "p, role:org-admin, repositories, get, *, allow"
+          - policy: "p, role:org-admin, repositories, create, *, allow"
+          - policy: "p, role:org-admin, repositories, update, *, allow"
+          - policy: "p, role:org-admin, repositories, delete, *, allow"
+          - policy: "p, role:org-backend, applications, *, default/*, allow"
+      
+      RBACRoleBindings:
+        type: list[object]
+        description: "RBAC role bindings mapping groups to roles. If not provided, no role bindings will be configured."
+        required: false
+        default: []
+        example:
+          - group: "SiriusPlatform:Infra"
+            role: "role:org-admin"
+          - group: "SiriusPlatform:backend"
+            role: "role:org-backend"
+      
+      # Namespace 标签配置
+      NamespaceLabels:
+        type: map[string]string
+        description: "Labels to add to ArgoCD namespace"
+        required: false
+        default:
+          prometheus.io/scrape: "true"
+          prometheus.io/port: "8080"
+        example:
+          prometheus.io/scrape: "true"
+          prometheus.io/port: "8080"
+          istio-injection: "enabled"
+      
+      # GitHub SSH 配置
+      GitHubSSHSecretName:
+        type: string
+        description: "Name of the sealed secret for GitHub SSH key"
+        required: false
+        default: "github-ssh-sealed-secret"
+        example: "github-ssh-sealed-secret"
+      
+      # Git Repository 配置
+      GitRepositories:
+        type: list[object]
+        description: "List of Git repositories for ArgoCD (supports multiple repositories)"
+        required: false
+        default: []
+        example:
+          - url: "git@github.com:your-org/your-repo.git"
+            sshPrivateKeySecret:
+              name: "argocd-github-ssh-secret"
+              key: "sshPrivateKey"
+            name: "infra-gitops"
+            type: "git"
+      
+      GitRepositoryURL:
+        type: string
+        description: "Git repository URL (used when GitRepositories is not provided, for backward compatibility)"
+        required: false
+        default: "git@github.com:your-org/your-repo.git"
+        example: "git@github.com:sirius-platform/infra-gitops.git"
+      
+      GitSSHSecretName:
+        type: string
+        description: "Name of the SSH secret for Git repository (used when GitRepositories is not provided)"
+        required: false
+        default: "argocd-github-ssh-secret"
+        example: "argocd-github-ssh-secret"
+      
+      GitSSHSecretKey:
+        type: string
+        description: "Key name in SSH secret (used when GitRepositories is not provided)"
+        required: false
+        default: "sshPrivateKey"
+        example: "sshPrivateKey"
+      
+      # ArgoCD URL 配置
+      ArgoCDURL:
+        type: string
+        description: "External URL for ArgoCD server"
+        required: false
+        default: ""
+        example: "https://corp.your-domain.com/argocd"
+      
+      # Dex OIDC 配置
+      DexConfig:
+        type: object
+        description: "Complete Dex configuration with connectors"
+        required: false
+        default: {}
+        example:
+          connectors:
+            - type: "github"
+              id: "github"
+              name: "GitHub"
+              config:
+                clientID: "Ov23xxxxxxxxxxxxxxx"
+                clientSecret: "efexxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                orgs:
+                  - name: "your-org"
+      
+      DexGitHubEnabled:
+        type: boolean
+        description: "Enable GitHub Dex connector (used when DexConfig is not provided)"
+        required: false
+        default: false
+        example: true
+      
+      DexGitHubClientID:
+        type: string
+        description: "GitHub OAuth Client ID for Dex"
+        required: false
+        default: ""
+        example: "Ov23xxxxxxxxxxxxxxx"
+      
+      DexGitHubClientSecret:
+        type: string
+        description: "GitHub OAuth Client Secret for Dex"
+        required: false
+        default: ""
+        example: "efexxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      
+      DexGitHubOrgs:
+        type: list[string]
+        description: "List of GitHub organizations for Dex authentication"
+        required: false
+        default: []
+        example:
+          - "your-org"
+      
+      # Kustomization 配置
+      ArgoCDManifestURL:
+        type: string
+        description: "URL to ArgoCD installation manifest"
+        required: false
+        default: "https://raw.githubusercontent.com/argoproj/argo-cd/v2.11.7/manifests/install.yaml"
+        example: "https://raw.githubusercontent.com/argoproj/argo-cd/v2.11.7/manifests/install.yaml"
+      
+      # 补丁配置
+      Patches:
+        type: list[string]
+        description: "List of patch files to apply to ArgoCD resources"
+        required: false
+        default:
+          - "argocd-cm.yaml"
+        example:
+          - "argocd-cm.yaml"
+          - "argocd-rbac-cm.yaml"

@@ -1,0 +1,44 @@
+version: 1.0.0
+
+# kubernetes/components/external-secrets-operator 组件的参数定义
+# 部署 External Secrets Operator (Helm)，可被 blcli 渲染
+
+parameters:
+  components:
+    external-secrets-operator:
+      namespace:
+        type: string
+        description: "Namespace to install the operator"
+        required: false
+        default: "external-secrets"
+      releaseName:
+        type: string
+        description: "Helm release name"
+        required: false
+        default: "external-secrets"
+      namespaceOverride:
+        type: string
+        description: "Helm chart namespaceOverride (overrides chart default)"
+        required: false
+        default: ""
+      replicaCount:
+        type: integer
+        description: "Operator replica count"
+        required: false
+        default: 1
+      imageTag:
+        type: string
+        description: "Operator image tag (empty = chart appVersion)"
+        required: false
+        default: ""
+      # 安装脚本会检查 helm/kubectl 是否存在；若设置则同时校验最低版本
+      minHelmVersion:
+        type: string
+        description: "Minimum helm version required by install script (e.g. 3.0). Empty = only check presence"
+        required: false
+        default: ""
+      minKubectlVersion:
+        type: string
+        description: "Minimum kubectl version required by install script (e.g. 1.24). Empty = only check presence"
+        required: false
+        default: ""

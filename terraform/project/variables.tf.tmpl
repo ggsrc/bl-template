@@ -1,0 +1,22 @@
+# Terraform Variables Configuration for {{ .project_name }}
+
+variable "project_id" {
+  description = "GCP Project ID"
+  type        = string
+  default     = "{{.project_id}}"
+}
+
+variable "region" {
+  description = "GCP Region"
+  type        = string
+  default     = "{{.region}}"
+}
+
+variable "zone" {
+  description = "GCP Zone"
+  type        = string
+  default     = "{{.region}}"
+}
+
+# Add more variables as needed for your project
+

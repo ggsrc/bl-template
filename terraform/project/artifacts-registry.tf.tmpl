@@ -1,0 +1,41 @@
+# Artifact Registry Configuration for {{ .project_name }}
+
+{{ if .repositories }}
+##############################################################################################
+# Artifact Registry Repositories
+##############################################################################################
+{{ range .repositories }}
+resource "google_artifact_registry_repository" "{{ .name }}" {
+  repository_id = "{{ .repository_id }}"
+  description   = {{ if .description }}"{{ .description }}"{{ else }}"Build artifacts for {{ .repository_id }}"{{ end }}
+  format        = "{{ .format }}"
+  location      = {{ if .location }}"{{ .location }}"{{ else }}var.region{{ end }}
+  {{ if .labels }}
+  labels = {
+    {{ range $key, $value := .labels }}
+    "{{ $key }}" = "{{ $value }}"
+    {{ end }}
+  }
+  {{ end }}{{ if eq .format "DOCKER" }}
+  docker_config {
+    immutable_tags = {{ if .docker_config.immutable_tags }}{{ .docker_config.immutable_tags }}{{ else }}true{{ end }}
+  }
+  {{ end }}
+}
+{{ end }}
+{{ end }}
+
+{{ if .iam_members }}
+##############################################################################################
+# Artifact Registry IAM Members
+##############################################################################################
+{{ range .iam_members }}
+resource "google_artifact_registry_repository_iam_member" "{{ .name }}" {
+  location   = {{ if .location }}"{{ .location }}"{{ else }}var.region{{ end }}
+  repository = google_artifact_registry_repository.{{ .repository_name }}.name
+  role       = "{{ .role }}"
+  member     = "{{ .member }}"
+}
+{{ end }}
+{{ end }}
+

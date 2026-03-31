@@ -1,0 +1,137 @@
+version: 1.0.0
+
+# terraform/project/iam 组件的参数定义
+# 这些参数用于创建 Service Account、IAM Binding、Workload Identity 配置
+
+parameters:
+  # 组件级参数（对应 config.yaml projects 中的 iam 组件）
+  components:
+    iam:
+      service_accounts:
+        type: array
+        description: "List of service accounts to create"
+        required: false
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              description: "Service account name (used as resource identifier)"
+              required: true
+              pattern: "^[a-z0-9-]+$"
+              example: "log_viewer"
+            account_id:
+              type: string
+              description: "Service account ID (must be unique within the project)"
+              required: true
+              pattern: "^[a-z0-9-]+$"
+              example: "log-viewer"
+            display_name:
+              type: string
+              description: "Display name of the service account"
+              required: false
+              example: "Logging Viewer for Grafana"
+            description:
+              type: string
+              description: "Description of the service account"
+              required: false
+              example: "Service account for viewing logs"
+      
+      project_iam_bindings:
+        type: array
+        description: "List of project-level IAM bindings"
+        required: false
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              description: "IAM binding name (used as resource identifier)"
+              required: true
+              pattern: "^[a-z0-9-]+$"
+              example: "deployer_role_binding"
+            role:
+              type: string
+              description: "IAM role to bind"
+              required: true
+              example: "roles/logging.viewer"
+            members:
+              type: array
+              description: "List of members (users, service accounts, groups)"
+              required: true
+              items:
+                type: string
+              example: ["serviceAccount:log-viewer@project.iam.gserviceaccount.com"]
+      
+      workload_identity_bindings:
+        type: array
+        description: "List of workload identity bindings (for GKE)"
+        required: false
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              description: "Workload identity binding name (used as resource identifier)"
+              required: true
+              pattern: "^[a-z0-9-]+$"
+              example: "loki_logs"
+            service_account_name:
+              type: string
+              description: "Service account name (must match name in service_accounts array)"
+              required: false
+            service_account_reference:
+              type: string
+              description: "Alternative service account reference (e.g., google_service_account.sa.name)"
+              required: false
+            namespace:
+              type: string
+              description: "Kubernetes namespace"
+              required: true
+              example: "loki"
+            kubernetes_service_account:
+              type: string
+              description: "Kubernetes service account name"
+              required: true
+              example: "loki"
+      
+      use_secret_manager_accessor:
+        type: boolean
+        description: "Use gke-sm-accessor-sa module for Secret Manager access"
+        required: false
+        default: false
+        example: false
+      
+      gke_cluster_dependency:
+        type: string
+        description: "GKE cluster dependency reference (e.g., module.gke.cluster_name)"
+        required: false
+        example: "module.gke"
+      
+      service_account_keys:
+        type: array
+        description: "List of service account keys to create (use with caution)"
+        required: false
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              description: "Service account key name (used as resource identifier)"
+              required: true
+              pattern: "^[a-z0-9-]+$"
+            service_account_name:
+              type: string
+              description: "Service account name (must match name in service_accounts array)"
+              required: false
+            service_account_reference:
+              type: string
+              description: "Alternative service account reference"
+              required: false
+            key_algorithm:
+              type: string
+              description: "Key algorithm"
+              required: false
+              enum: ["KEY_ALG_RSA_1024", "KEY_ALG_RSA_2048"]
+              default: "KEY_ALG_RSA_2048"
+

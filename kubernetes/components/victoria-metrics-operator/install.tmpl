@@ -1,0 +1,80 @@
+#!/bin/bash
+# Install Victoria Metrics K8s Stack via Helm
+# Rendered by blcli; namespace and values can be parameterized.
+set -e
+
+# --- Tool checks: helm, kubectl (optional minimum versions from .minHelmVersion / .minKubectlVersion) ---
+if ! command -v helm &> /dev/null; then
+  echo "Error: helm is not installed or not in PATH"
+  echo "Install from: https://helm.sh/docs/intro/install/"
+  exit 1
+fi
+
+if ! command -v kubectl &> /dev/null; then
+  echo "Error: kubectl is not installed or not in PATH"
+  echo "Install from: https://kubernetes.io/docs/tasks/tools/"
+  exit 1
+fi
+
+MIN_HELM_VERSION="{{ if .minHelmVersion }}{{ .minHelmVersion }}{{ end }}"
+if [ -n "${MIN_HELM_VERSION}" ]; then
+  ACTUAL=$(helm version --short 2>/dev/null | tr -d 'v' | sed 's/+.*//' || true)
+  if [ -z "${ACTUAL}" ]; then
+    echo "Error: could not get helm version (helm version --short)"
+    exit 1
+  fi
+  MIN_NORM=$(echo "${MIN_HELM_VERSION}" | tr -d 'v')
+  if [ "$(printf '%s\n' "${MIN_NORM}" "${ACTUAL}" | sort -V | head -n1)" != "${MIN_NORM}" ]; then
+    echo "Error: helm version ${ACTUAL} is older than required ${MIN_HELM_VERSION}"
+    exit 1
+  fi
+  echo "helm version ${ACTUAL} meets requirement >= ${MIN_HELM_VERSION}"
+fi
+
+MIN_KUBECTL_VERSION="{{ if .minKubectlVersion }}{{ .minKubectlVersion }}{{ end }}"
+if [ -n "${MIN_KUBECTL_VERSION}" ]; then
+  ACTUAL=$(kubectl version --client --short 2>/dev/null | sed 's/Client Version: v//' | tr -d ' ' || true)
+  if [ -z "${ACTUAL}" ]; then
+    ACTUAL=$(kubectl version --client -o json 2>/dev/null | sed -n 's/.*"gitVersion":"v\?\([^"]*\)".*/\1/p' || true)
+  fi
+  if [ -z "${ACTUAL}" ]; then
+    echo "Error: could not get kubectl version"
+    exit 1
+  fi
+  MIN_NORM=$(echo "${MIN_KUBECTL_VERSION}" | tr -d 'v')
+  if [ "$(printf '%s\n' "${MIN_NORM}" "${ACTUAL}" | sort -V | head -n1)" != "${MIN_NORM}" ]; then
+    echo "Error: kubectl version ${ACTUAL} is older than required ${MIN_KUBECTL_VERSION}"
+    exit 1
+  fi
+  echo "kubectl version ${ACTUAL} meets requirement >= ${MIN_KUBECTL_VERSION}"
+fi
+
+NAMESPACE="{{ default "monitoring-vm" .namespace }}"
+RELEASE_NAME="{{ default "victoriametrics" .releaseName }}"
+VALUES_FILES="{{ if .valuesFiles }}{{ .valuesFiles }}{{ else }}values.yaml values-override.yaml{{ end }}"
+
+if [ ! -f "Chart.yaml" ]; then
+  echo "Error: Chart.yaml not found. Run this script from the component directory."
+  exit 1
+fi
+
+echo "Installing Victoria Metrics K8s Stack: release=${RELEASE_NAME}, namespace=${NAMESPACE}"
+
+# Install prometheus-operator CRDs (required for ServiceMonitor, PodMonitor, etc.)
+if ! kubectl get crd servicemonitors.monitoring.coreos.com > /dev/null 2>&1; then
+  echo "Installing prometheus-operator CRDs..."
+  helm install prometheus-operator-crds oci://ghcr.io/prometheus-community/charts/prometheus-operator-crds \
+    --namespace "${NAMESPACE}" --create-namespace 2>/dev/null || true
+fi
+
+helm dependency update
+kubectl create namespace "${NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f -
+HELM_VALUES=""
+for f in ${VALUES_FILES}; do
+  if [ -f "${f}" ]; then
+    HELM_VALUES="${HELM_VALUES} -f ${f}"
+  fi
+done
+helm upgrade --install "${RELEASE_NAME}" . -n "${NAMESPACE}" ${HELM_VALUES} --wait
+
+echo "Victoria Metrics K8s Stack installed successfully."

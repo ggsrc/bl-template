@@ -1,0 +1,78 @@
+# IAM Configuration for {{ .project_name }}
+
+{{ if .service_accounts }}
+##############################################################################################
+# Service Accounts
+##############################################################################################
+{{ range .service_accounts }}
+resource "google_service_account" "{{ .name }}" {
+  project      = var.project_id
+  account_id   = "{{ .account_id }}"
+  display_name = {{ if .display_name }}"{{ .display_name }}"{{ else }}"{{ .account_id }}"{{ end }}
+  {{ if .description }}description  = "{{ .description }}"
+  {{ end }}
+}
+{{ end }}
+{{ end }}
+
+{{ if .project_iam_bindings }}
+##############################################################################################
+# Project IAM Bindings
+##############################################################################################
+{{ range .project_iam_bindings }}
+resource "google_project_iam_binding" "{{ .name }}" {
+  project = var.project_id
+  role    = "{{ .role }}"
+
+  members = [
+    {{ range $i, $member := .members }}{{ if $i }},
+    {{ end }}"{{ $member }}"{{ end }}
+  ]
+}
+{{ end }}
+{{ end }}
+
+{{ if .workload_identity_bindings }}
+##############################################################################################
+# Workload Identity Bindings
+##############################################################################################
+{{ range .workload_identity_bindings }}
+resource "google_service_account_iam_member" "{{ .name }}_workload_identity_user" {
+  service_account_id = {{ if .service_account_reference }}{{ .service_account_reference }}{{ else }}google_service_account.{{ .service_account_name }}.name{{ end }}
+  role               = "roles/iam.workloadIdentityUser"
+
+  # Kubernetes ServiceAccount in the format: PROJECT_ID.svc.id.goog[NAMESPACE/K8S_SA_NAME]
+  member = "serviceAccount:${var.project_id}.svc.id.goog[{{ .namespace }}/{{ .kubernetes_service_account }}]"
+}
+{{ end }}
+{{ end }}
+
+{{ if .use_secret_manager_accessor }}
+##############################################################################################
+# Secret Manager Accessor (using gke-sm-accessor-sa module)
+##############################################################################################
+module "sm_accessor" {
+  source = "../../modules/gke-sm-accessor-sa"
+
+  project_id = var.project_id
+
+  # Must wait for GKE cluster to create the Workload Identity Pool
+  {{ if .gke_cluster_dependency }}depends_on = [{{ .gke_cluster_dependency }}]
+  {{ end }}
+}
+{{ end }}
+
+{{ if .service_account_keys }}
+##############################################################################################
+# Service Account Keys (use with caution - keys pose security risk)
+##############################################################################################
+{{ range .service_account_keys }}
+resource "google_service_account_key" "{{ .name }}" {
+  service_account_id = {{ if .service_account_reference }}{{ .service_account_reference }}{{ else }}google_service_account.{{ .service_account_name }}.name{{ end }}
+  public_key_type    = "TYPE_X509_PEM_FILE"
+  {{ if .key_algorithm }}key_algorithm = "{{ .key_algorithm }}"
+  {{ end }}
+}
+{{ end }}
+{{ end }}
+

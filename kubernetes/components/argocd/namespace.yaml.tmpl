@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: argocd
+  labels:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8080"

@@ -1,0 +1,70 @@
+version: 1.0.0
+
+# terraform 模块级别的全局参数定义
+# 这些参数适用于 terraform 模块下的所有组件
+# 字段校验规则参考 GCP 官方文档
+
+parameters:
+  # Terraform 级别的全局参数
+  global:
+    TerraformBackendBucket:
+      type: string
+      description: "GCS bucket name for Terraform backend; 3-63 chars, lowercase/numbers/dashes/underscores, must start and end with letter or number"
+      required: false
+      default: "terraform-statestore"
+      validation:
+        - kind: stringLength
+          min: 3
+          max: 63
+          message: "GCS 桶名长度为 3-63 个字符"
+        - kind: pattern
+          value: "^[a-z0-9][a-z0-9._-]{1,61}[a-z0-9]$"
+          message: "GCS 桶名：小写字母/数字/._-，3-63 字符且首尾为字母或数字"
+      example: "terraform-statestore"
+
+    TerraformVersion:
+      type: string
+      description: "Terraform version to use"
+      required: false
+      default: "1.5.0"
+      example: "1.5.0"
+
+    OrganizationID:
+      type: string
+      description: "GCP Organization ID (numeric). Set to \"0\" to disable org_id rendering in templates."
+      required: false
+      default: "0"
+      validation:
+        - kind: format
+          value: numeric
+          message: "Organization ID 必须为数字"
+        - kind: pattern
+          value: "^[0-9]+$"
+      example: "123456789012"
+
+    BillingAccountID:
+      type: string
+      description: "GCP Billing Account ID; 18 alphanumeric chars, format like 01ABCD-2EFGH3-4IJKL5"
+      required: true
+      validation:
+        - kind: required
+        - kind: pattern
+          value: "^[0-9A-Z]{6}-[0-9A-Z]{6}-[0-9A-Z]{6}$"
+          message: "Billing Account ID 格式为 6-6-6 位数字与大写字母，如 01ABCD-2EFGH3-4IJKL5"
+      example: "01ABCD-2EFGH3-4IJKL5"
+
+    GlobalName:
+      type: string
+      description: "Global name used for resource naming (e.g., for backend bucket); RFC 1035 style, 1-63 chars"
+      required: true
+      validation:
+        - kind: required
+        - kind: stringLength
+          min: 1
+          max: 63
+          message: "资源名称长度为 1-63 个字符"
+        - kind: pattern
+          value: "^[a-z]([-a-z0-9]*[a-z0-9])?$"
+          message: "小写字母开头，仅小写字母/数字/连字符"
+      example: "my-org"
+

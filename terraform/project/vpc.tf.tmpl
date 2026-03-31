@@ -1,0 +1,107 @@
+# VPC Network Configuration for {{ .project_name }}
+# vpc_name 仅在此处用作 resource 的 name；locals.vpc_name 由 main.tf 统一提供
+
+resource "google_compute_network" "main" {
+  name                    = {{ if .vpc_name }}"{{ .vpc_name }}"{{ else }}"main"{{ end }}
+  auto_create_subnetworks = {{ if .auto_create_subnetworks }}{{ .auto_create_subnetworks }}{{ else }}false{{ end }}
+  {{ if .routing_mode }}routing_mode = "{{ .routing_mode }}"
+  {{ end }}{{ if .description }}description = "{{ .description }}"
+  {{ end }}project = var.project_id
+}
+
+{{ if .subnetworks }}
+{{ range .subnetworks }}
+resource "google_compute_subnetwork" "{{ .name }}" {
+  name          = "{{ .name }}"
+  region        = "{{ .region }}"
+  network       = google_compute_network.main.name
+  ip_cidr_range = "{{ .ip_cidr_range }}"
+  {{ if .description }}description = "{{ .description }}"
+  {{ end }}{{ if .private_ip_google_access }}private_ip_google_access = {{ .private_ip_google_access }}
+  {{ end }}{{ if .secondary_ip_ranges }}
+  secondary_ip_range {
+    {{ range .secondary_ip_ranges }}
+    range_name    = "{{ .range_name }}"
+    ip_cidr_range = "{{ .ip_cidr_range }}"
+    {{ end }}
+  }
+  {{ end }}
+}
+{{ end }}
+{{ else }}
+# Default subnetwork
+resource "google_compute_subnetwork" "default" {
+  name          = {{ if .subnetwork_name }}"{{ .subnetwork_name }}"{{ else }}"default"{{ end }}
+  region        = var.region
+  network       = google_compute_network.main.name
+  ip_cidr_range = "{{ .ip_cidr_range }}"
+}
+{{ end }}
+
+{{ if .enable_nat }}
+##############################################################################################
+# Configure egress router and NAT for GKE egress traffic static IP
+##############################################################################################
+resource "google_compute_router" "gke_egress" {
+  name    = {{ if .nat_router_name }}"{{ .nat_router_name }}"{{ else }}"gke-egress-router"{{ end }}
+  region  = var.region
+  network = google_compute_network.main.id
+  project = var.project_id
+}
+
+resource "google_compute_address" "gke_egress_ip" {
+  name   = {{ if .nat_ip_name }}"{{ .nat_ip_name }}"{{ else }}"gke-egress-router-nat-ip"{{ end }}
+  region = {{ if .subnetworks }}{{ range $i, $subnet := .subnetworks }}{{ if eq $i 0 }}google_compute_subnetwork.{{ $subnet.name }}.region{{ end }}{{ end }}{{ else }}google_compute_subnetwork.default.region{{ end }}
+}
+
+resource "google_compute_router_nat" "gke_egress_nat" {
+  name                               = {{ if .nat_name }}"{{ .nat_name }}"{{ else }}"gke-egress-router-nat"{{ end }}
+  router                             = google_compute_router.gke_egress.name
+  region                             = var.region
+  nat_ip_allocate_option             = "MANUAL_ONLY"
+  nat_ips                            = [google_compute_address.gke_egress_ip.self_link]
+  source_subnetwork_ip_ranges_to_nat = {{ if .nat_source_subnetworks }}"{{ .nat_source_subnetworks }}"{{ else }}"ALL_SUBNETWORKS_ALL_IP_RANGES"{{ end }}
+
+  log_config {
+    enable = {{ if .nat_log_enable }}{{ .nat_log_enable }}{{ else }}false{{ end }}
+    filter = {{ if .nat_log_filter }}"{{ .nat_log_filter }}"{{ else }}"ERRORS_ONLY"{{ end }}
+  }
+}
+{{ end }}
+
+{{ if .enable_private_pool_route }}
+resource "google_compute_route" "route_private_pool_to_internet" {
+  name       = {{ if .private_pool_route_name }}"{{ .private_pool_route_name }}"{{ else }}"route-private-pool-to-internet-via-nat"{{ end }}
+  dest_range = "0.0.0.0/0"
+  network    = google_compute_network.main.self_link
+
+  # route traffic to the default internet-gateway (Cloud NAT)
+  next_hop_gateway = "default-internet-gateway"
+
+  # Applys only to the VM instances with this tag
+  tags = {{ if .private_pool_tags }}[{{ range $i, $tag := .private_pool_tags }}{{ if $i }}, {{ end }}"{{ $tag }}"{{ end }}]{{ else }}["gke-private-nat-pool"]{{ end }}
+
+  # LOWER numbers means higher priority. (should lower than default - 1000)
+  priority = {{ if .private_pool_route_priority }}{{ .private_pool_route_priority }}{{ else }}900{{ end }}
+}
+{{ end }}
+
+{{ if .enable_private_service_networking }}
+##############################################################################################
+# Configure private service networking connection
+##############################################################################################
+resource "google_compute_global_address" "private_conn_ip_alloc" {
+  name          = {{ if .private_conn_ip_name }}"{{ .private_conn_ip_name }}"{{ else }}"private-conn-alloc"{{ end }}
+  purpose       = "VPC_PEERING"
+  address_type  = "INTERNAL"
+  prefix_length = {{ if .private_conn_prefix_length }}{{ .private_conn_prefix_length }}{{ else }}16{{ end }}
+  network       = google_compute_network.main.id
+}
+
+resource "google_service_networking_connection" "private_network" {
+  network                 = google_compute_network.main.id
+  service                 = "servicenetworking.googleapis.com"
+  reserved_peering_ranges = [google_compute_global_address.private_conn_ip_alloc.name]
+}
+{{ end }}
+

@@ -1,0 +1,68 @@
+version: 1.0.0
+
+# terraform/project/ip 组件的参数定义
+# 用于声明保留的全局 IP 与内部 IP，供 DNS/Cert/CDN/LB 等引用
+
+parameters:
+  components:
+    ip:
+      # 全局外部 IP 列表（LB、Gateway、CDN 等）
+      global_addresses:
+        type: array
+        description: "List of global external IP addresses to reserve"
+        required: false
+        default: []
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              description: "Resource name (GCP and Terraform identifier; use letters, digits, hyphens)"
+              example: "app"
+            purpose:
+              type: string
+              description: "Optional purpose (e.g. GCE_ENDPOINT, VPC_PEERING)"
+              required: false
+            address_type:
+              type: string
+              description: "EXTERNAL or INTERNAL"
+              required: false
+              default: "EXTERNAL"
+      # 内部 IP 列表（需指定子网）
+      internal_addresses:
+        type: array
+        description: "List of internal IP addresses (require subnetwork reference)"
+        required: false
+        default: []
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              description: "Resource name"
+              example: "tempoip"
+            subnetwork:
+              type: string
+              description: "Subnetwork reference, e.g. google_compute_subnetwork.default.id"
+              example: "google_compute_subnetwork.default.id"
+            region:
+              type: string
+              description: "Region for the address (optional if subnetwork is region-scoped)"
+              required: false
+      # 需要输出的 address 列表，供 DNS/cert 引用（output 名需为合法标识符，建议用下划线）
+      output_addresses:
+        type: array
+        description: "List of { resource_name, output_name } to expose as outputs"
+        required: false
+        default: []
+        items:
+          type: object
+          properties:
+            resource_name:
+              type: string
+              description: "Terraform resource name (google_compute_global_address.<this>)"
+              example: "corp-ip-whitelist"
+            output_name:
+              type: string
+              description: "Output name (use underscores, e.g. corp_ip_whitelist_address)"
+              example: "corp_ip_whitelist_address"

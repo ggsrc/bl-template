@@ -1,0 +1,47 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMServiceScrape
+metadata:
+  name: {{ .ApplicationName | default "APP_NAME" }}
+  namespace: {{ if .VMServiceScrape }}{{ .VMServiceScrape.namespace | default "monitoring" }}{{ else }}monitoring{{ end }}
+  labels:
+    {{- if and .VMServiceScrape .VMServiceScrape.labels }}
+    {{- range $k, $v := .VMServiceScrape.labels }}
+    {{ $k }}: {{ $v | quote }}
+    {{- end }}
+    {{- else }}
+    victoriametrics: enabled
+    {{- end }}
+spec:
+  namespaceSelector:
+    {{- if and .VMServiceScrape .VMServiceScrape.namespaceSelector }}
+    {{- if .VMServiceScrape.namespaceSelector.any }}
+    any: {{ .VMServiceScrape.namespaceSelector.any }}
+    {{- else if .VMServiceScrape.namespaceSelector.matchNames }}
+    matchNames:
+      {{- range .VMServiceScrape.namespaceSelector.matchNames }}
+      - {{ . | quote }}
+      {{- end }}
+    {{- end }}
+    {{- else }}
+    matchNames:
+      - {{ .ApplicationNamespace | default "app" | quote }}
+    {{- end }}
+  selector:
+    matchLabels:
+      app: {{ .ApplicationName | default "APP_NAME" | quote }}
+      version: {{ .ApplicationRevision | default "APP_VERSION" | quote }}
+  endpoints:
+    {{- if and .VMServiceScrape .VMServiceScrape.endpoints }}
+    {{- range .VMServiceScrape.endpoints }}
+    - port: {{ .port | quote }}
+      {{- if .interval }}
+      interval: {{ .interval | quote }}
+      {{- end }}
+      {{- if .path }}
+      path: {{ .path | quote }}
+      {{- end }}
+    {{- end }}
+    {{- else }}
+    - port: http-prometheus
+      interval: 30s
+    {{- end }}

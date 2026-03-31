@@ -1,0 +1,46 @@
+#!/bin/bash
+# Apply Victoria Metrics alert rules via Kustomize
+# Rendered by blcli; uses kubectl kustomize (built-in).
+set -e
+
+# --- Tool checks: kubectl (optional minimum version from .minKubectlVersion) ---
+if ! command -v kubectl &> /dev/null; then
+  echo "Error: kubectl is not installed or not in PATH"
+  echo "Install from: https://kubernetes.io/docs/tasks/tools/"
+  exit 1
+fi
+
+MIN_KUBECTL_VERSION="{{ if .minKubectlVersion }}{{ .minKubectlVersion }}{{ end }}"
+if [ -n "${MIN_KUBECTL_VERSION}" ]; then
+  ACTUAL=$(kubectl version --client --short 2>/dev/null | sed 's/Client Version: v//' | tr -d ' ' || true)
+  if [ -z "${ACTUAL}" ]; then
+    ACTUAL=$(kubectl version --client -o json 2>/dev/null | sed -n 's/.*"gitVersion":"v\?\([^"]*\)".*/\1/p' || true)
+  fi
+  if [ -z "${ACTUAL}" ]; then
+    echo "Error: could not get kubectl version"
+    exit 1
+  fi
+  MIN_NORM=$(echo "${MIN_KUBECTL_VERSION}" | tr -d 'v')
+  if [ "$(printf '%s\n' "${MIN_NORM}" "${ACTUAL}" | sort -V | head -n1)" != "${MIN_NORM}" ]; then
+    echo "Error: kubectl version ${ACTUAL} is older than required ${MIN_KUBECTL_VERSION}"
+    exit 1
+  fi
+  echo "kubectl version ${ACTUAL} meets requirement >= ${MIN_KUBECTL_VERSION}"
+fi
+
+NAMESPACE="{{ if .namespace }}{{ .namespace }}{{ end }}"
+KUSTOMIZE_DIR="{{ if .kustomizeDir }}{{ .kustomizeDir }}{{ else }}.{{ end }}"
+
+if [ ! -f "${KUSTOMIZE_DIR}/kustomization.yaml" ] && [ ! -f "${KUSTOMIZE_DIR}/kustomization.yml" ]; then
+  echo "Error: kustomization.yaml not found in ${KUSTOMIZE_DIR}. Run this script from the component directory."
+  exit 1
+fi
+
+echo "Applying Victoria Metrics alert rules from ${KUSTOMIZE_DIR}"
+if [ -n "${NAMESPACE}" ]; then
+  kubectl kustomize "${KUSTOMIZE_DIR}" | kubectl apply -n "${NAMESPACE}" -f -
+else
+  kubectl kustomize "${KUSTOMIZE_DIR}" | kubectl apply -f -
+fi
+
+echo "Victoria Metrics alert rules applied successfully."

@@ -1,0 +1,16 @@
+variable "gcp_common" {
+  type = object({
+{{- $org := printf "%v" .OrganizationID -}}
+{{- if and $org (ne $org "0") }}
+    org_id          = string
+{{- end }}
+    billing_account = string
+  })
+  default = {
+{{- if and $org (ne $org "0") }}
+    org_id          = "{{ .OrganizationID }}"
+{{- end }}
+    billing_account = "{{ .BillingAccountID }}"
+  }
+}
+

@@ -1,0 +1,47 @@
+#!/bin/bash
+
+# install istio
+# This script installs Istio using the IstioOperator configuration file
+set -e
+
+# --- Tool checks: istioctl (optional minimum version from .minIstioctlVersion) ---
+if ! command -v istioctl &> /dev/null; then
+  echo "Error: istioctl is not installed or not in PATH"
+  echo "Install from: https://istio.io/latest/docs/setup/install/"
+  exit 1
+fi
+
+MIN_ISTIOCTL_VERSION="{{ if .minIstioctlVersion }}{{ .minIstioctlVersion }}{{ end }}"
+if [ -n "${MIN_ISTIOCTL_VERSION}" ]; then
+  ACTUAL=$(istioctl version --short 2>/dev/null | sed -n 's/.*client version: *\([0-9.]*\).*/\1/p' | head -n1)
+  if [ -z "${ACTUAL}" ]; then
+    ACTUAL=$(istioctl version --short 2>/dev/null | head -n1 | sed 's/^v//' | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+' || true)
+  fi
+  if [ -z "${ACTUAL}" ]; then
+    echo "Error: could not get istioctl version (istioctl version --short)"
+    exit 1
+  fi
+  # Normalize: strip leading 'v'
+  MIN_NORM=$(echo "${MIN_ISTIOCTL_VERSION}" | tr -d 'v')
+  if [ "$(printf '%s\n' "${MIN_NORM}" "${ACTUAL}" | sort -V | head -n1)" != "${MIN_NORM}" ]; then
+    echo "Error: istioctl version ${ACTUAL} is older than required ${MIN_ISTIOCTL_VERSION}"
+    exit 1
+  fi
+  echo "istioctl version ${ACTUAL} meets requirement >= ${MIN_ISTIOCTL_VERSION}"
+fi
+
+kubectl apply -f "{{ if .IstioNamespaceYaml }}{{ .IstioNamespaceYaml }}{{ else }}namespace.yaml{{ end }}"
+
+ISTIO_OPERATOR_YAML="{{ if .IstioOperatorYaml }}{{ .IstioOperatorYaml }}{{ else }}operator.yaml{{ end }}"
+
+if [ ! -f "${ISTIO_OPERATOR_YAML}" ]; then
+  echo "Error: IstioOperator file ${ISTIO_OPERATOR_YAML} not found"
+  exit 1
+fi
+
+echo "Installing Istio using operator file: ${ISTIO_OPERATOR_YAML}"
+istioctl install --set values.defaultRevision=default \
+  -f "${ISTIO_OPERATOR_YAML}" \
+  --skip-confirmation
+
+echo "Istio installation completed successfully"

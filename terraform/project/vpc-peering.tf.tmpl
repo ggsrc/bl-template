@@ -1,0 +1,17 @@
+# VPC Peering Configuration for {{ .project_name }}
+# Rendered into project root after dependencies are applied (see blcli apply terraform).
+
+{{ if .vpc_peerings }}
+##############################################################################################
+# VPC Peering Connections
+##############################################################################################
+{{ range .vpc_peerings }}
+resource "google_compute_network_peering" "{{ .name }}" {
+  name                 = "{{ .name }}"
+  network              = google_compute_network.main.self_link
+  peer_network         = "{{ .peer_network }}"
+  export_custom_routes = {{ if .export_custom_routes }}{{ .export_custom_routes }}{{ else }}true{{ end }}
+  import_custom_routes = {{ if .import_custom_routes }}{{ .import_custom_routes }}{{ else }}true{{ end }}
+}
+{{ end }}
+{{ end }}

@@ -1,0 +1,24 @@
+output "cluster_name" {
+  value = google_container_cluster.main.name
+}
+
+output "endpoint" {
+  value = google_container_cluster.main.endpoint
+}
+
+output "master_auth" {
+  value = google_container_cluster.main.master_auth
+}
+
+output "services_ipv4_cidr" {
+  value = google_container_cluster.main.services_ipv4_cidr
+}
+
+output "cluster_ipv4_cidr" {
+  value = google_container_cluster.main.cluster_ipv4_cidr
+}
+
+output "node_service_account_email" {
+  value = google_service_account.gke_node.email
+}
+

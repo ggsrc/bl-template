@@ -1,0 +1,97 @@
+version: 1.0.0
+
+# terraform/project/loki-logs 组件的参数定义
+# 这些参数用于创建 Loki Logs GCS Bucket、Service Account、Workload Identity 配置
+
+parameters:
+  # 组件级参数（对应 config.yaml projects 中的 loki-logs 组件）
+  components:
+    loki-logs:
+      enable_loki_logs:
+        type: boolean
+        description: "Enable Loki logs configuration"
+        required: false
+        default: true
+        example: true
+      
+      bucket_name:
+        type: string
+        description: "Suffix of the GCS bucket name for Loki logs (auto-prefixed with project_id to ensure global uniqueness)"
+        required: true
+        pattern: "^[a-z0-9-]+$"
+        example: "loki"
+      
+      location:
+        type: string
+        description: "Bucket location (defaults to var.region if not specified)"
+        required: false
+        example: "us-west1"
+      
+      force_destroy:
+        type: boolean
+        description: "Force destroy bucket even if it contains objects"
+        required: false
+        default: false
+        example: false
+      
+      lifecycle_rule:
+        type: object
+        description: "Lifecycle rule for log retention"
+        required: false
+        properties:
+          age:
+            type: integer
+            description: "Age in days before deletion (retention_period + 1 day)"
+            required: true
+            example: 8
+      
+      versioning_enabled:
+        type: boolean
+        description: "Enable versioning on the bucket"
+        required: false
+        default: false
+        example: false
+      
+      service_account_id:
+        type: string
+        description: "Service account ID for Loki"
+        required: false
+        default: "loki-logs"
+        pattern: "^[a-z0-9-]+$"
+        example: "loki-logs"
+      
+      service_account_display_name:
+        type: string
+        description: "Display name of the service account"
+        required: false
+        default: "Loki logs service account"
+        example: "Loki logs service account"
+      
+      service_account_description:
+        type: string
+        description: "Description of the service account"
+        required: false
+        example: "Service account used by Loki to access GCS bucket"
+      
+      iam_role:
+        type: string
+        description: "IAM role for bucket access"
+        required: false
+        default: "roles/storage.objectAdmin"
+        enum: ["roles/storage.objectAdmin", "roles/storage.objectCreator", "roles/storage.legacyBucketWriter"]
+        example: "roles/storage.objectAdmin"
+      
+      namespace:
+        type: string
+        description: "Kubernetes namespace where Loki is deployed"
+        required: false
+        default: "loki"
+        example: "loki"
+      
+      kubernetes_service_account:
+        type: string
+        description: "Kubernetes service account name for Loki"
+        required: false
+        default: "loki"
+        example: "loki"
+

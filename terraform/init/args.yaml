@@ -1,0 +1,119 @@
+version: 1.0.0
+
+# terraform/init 目录的参数定义
+# 这些参数用于初始化 GCP org 级别的资源
+# 校验规则与 terraform/args.yaml 对齐，并满足 GCP 命名约束
+
+parameters:
+  # 全局参数（适用于 init 目录下的所有模板）
+  global:
+    GlobalName:
+      type: string
+      description: "Global name used for resource naming (e.g., state store bucket name); 1-63 chars, RFC 1035"
+      required: true
+      validation:
+        - kind: required
+        - kind: stringLength
+          min: 1
+          max: 63
+        - kind: pattern
+          value: "^[a-z]([-a-z0-9]*[a-z0-9])?$"
+      example: "my-org"
+
+    TerraformBackendBucket:
+      type: string
+      description: "Name of the GCS bucket for Terraform state store. 3-63 chars, GCS bucket naming rules."
+      required: false
+      validation:
+        - kind: stringLength
+          min: 3
+          max: 63
+        - kind: pattern
+          value: "^[a-z0-9][a-z0-9._-]{1,61}[a-z0-9]$"
+      example: "my-org-statestore"
+
+    FolderName:
+      type: string
+      description: "Folder name or path hint used to control init behavior (e.g., contains 'terraform-statestore')."
+      required: false
+
+    OrganizationID:
+      type: string
+      description: "GCP Organization ID (numeric). Set to \"0\" to disable org_id rendering in templates."
+      required: false
+      default: "0"
+      validation:
+        - kind: pattern
+          value: "^[0-9]+$"
+      example: "123456789012"
+
+    BillingAccountID:
+      type: string
+      description: "GCP Billing Account ID; format 6-6-6 alphanumeric"
+      required: true
+      validation:
+        - kind: required
+        - kind: pattern
+          value: "^[0-9A-Z]{6}-[0-9A-Z]{6}-[0-9A-Z]{6}$"
+      example: "01ABCD-2EFGH3-4IJKL5"
+
+  # 组件级参数（对应 config.yaml 中的组件名称）
+  components:
+    projects:  # 对应 init.projects；default 中 ProjectServices 的 key 使用占位符 ${project.<name>.id}，由 init-args 解析
+      ProjectServices:
+        type: map[list[string]]
+        description: "Map of project IDs to list of enabled GCP services. In default.yaml keys use ${project.<name>.id} placeholders, resolved at init-args."
+        required: false
+        default:
+          "my-dev-project-123":
+            - "compute.googleapis.com"
+            - "container.googleapis.com"
+            - "storage.googleapis.com"
+            - "iam.googleapis.com"
+          "my-prod-project-456":
+            - "compute.googleapis.com"
+            - "container.googleapis.com"
+            - "storage.googleapis.com"
+            - "iam.googleapis.com"
+        example:
+          "my-dev-project-123":
+            - "compute.googleapis.com"
+            - "container.googleapis.com"
+            - "storage.googleapis.com"
+          "my-prod-project-456":
+            - "compute.googleapis.com"
+            - "container.googleapis.com"
+
+    atlantis:  # 对应 init.atlantis；default 中 ProjectID、ProjectIAMMembers 等可使用占位符 ${project.<name>.id}
+      ProjectID:
+        type: string
+        description: "GCP Project ID where Atlantis service account will be created. In default.yaml can be ${project.<name>.id}, resolved at init-args."
+        required: true
+        validation:
+          - kind: required
+          - kind: stringLength
+            min: 6
+            max: 30
+          - kind: pattern
+            value: "^[a-z][a-z0-9-]{4,28}[a-z0-9]$"
+        example: "my-atlantis-project-123"
+
+      ProjectIAMMembers:
+        type: map[string]string
+        description: "Map of project IDs to IAM roles for Atlantis service account. Key is project ID, value is IAM role name."
+        required: true
+        example:
+          "my-dev-project-123": "roles/owner"
+          "my-prod-project-456": "roles/owner"
+          "my-terraform-backend": "roles/iam.securityReviewer"
+
+      GCSBucketsObjectAdmin:
+        type: map[string]string
+        description: "Map of GCS bucket names to project IDs where Atlantis needs storage.objectAdmin permissions. Key is bucket name, value is project ID where the bucket resides."
+        required: false
+        default: {}
+        example:
+          "my-terraform-backend": "my-terraform-backend-project"
+          "my-artifacts-bucket": "my-artifacts-project"
+    
+    

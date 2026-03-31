@@ -1,0 +1,560 @@
+version: 1.0.0
+global:
+    BillingAccountID: 01ABCD-2EFGH3-4IJKL5
+    OrganizationID: "0"
+    TerraformBackendBucket: tfstore
+    TerraformVersion: 1.5.0
+init:
+    components:
+        backend: {}
+        projects:
+            ProjectServices:
+                ${project.prd.id}:
+                    - compute.googleapis.com
+                    - container.googleapis.com
+                    - iamcredentials.googleapis.com
+                    - dns.googleapis.com
+                    - alloydb.googleapis.com
+                    - servicenetworking.googleapis.com
+                    - certificatemanager.googleapis.com
+                    - redis.googleapis.com
+                    - secretmanager.googleapis.com
+                    - iap.googleapis.com
+                    - cloudidentity.googleapis.com
+                    - serviceusage.googleapis.com
+                    - networkmanagement.googleapis.com
+                    - logging.googleapis.com
+                    - cloudresourcemanager.googleapis.com
+                ${project.stg.id}:
+                    - compute.googleapis.com
+                    - container.googleapis.com
+                    - iamcredentials.googleapis.com
+                    - dns.googleapis.com
+                    - alloydb.googleapis.com
+                    - servicenetworking.googleapis.com
+                    - redis.googleapis.com
+                    - certificatemanager.googleapis.com
+                    - iap.googleapis.com
+                    - cloudidentity.googleapis.com
+                    - serviceusage.googleapis.com
+                    - networkmanagement.googleapis.com
+                    - logging.googleapis.com
+                    - secretmanager.googleapis.com
+                    - cloudresourcemanager.googleapis.com
+                ${project.corp.id}:
+                    - compute.googleapis.com
+                    - container.googleapis.com
+                    - iamcredentials.googleapis.com
+                    - dns.googleapis.com
+                    - certificatemanager.googleapis.com
+                    - iap.googleapis.com
+                    - secretmanager.googleapis.com
+                    - servicenetworking.googleapis.com
+                    - logging.googleapis.com
+                    - cloudresourcemanager.googleapis.com
+                    - artifactregistry.googleapis.com
+projects:
+    # prd: 生产环境，配置 k8s 集群以及生产用业务服务
+    # 必须: main(提供 locals), provider, variables, vpc; 业务需要: gke, dns, cert, ip, firewall, outputs
+    - name: prd
+      global:
+        project_name: prd
+        region: us-west1
+        domain: prd.example.com
+      components:
+        - name: main
+          parameters: {}
+        - name: backend
+          parameters: {}
+        - name: config-gcs-tfbackend
+          parameters: {}
+        - name: provider
+          parameters: {}
+        - name: variables
+          parameters:
+            zone: us-west1-a
+        - name: vpc
+          parameters:
+            auto_create_subnetworks: false
+            enable_nat: true
+            enable_private_pool_route: true
+            enable_private_service_networking: false
+            ip_cidr_range: 10.12.0.0/16
+            nat_ip_name: gke-egress-router-nat-ip
+            nat_log_enable: false
+            nat_log_filter: ERRORS_ONLY
+            nat_name: gke-egress-router-nat
+            nat_router_name: gke-egress-router
+            nat_source_subnetworks: ALL_SUBNETWORKS_ALL_IP_RANGES
+            private_conn_ip_name: private-conn-alloc
+            private_conn_prefix_length: 16
+            private_pool_route_name: route-private-pool-to-internet-via-nat
+            private_pool_route_priority: 900
+            private_pool_tags:
+                - gke-private-nat-pool
+            routing_mode: REGIONAL
+            subnetwork_name: us-west-1
+            subnetworks: []
+            vpc_name: app
+        - name: vpc-peering
+          depends_on:
+            - project: corp
+              component: vpc
+          parameters:
+            vpc_peerings:
+                - name: prd-to-corp
+                  peer_network: https://www.googleapis.com/compute/v1/projects/corp/global/networks/main
+                  export_custom_routes: true
+                  import_custom_routes: true
+        - name: ip
+          parameters:
+            global_addresses:
+                - name: app
+                  address_type: EXTERNAL
+            output_addresses:
+                - resource_name: app
+                  output_name: gateway_ip
+        - name: firewall
+          parameters:
+            network: google_compute_network.main.name
+            rules:
+                - name: allow-peering-corp-to-lb
+                  direction: INGRESS
+                  priority: 1000
+                  source_ranges:
+                      - 10.10.0.0/16
+                  allow:
+                      - protocol: tcp
+                        ports:
+                            - "10901"
+                  description: Allow access from Project Corp via VPC Peering to LB on port 10901
+        - name: gke
+          parameters:
+              clusterName: prd-cluster
+              network: app
+              subnetwork: us-west-1
+              clusterIpv4CidrBlock: 10.36.0.0/14
+              servicesIpv4CidrBlock: 10.40.0.0/19
+              masterIpv4CidrBlock: 172.16.0.0/28
+              nodeLocations:
+                  - us-west1-a
+              diskSizeGb: 20
+              machineType: e2-small
+              minNodeCount: 1
+              maxNodeCount: 50
+              initialNodeCount: 1
+              loggingConfigEnableComponents: []
+              monitoringConfigEnableComponents:
+                  - SYSTEM_COMPONENTS
+              managedPrometheusEnabled: false
+              locationPolicy: BALANCED
+              releaseChannel: EXTENDED
+              deletionProtection: true
+              nodePools:
+                  - name: on-demand
+                    machineType: e2-standard-8
+                    minNodes: 0
+                    maxNodes: 5
+                    nodeLocations:
+                        - us-west1-a
+                    taints:
+                        - key: nodepool
+                          value: on-demand
+                          effect: NO_SCHEDULE
+                    labels:
+                        nodepool: on-demand
+                  - name: spotvm
+                    machineType: e2-standard-8
+                    minNodes: 0
+                    maxNodes: 5
+                    nodeLocations:
+                        - us-west1-a
+                    spot: true
+                    taints:
+                        - key: nodepool
+                          value: spotvm
+                          effect: NO_SCHEDULE
+                    labels:
+                        nodepool: spotvm
+        - name: dns
+          parameters:
+            records: []
+            zones:
+                - name: prd
+                  dns_name: prd.example.com.
+                  description: Production DNS zone
+                  visibility: public
+                - name: prd_private
+                  dns_name: prd.private.example.com.
+                  description: Production private DNS zone
+                  visibility: private
+                  private_visibility_config:
+                      networks:
+                          - network_url: google_compute_network.main.id
+        - name: cert
+          parameters:
+            certificates:
+                - name: app
+                  component_name: app
+                  domain: prd.example.com
+                  dns_zone_name: prd
+                  zone_project: var.project_id
+            certificate_maps:
+                - name: app
+                  description: main gateway certificate map
+            certificate_map_entries:
+                - name: app_main
+                  map_name: app
+                  hostname: prd.example.com
+                  certificates: [app]
+                  description: ""
+                - name: app_subdomain
+                  map_name: app
+                  hostname: "*.prd.example.com"
+                  certificates: [app]
+                  description: ""
+        - name: outputs
+          parameters:
+            certificate_maps:
+                - map_name: app
+                  output_prefix: app
+            gke:
+                output_endpoint: true
+                output_cluster_name: true
+                module_name: gke
+            project_iam_bindings:
+                - name: deployer_role_binding
+                  role: roles/storage.objectCreator
+                  members:
+                      - serviceAccount:sa-gitops-deployer@corp.iam.gserviceaccount.com
+                - name: deployer_role_binding_admin
+                  role: roles/storage.objectAdmin
+                  members:
+                      - serviceAccount:sa-gitops-deployer@corp.iam.gserviceaccount.com
+            service_account_keys: []
+            service_accounts:
+                - name: log_viewer
+                  account_id: log-viewer
+                  display_name: Logging Viewer for Grafana
+                  description: Service account for viewing logs
+            use_secret_manager_accessor: true
+            workload_identity_bindings:
+                - name: loki_logs
+                  service_account_name: loki_logs
+                  namespace: loki
+                  kubernetes_service_account: loki
+
+    # stg: stage 环境，用于测试开发
+    # 必须: main, provider, variables, vpc; 业务需要: gke, dns, cert
+    - name: stg
+      global:
+        project_name: stg
+        region: us-west1
+      components:
+        - name: main
+          parameters: {}
+        - name: backend
+          parameters: {}
+        - name: config-gcs-tfbackend
+          parameters: {}
+        - name: provider
+          parameters: {}
+        - name: variables
+          parameters:
+            zone: us-west1-a
+        - name: vpc
+          parameters:
+            auto_create_subnetworks: false
+            enable_nat: true
+            enable_private_pool_route: true
+            enable_private_service_networking: false
+            ip_cidr_range: 10.11.0.0/16
+            nat_ip_name: gke-egress-router-nat-ip
+            nat_log_enable: false
+            nat_log_filter: ERRORS_ONLY
+            nat_name: gke-egress-router-nat
+            nat_router_name: gke-egress-router
+            nat_source_subnetworks: ALL_SUBNETWORKS_ALL_IP_RANGES
+            private_conn_ip_name: private-conn-alloc
+            private_conn_prefix_length: 16
+            private_pool_route_name: route-private-pool-to-internet-via-nat
+            private_pool_route_priority: 900
+            private_pool_tags:
+                - gke-private-nat-pool
+            routing_mode: REGIONAL
+            subnetwork_name: us-west-1
+            subnetworks: []
+            vpc_name: main
+        - name: vpc-peering
+          depends_on:
+            - project: corp
+              component: vpc
+          parameters:
+            vpc_peerings:
+                - name: stg-to-corp
+                  peer_network: https://www.googleapis.com/compute/v1/projects/corp/global/networks/main
+                  export_custom_routes: true
+                  import_custom_routes: true
+        - name: gke
+          parameters:
+              clusterName: stg-cluster
+              network: main
+              subnetwork: us-west-1
+              clusterIpv4CidrBlock: 10.28.0.0/14
+              servicesIpv4CidrBlock: 10.32.0.0/19
+              masterIpv4CidrBlock: 172.16.0.0/28
+              nodeLocations:
+                  - us-west1-a
+              diskSizeGb: 20
+              machineType: e2-small
+              minNodeCount: 1
+              maxNodeCount: 50
+              initialNodeCount: 1
+              loggingConfigEnableComponents: []
+              monitoringConfigEnableComponents:
+                  - SYSTEM_COMPONENTS
+              managedPrometheusEnabled: false
+              locationPolicy: BALANCED
+              releaseChannel: EXTENDED
+              deletionProtection: true
+              nodePools:
+                  - name: on-demand
+                    machineType: e2-standard-8
+                    minNodes: 0
+                    maxNodes: 5
+                    nodeLocations:
+                        - us-west1-a
+                    taints:
+                        - key: nodepool
+                          value: on-demand
+                          effect: NO_SCHEDULE
+                    labels:
+                        nodepool: on-demand
+                  - name: spotvm
+                    machineType: e2-standard-8
+                    minNodes: 0
+                    maxNodes: 5
+                    nodeLocations:
+                        - us-west1-a
+                    spot: true
+                    taints:
+                        - key: nodepool
+                          value: spotvm
+                          effect: NO_SCHEDULE
+                    labels:
+                        nodepool: spotvm
+        - name: dns
+          parameters:
+            records: []
+            zones:
+                - name: stg
+                  dns_name: stg.example.com.
+                  description: Staging DNS zone
+                  visibility: public
+                - name: stg_private
+                  dns_name: stg.private.example.com.
+                  description: Staging private DNS zone
+                  visibility: private
+                  private_visibility_config:
+                      networks:
+                          - network_url: google_compute_network.main.id
+        - name: cert
+          parameters:
+            certificates:
+                - name: app
+                  component_name: app
+                  domain: stg.example.com
+                  dns_zone_name: stg
+                  zone_project: var.project_id
+            certificate_maps:
+                - name: app
+                  description: main gateway certificate map
+            certificate_map_entries:
+                - name: app_main
+                  map_name: app
+                  hostname: stg.example.com
+                  certificates: [app]
+                  description: ""
+                - name: app_subdomain
+                  map_name: app
+                  hostname: "*.stg.example.com"
+                  certificates: [app]
+                  description: ""
+
+    # corp: 配置一些跨环境使用的内部服务，如 grafana、bytebase、victory metrics 等
+    # 必须: main, provider, variables, vpc; 业务需要: gke, dns, cert, loki-logs
+    - name: corp
+      global:
+        project_name: corp
+        region: us-west1
+      components:
+        - name: main
+          parameters: {}
+        - name: backend
+          parameters: {}
+        - name: config-gcs-tfbackend
+          parameters: {}
+        - name: provider
+          parameters: {}
+        - name: variables
+          parameters:
+            zone: us-west1-a
+        - name: vpc
+          parameters:
+            auto_create_subnetworks: false
+            enable_nat: true
+            enable_private_pool_route: true
+            enable_private_service_networking: false
+            ip_cidr_range: 10.10.0.0/16
+            nat_ip_name: gke-egress-router-nat-ip
+            nat_log_enable: false
+            nat_log_filter: ERRORS_ONLY
+            nat_name: gke-egress-router-nat
+            nat_router_name: gke-egress-router
+            nat_source_subnetworks: ALL_SUBNETWORKS_ALL_IP_RANGES
+            private_conn_ip_name: private-conn-alloc
+            private_conn_prefix_length: 16
+            private_pool_route_name: route-private-pool-to-internet-via-nat
+            private_pool_route_priority: 900
+            private_pool_tags:
+                - gke-private-nat-pool
+            routing_mode: REGIONAL
+            subnetwork_name: us-west-1
+            subnetworks: []
+            vpc_name: main
+        - name: vpc-peering
+          depends_on:
+            - project: prd
+              component: vpc
+            - project: stg
+              component: vpc
+          parameters:
+            vpc_peerings:
+                - name: corp-to-prd
+                  peer_network: https://www.googleapis.com/compute/v1/projects/prd/global/networks/app
+                  export_custom_routes: true
+                  import_custom_routes: true
+                - name: corp-to-stg
+                  peer_network: https://www.googleapis.com/compute/v1/projects/stg/global/networks/main
+                  export_custom_routes: true
+                  import_custom_routes: true
+        - name: gke
+          parameters:
+              clusterName: corp-cluster
+              network: main
+              subnetwork: us-west-1
+              clusterIpv4CidrBlock: 10.20.0.0/14
+              servicesIpv4CidrBlock: 10.24.0.0/19
+              masterIpv4CidrBlock: 172.16.0.0/28
+              nodeLocations:
+                  - us-west1-a
+              diskSizeGb: 20
+              machineType: e2-small
+              minNodeCount: 1
+              maxNodeCount: 50
+              initialNodeCount: 1
+              loggingConfigEnableComponents: []
+              monitoringConfigEnableComponents:
+                  - SYSTEM_COMPONENTS
+              managedPrometheusEnabled: false
+              locationPolicy: BALANCED
+              releaseChannel: EXTENDED
+              deletionProtection: true
+        - name: dns
+          parameters:
+            records: []
+            zones:
+                - name: corp
+                  dns_name: corp.example.com.
+                  description: Corp DNS zone
+                  visibility: public
+                - name: corp_private
+                  dns_name: corp.private.example.com.
+                  description: Corp private DNS zone
+                  visibility: private
+                  private_visibility_config:
+                      networks:
+                          - network_url: google_compute_network.main.id
+        - name: cert
+          parameters:
+            certificates:
+                - name: app
+                  component_name: app
+                  domain: corp.example.com
+                  dns_zone_name: corp
+                  zone_project: var.project_id
+            certificate_maps:
+                - name: app
+                  description: main gateway certificate map
+            certificate_map_entries:
+                - name: app_main
+                  map_name: app
+                  hostname: corp.example.com
+                  certificates: [app]
+                  description: ""
+                - name: app_subdomain
+                  map_name: app
+                  hostname: "*.corp.example.com"
+                  certificates: [app]
+                  description: ""
+        - name: loki-logs
+          parameters:
+            bucket_name: corp-loki
+            enable_loki_logs: true
+            force_destroy: false
+            iam_role: roles/storage.objectAdmin
+            kubernetes_service_account: loki
+            lifecycle_rule: {}
+            location: us-west1
+            namespace: loki
+            service_account_description: Service account used by Loki to access GCS bucket
+            service_account_display_name: Loki logs service account
+            service_account_id: loki-logs
+            versioning_enabled: false
+        - name: artifacts-registry
+          parameters:
+            repositories:
+                - name: internal-registry
+                  repository_id: internal-registry
+                  description: Internal Docker registry for all Kubernetes clusters
+                  format: DOCKER
+                  location: us-west1
+                  docker_config:
+                      immutable_tags: true
+            iam_members:
+                - name: repo_iam_prd
+                  repository_name: internal-registry
+                  role: roles/artifactregistry.reader
+                  member: serviceAccount:gke-node-sa@prd.iam.gserviceaccount.com
+                - name: repo_iam_stg
+                  repository_name: internal-registry
+                  role: roles/artifactregistry.reader
+                  member: serviceAccount:gke-node-sa@stg.iam.gserviceaccount.com
+                - name: repo_iam_corp
+                  repository_name: internal-registry
+                  role: roles/artifactregistry.reader
+                  member: serviceAccount:gke-node-sa@corp.iam.gserviceaccount.com
+        - name: cdn
+          parameters:
+            cdn_configs: []
+        - name: iam
+          parameters:
+            gke_cluster_dependency: ""
+            project_iam_bindings:
+                - name: gitops_deployer
+                  role: roles/storage.objectCreator
+                  members:
+                      - serviceAccount:sa-gitops-deployer@corp.iam.gserviceaccount.com
+            service_account_keys: []
+            service_accounts:
+                - name: sa_gitops_deployer
+                  account_id: sa-gitops-deployer
+                  display_name: GitOps Deployer Service Account
+                  description: Service account used by GitOps for deployment operations
+            use_secret_manager_accessor: false
+            workload_identity_bindings: []
+
+    # static-res、atfs 已合并到 corp（registry + CDN + GitOps SA）
+    - name: tfstore
+      marshalled: false
+      

@@ -1,0 +1,32 @@
+---
+# Source: victoria-metrics-k8s-stack/charts/victoria-metrics-k8s-stack/templates/rules/rule.yaml
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  namespace: monitoring-vm
+  name: vmks-llm-matcher
+  labels: 
+    app: vmks
+    app.kubernetes.io/instance: vmks
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: vmks
+    app.kubernetes.io/version: v0.28.1
+    helm.sh/chart: victoria-metrics-k8s-stack-0.58.2
+spec:
+  groups:
+  - name: llm-matcher
+    params: {}
+    rules:
+    - alert: LLMMatcherHighFailureRate
+      annotations:
+        description: |
+          LLM Matcher service has a high failure rate of {{ $value | humanizePercentage }}.
+          This indicates that a significant portion of LLM calls are failing.
+        summary: LLM Matcher failure rate is too high ({{ $value | humanizePercentage }})
+      expr: |
+        sum(rate(llm_matcher_llm_call_failure_total{service="llm_matcher"}[5m])) 
+        / 
+        sum(rate(llm_matcher_llm_call_total{service="llm_matcher"}[5m])) > 0.1
+      for: 5m
+      labels:
+        severity: warning

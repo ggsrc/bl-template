@@ -1,0 +1,176 @@
+version: 1.0.0
+
+# terraform/project/dns 组件的参数定义
+# 这些参数用于创建 DNS Zone 和 DNS Record
+
+parameters:
+  # 组件级参数（对应 config.yaml projects 中的 dns 组件）
+  components:
+    dns:
+      zones:
+        type: array
+        description: "List of DNS zones to create"
+        required: false
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              description: "Zone name (used as resource identifier)"
+              required: true
+              pattern: "^[a-z0-9-]+$"
+              example: "public"
+            dns_name:
+              type: string
+              description: "DNS name (must end with .)"
+              required: true
+              pattern: "^.+\\.$"
+              example: "example.com."
+            description:
+              type: string
+              description: "Description of the DNS zone"
+              required: false
+              example: "Public DNS zone"
+            visibility:
+              type: string
+              description: "Zone visibility"
+              required: true
+              enum: ["public", "private"]
+              example: "public"
+            dnssec_config:
+              type: object
+              description: "DNSSEC configuration"
+              required: false
+              properties:
+                state:
+                  type: string
+                  description: "DNSSEC state"
+                  enum: ["on", "off", "transfer"]
+                  default: "off"
+                default_key_specs:
+                  type: array
+                  description: "Default key specs for DNSSEC"
+                  required: false
+                  items:
+                    type: object
+                    properties:
+                      algorithm:
+                        type: string
+                        description: "Algorithm for the key"
+                        enum: ["rsasha1", "rsasha256", "rsasha512", "ecdsap256sha256", "ecdsap384sha384"]
+                      key_length:
+                        type: integer
+                        description: "Key length"
+                      key_type:
+                        type: string
+                        description: "Key type"
+                        enum: ["keySigning", "zoneSigning"]
+                      kind:
+                        type: string
+                        description: "Kind of key"
+            private_visibility_config:
+              type: object
+              description: "Private visibility configuration (required for private zones)"
+              required: false
+              properties:
+                networks:
+                  type: array
+                  description: "List of networks that can see this zone"
+                  required: false
+                  items:
+                    type: object
+                    properties:
+                      network_url:
+                        type: string
+                        description: "Network URL (e.g., google_compute_network.main.id)"
+                        required: true
+      
+      records:
+        type: array
+        description: "List of DNS records to create"
+        required: false
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              description: "Record name (used as resource identifier)"
+              required: true
+              pattern: "^[a-z0-9_-]+$"
+              example: "api_record"
+            zone_name:
+              type: string
+              description: "Name of the DNS zone (must match name in zones array)"
+              required: true
+              example: "public"
+            zone_reference:
+              type: string
+              description: "Alternative zone reference (e.g., data.google_dns_managed_zone.zone.name)"
+              required: false
+            record_name:
+              type: string
+              description: "DNS record name (without zone suffix, e.g., 'api' for 'api.example.com.')"
+              required: false
+            full_name:
+              type: string
+              description: "Full DNS record name (e.g., 'api.example.com.')"
+              required: false
+            type:
+              type: string
+              description: "DNS record type"
+              required: true
+              enum: ["A", "AAAA", "CNAME", "MX", "NS", "PTR", "SOA", "SRV", "TXT"]
+              example: "A"
+            ttl:
+              type: integer
+              description: "Time to live in seconds"
+              required: false
+              default: 300
+              example: 300
+            rrdatas:
+              type: array
+              description: "List of record data values"
+              required: false
+              items:
+                type: string
+              example: ["1.2.3.4"]
+            routing_policy:
+              type: object
+              description: "Routing policy for the DNS record"
+              required: false
+              properties:
+                geo:
+                  type: array
+                  description: "Geo-based routing"
+                  required: false
+                  items:
+                    type: object
+                    properties:
+                      location:
+                        type: string
+                        description: "Location code (e.g., 'us', 'eu', 'asia')"
+                        required: true
+                      rrdatas:
+                        type: array
+                        description: "Record data for this location"
+                        required: true
+                        items:
+                          type: string
+                weighted:
+                  type: array
+                  description: "Weighted routing"
+                  required: false
+                  items:
+                    type: object
+                    properties:
+                      weight:
+                        type: number
+                        description: "Weight for this routing"
+                        required: true
+                      rrdatas:
+                        type: array
+                        description: "Record data for this weight"
+                        required: true
+                        items:
+                          type: string
+

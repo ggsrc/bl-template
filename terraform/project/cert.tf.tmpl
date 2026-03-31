@@ -1,0 +1,85 @@
+# SSL Certificate Configuration for {{ .project_name }}
+
+{{ if .dns_authorization_certificates }}
+##############################################################################################
+# DNS authorization + certificate (external DNS; no DNS record created - add CNAME manually)
+##############################################################################################
+{{ range .dns_authorization_certificates }}
+resource "google_certificate_manager_dns_authorization" "{{ .name }}" {
+  project     = local.project_id
+  name        = "{{ .dns_authorization_name }}"
+  description = {{ if .description }}"{{ .description }}"{{ else }}"DNS authorization for {{ .domain }} (external DNS)"{{ end }}
+  domain      = "{{ .domain }}"
+}
+
+resource "google_certificate_manager_certificate" "{{ .name }}" {
+  project     = local.project_id
+  name        = "{{ .dns_authorization_name }}-cert"
+  description = {{ if .description }}"{{ .description }}"{{ else }}"Certificate for {{ .domain }}"{{ end }}
+  managed {
+    domains = [{{ range $i, $d := .managed_domains }}{{ if $i }}, {{ end }}"{{ $d }}"{{ end }}]
+    dns_authorizations = [google_certificate_manager_dns_authorization.{{ .name }}.id]
+  }
+}
+{{ end }}
+{{ end }}
+
+{{ if .certificates }}
+##############################################################################################
+# SSL Certificates using ssl-certificate module
+##############################################################################################
+{{ range .certificates }}
+module "{{ .name }}_cert" {
+  source           = "../modules/ssl-certificate"
+  project          = var.project_id
+  zone_project     = {{ if .zone_project }}{{ if eq .zone_project "var.project_id" }}var.project_id{{ else }}"{{ .zone_project }}"{{ end }}{{ else }}var.project_id{{ end }}
+  component_name   = "{{ .component_name }}"
+  domain           = "{{ .domain }}"
+  dns_managed_zone = {{ if .dns_zone_reference }}{{ .dns_zone_reference }}{{ else }}google_dns_managed_zone.{{ .dns_zone_name }}.managed_zone_id{{ end }}
+
+  depends_on = [google_dns_managed_zone.{{ .dns_zone_name }}]
+}
+{{ end }}
+{{ end }}
+
+{{ if .certificate_maps }}
+##############################################################################################
+# Certificate Maps
+##############################################################################################
+{{ range .certificate_maps }}
+resource "google_certificate_manager_certificate_map" "{{ .name }}" {
+  name        = "{{ replace .name "_" "-" }}"
+  description = {{ if .description }}"{{ .description }}"{{ else }}""{{ end }}
+  {{ if .labels }}
+  labels = {
+    {{ range $key, $value := .labels }}
+    "{{ $key }}" = "{{ $value }}"
+    {{ end }}
+  }
+  {{ end }}
+}
+{{ end }}
+{{ end }}
+
+{{ if .certificate_map_entries }}
+##############################################################################################
+# Certificate Map Entries
+##############################################################################################
+{{ range .certificate_map_entries }}
+resource "google_certificate_manager_certificate_map_entry" "{{ .name }}" {
+  name         = "{{ replace .name "_" "-" }}"
+  description  = {{ if .description }}"{{ .description }}"{{ else }}""{{ end }}
+  map          = google_certificate_manager_certificate_map.{{ .map_name }}.name
+  hostname     = "{{ .hostname }}"
+  certificates = [
+    {{ if .certificate_refs }}{{ range $i, $r := .certificate_refs }}{{ if $i }},
+    {{ end }}{{ if eq $r.type "resource" }}google_certificate_manager_certificate.{{ $r.name }}.id{{ else }}module.{{ $r.name }}_cert.cert_id{{ end }}{{ end }}{{ else }}{{ range $i, $cert := .certificates }}{{ if $i }},
+    {{ end }}module.{{ $cert }}_cert.cert_id{{ end }}{{ end }}
+  ]
+  {{ if .matcher }}
+  matcher = "{{ .matcher }}"
+  {{ end }}
+}
+{{ end }}
+{{ end }}
+

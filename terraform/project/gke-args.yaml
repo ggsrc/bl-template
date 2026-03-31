@@ -1,0 +1,208 @@
+version: 1.0.0
+
+# terraform/project/gke 组件的参数定义
+# 这些参数用于创建 GKE 集群
+
+parameters:
+  # 组件级参数（对应 config.yaml projects 中的 gke 组件）
+  components:
+    gke:
+      project_id:
+        type: string
+        description: "GCP Project ID where the GKE cluster will be created"
+        required: true
+        example: "my-project-123"
+      
+      clusterName:
+        type: string
+        description: "Name of the GKE cluster"
+        required: false
+        pattern: "^[a-z0-9-]+$"
+        example: "my-cluster"
+      
+      network:
+        type: string
+        description: "Name of the VPC network"
+        required: false
+        default: "default"
+        example: "default"
+      
+      subnetwork:
+        type: string
+        description: "Name of the VPC subnetwork"
+        required: false
+        default: "default"
+        example: "default"
+      
+      clusterIpv4CidrBlock:
+        type: string
+        description: "CIDR block for the GKE cluster pods"
+        required: false
+        default: "10.0.0.0/14"
+        example: "10.0.0.0/14"
+      
+      servicesIpv4CidrBlock:
+        type: string
+        description: "CIDR block for the GKE cluster services"
+        required: false
+        default: "10.4.0.0/19"
+        example: "10.4.0.0/19"
+      
+      masterIpv4CidrBlock:
+        type: string
+        description: "CIDR block for the GKE master nodes"
+        required: false
+        default: "172.16.0.0/28"
+        example: "172.16.0.0/28"
+      
+      nodeLocations:
+        type: array
+        description: "List of GCP zones for node placement"
+        required: false
+        default: ["us-west1-a"]
+        example: ["us-west1-a"]
+      
+      machineType:
+        type: string
+        description: "Machine type for GKE nodes"
+        required: false
+        default: "e2-medium"
+        example: "e2-medium"
+      
+      diskSizeGb:
+        type: integer
+        description: "Boot disk size in GB for the main node pool"
+        required: false
+        default: 20
+        example: 20
+      
+      minNodeCount:
+        type: integer
+        description: "Minimum number of nodes in the node pool"
+        required: false
+        default: 1
+        example: 1
+      
+      maxNodeCount:
+        type: integer
+        description: "Maximum number of nodes in the node pool"
+        required: false
+        default: 50
+        example: 50
+      
+      initialNodeCount:
+        type: integer
+        description: "Initial number of nodes in the node pool"
+        required: false
+        default: 1
+        example: 1
+      
+      loggingConfigEnableComponents:
+        type: array
+        description: "List of logging components to enable"
+        required: false
+        default: []
+        example: []
+      
+      monitoringConfigEnableComponents:
+        type: array
+        description: "List of monitoring components to enable"
+        required: false
+        default: ["SYSTEM_COMPONENTS"]
+        example: ["SYSTEM_COMPONENTS"]
+      
+      managedPrometheusEnabled:
+        type: boolean
+        description: "Enable managed Prometheus"
+        required: false
+        default: false
+        example: false
+      
+      totalMinNodeCount:
+        type: integer
+        description: "Total minimum node count across all node pools"
+        required: false
+        example: 1
+      
+      totalMaxNodeCount:
+        type: integer
+        description: "Total maximum node count across all node pools"
+        required: false
+        example: 100
+      
+      locationPolicy:
+        type: string
+        description: "Location policy for node placement"
+        required: false
+        default: "BALANCED"
+        enum: ["BALANCED", "ANY"]
+        example: "BALANCED"
+      
+      releaseChannel:
+        type: string
+        description: "GKE release channel"
+        required: false
+        default: "EXTENDED"
+        enum: ["RAPID", "REGULAR", "STABLE", "EXTENDED"]
+        example: "EXTENDED"
+      
+      deletionProtection:
+        type: boolean
+        description: "Enable deletion protection for the cluster"
+        required: false
+        default: true
+        example: true
+      
+      nodePools:
+        type: array
+        description: "List of node pools to create"
+        required: false
+        default: []
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              description: "Node pool name"
+              required: true
+            machineType:
+              type: string
+              description: "Machine type for the node pool"
+              required: true
+            minNodes:
+              type: integer
+              description: "Minimum number of nodes"
+              required: true
+            maxNodes:
+              type: integer
+              description: "Maximum number of nodes"
+              required: true
+            nodeLocations:
+              type: array
+              description: "List of zones for node placement"
+              required: false
+            taints:
+              type: array
+              description: "List of taints for the node pool"
+              required: false
+              items:
+                type: object
+                properties:
+                  key:
+                    type: string
+                    required: true
+                  value:
+                    type: string
+                    required: true
+                  effect:
+                    type: string
+                    required: true
+            labels:
+              type: object
+              description: "Labels for the node pool"
+              required: false
+            spot:
+              type: boolean
+              description: "Use spot VMs"
+              required: false
+              default: false

@@ -1,0 +1,46 @@
+# Firewall rules for {{ .project_name }}
+# Use for VPC peering, LB access, or other ingress/egress rules
+
+{{ if .rules }}
+{{ range .rules }}
+resource "google_compute_firewall" "{{ .name }}" {
+  name    = "{{ .name }}"
+  network = {{ $.network }}
+
+  direction = "{{ .direction | default "INGRESS" }}"
+  priority  = {{ .priority | default 1000 }}
+
+  {{ if .source_ranges }}
+  source_ranges = [{{ range $i, $r := .source_ranges }}{{ if $i }}, {{ end }}"{{ $r }}"{{ end }}]
+  {{ end }}
+  {{ if .source_tags }}
+  source_tags = [{{ range $i, $t := .source_tags }}{{ if $i }}, {{ end }}"{{ $t }}"{{ end }}]
+  {{ end }}
+  {{ if .target_tags }}
+  target_tags = [{{ range $i, $t := .target_tags }}{{ if $i }}, {{ end }}"{{ $t }}"{{ end }}]
+  {{ end }}
+
+  {{ if .allow }}
+  {{ range .allow }}
+  allow {
+    protocol = "{{ .protocol }}"
+    {{ if .ports }}ports    = [{{ range $i, $p := .ports }}{{ if $i }}, {{ end }}"{{ $p }}"{{ end }}]
+    {{ end }}
+  }
+  {{ end }}
+  {{ end }}
+  {{ if .deny }}
+  {{ range .deny }}
+  deny {
+    protocol = "{{ .protocol }}"
+    {{ if .ports }}ports   = [{{ range $i, $p := .ports }}{{ if $i }}, {{ end }}"{{ $p }}"{{ end }}]
+    {{ end }}
+  }
+  {{ end }}
+  {{ end }}
+
+  {{ if .description }}description = "{{ .description }}"
+  {{ end }}
+}
+{{ end }}
+{{ end }}

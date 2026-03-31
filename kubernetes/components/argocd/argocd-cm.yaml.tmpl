@@ -1,0 +1,70 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cm
+  labels:
+    app.kubernetes.io/name: argocd-cm
+    app.kubernetes.io/part-of: argocd
+data:
+  repositories: |
+    {{- if .GitRepositories }}
+    {{- range .GitRepositories }}
+    - url: {{ .url }}
+      {{- if .sshPrivateKeySecret }}
+      sshPrivateKeySecret:
+        name: {{ .sshPrivateKeySecret.name }}
+        key: {{ .sshPrivateKeySecret.key }}
+      {{- end }}
+      {{- if .type }}
+      type: {{ .type }}
+      {{- end }}
+      {{- if .name }}
+      name: {{ .name }}
+      {{- end }}
+    {{- end }}
+    {{- else }}
+    - url: {{ if .GitRepositoryURL }}{{ .GitRepositoryURL }}{{ else }}git@github.com:alva-ai/infra-gitops.git{{ end }}
+      sshPrivateKeySecret:
+        name: {{ if .GitSSHSecretName }}{{ .GitSSHSecretName }}{{ else }}argocd-github-ssh-secret{{ end }}
+        key: {{ if .GitSSHSecretKey }}{{ .GitSSHSecretKey }}{{ else }}sshPrivateKey{{ end }}
+    {{- end }}
+
+  {{- if .ArgoCDURL }}
+  url: {{ .ArgoCDURL }}
+  {{- end }}
+
+  {{- if .DexConfig }}
+  dex.config: |
+    connectors:
+      {{- range .DexConfig.connectors }}
+      - type: {{ .type }}
+        id: {{ .id }}
+        name: {{ .name }}
+        config:
+          {{- if eq .type "github" }}
+          clientID: {{ .config.clientID }}
+          clientSecret: {{ .config.clientSecret }}
+          {{- if .config.orgs }}
+          orgs:
+            {{- range .config.orgs }}
+            - name: {{ .name }}
+            {{- end }}
+          {{- end }}
+          {{- end }}
+      {{- end }}
+  {{- else if .DexGitHubEnabled }}
+  dex.config: |
+    connectors:
+      - type: github
+        id: github
+        name: GitHub
+        config:
+          clientID: {{ .DexGitHubClientID }}
+          clientSecret: {{ .DexGitHubClientSecret }}
+          {{- if .DexGitHubOrgs }}
+          orgs:
+            {{- range .DexGitHubOrgs }}
+            - name: {{ . }}
+            {{- end }}
+          {{- end }}
+  {{- end }}

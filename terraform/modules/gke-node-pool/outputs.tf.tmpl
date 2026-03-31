@@ -1,0 +1,30 @@
+output "name" {
+  description = "Name of the node pool"
+  value       = google_container_node_pool.main.name
+}
+
+output "id" {
+  description = "ID of the node pool"
+  value       = google_container_node_pool.main.id
+}
+
+output "instance_group_urls" {
+  description = "List of instance group URLs which have been assigned to the node pool"
+  value       = google_container_node_pool.main.instance_group_urls
+}
+
+output "managed_instance_group_urls" {
+  description = "List of managed instance group URLs which have been assigned to the node pool"
+  value       = google_container_node_pool.main.managed_instance_group_urls
+}
+
+output "node_count" {
+  description = "Number of nodes in the node pool"
+  value       = google_container_node_pool.main.node_count
+}
+
+output "operation" {
+  description = "Operation ID for the node pool"
+  value       = google_container_node_pool.main.operation
+}
+

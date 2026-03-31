@@ -1,0 +1,156 @@
+# https://github.com/VictoriaMetrics/helm-charts/tree/master/charts/victoria-metrics-k8s-stack
+victoria-metrics-k8s-stack:
+  nameOverride: vmks
+  # -- Tenant to use for Grafana datasources and remote write
+  tenant: "0"
+  # -- If this chart is used in "Argocd" with "releaseName" field then
+  # VMServiceScrapes couldn't select the proper services.
+  # For correct working need set value 'argocdReleaseOverride=$ARGOCD_APP_NAME'
+  argocdReleaseOverride: ""
+
+  # -- VictoriaMetrics Operator dependency chart configuration. More values can be found [here](https://docs.victoriametrics.com/helm/victoriametrics-operator#parameters). Also checkout [here](https://docs.victoriametrics.com/operator/configuration/#environment-variables) possible ENV variables to configure operator behaviour
+  victoria-metrics-operator:
+    enabled: true
+    crds:
+      plain: true
+      cleanup:
+        enabled: false
+    serviceMonitor:
+      enabled: true
+      # -- Creates `VMServiceScrape` if `true` and `ServiceMonitor` otherwise.
+      vm: true
+    operator:
+      # -- By default, operator converts prometheus-operator objects.
+      # We disable it and add all serviceMonitor/podMonitor manually.
+      disable_prometheus_converter: false
+      # -- Compare-options and sync-options for prometheus objects converted by operator for properly use with ArgoCD
+      prometheus_converter_add_argocd_ignore_annotations: true
+      # Enables ownership reference for converted prometheus-operator objects, it will remove corresponding victoria-metrics objects in case of deletion prometheus one.
+      enable_converter_ownership: true
+
+    image:
+      registry: "quay.io"
+    env:
+      - name: "VM_USECUSTOMCONFIGRELOADER"
+        value: "true"
+      - name: VM_CUSTOMCONFIGRELOADERIMAGE
+        value: "quay.io/victoriametrics/operator:config-reloader-v0.53.0"
+      - name: VM_VLOGSDEFAULT_IMAGE
+        value: "quay.io/victoriametrics/victoria-logs"
+      - name: "VM_VMALERTDEFAULT_IMAGE"
+        value: "quay.io/victoriametrics/vmalert"
+      - name: "VM_VMAGENTDEFAULT_IMAGE"
+        value: "quay.io/victoriametrics/vmagent"
+      - name: "VM_VMSINGLEDEFAULT_IMAGE"
+        value: "quay.io/victoriametrics/victoria-metrics"
+      - name: "VM_VMCLUSTERDEFAULT_VMSELECTDEFAULT_IMAGE"
+        value: "quay.io/victoriametrics/vmselect"
+      - name: "VM_VMCLUSTERDEFAULT_VMSTORAGEDEFAULT_IMAGE"
+        value: "quay.io/victoriametrics/vmstorage"
+      - name: "VM_VMCLUSTERDEFAULT_VMINSERTDEFAULT_IMAGE"
+        value: "quay.io/victoriametrics/vminsert"
+      - name: "VM_VMBACKUP_IMAGE"
+        value: "quay.io/victoriametrics/vmbackupmanager"
+      - name: "VM_VMAUTHDEFAULT_IMAGE"
+        value: "quay.io/victoriametrics/vmauth"
+      - name: "VM_VMALERTMANAGER_ALERTMANAGERDEFAULTBASEIMAGE"
+        value: "quay.io/prometheus/alertmanager"
+
+
+  defaultDashboards:
+    # -- Enable custom dashboards installation
+    enabled: false
+
+  defaultRules:
+    # disable all default vmrules, create our custom one instead
+    create: false
+
+  alertmanager:
+    # -- Create VMAlertmanager CR
+    enabled: false
+
+  vmalert:
+    # -- VMAlert annotations
+    annotations: {}
+    # -- VMAlert labels
+    labels: {}
+    # -- Create VMAlert CR
+    enabled: false
+
+  vmauth:
+    # -- Enable VMAuth CR
+    enabled: false
+
+  vmagent:
+    # -- Create VMAgent CR
+    enabled: true
+    # spec for VMAgent crd
+    # https://docs.victoriametrics.com/operator/api.html#vmagentspec
+    spec:
+      scrapeInterval: 20s
+      selectAllByDefault: true
+      extraArgs:
+        # vmagent automatically switches to VictoriaMetrics remote write protocol when it sends data to VictoriaMetrics components
+        remoteWrite.forceVMProto: "true"
+        # remoteWrite.vmProtoCompressLevel: "5" # -22 ~ 22, default to 0
+
+        promscrape.streamParse: "true"
+        # Do not store original labels in vmagent's memory by default. This reduces the amount of memory used by vmagent
+        # but makes vmagent debugging UI less informative. See: https://docs.victoriametrics.com/vmagent/#relabel-debug
+        promscrape.dropOriginalLabels: "false"
+      # https://docs.victoriametrics.com/victoriametrics/#relabeling
+      globalScrapeMetricRelabelConfigs:
+        # Drop all unused/duplicate labels to avoid excessive label cardinality.
+        # This is a best practice for performance.
+        - action: labeldrop
+          regex: "beta_kubernetes_io_(.+)"
+        - action: labeldrop
+          regex: "failure_domain_(.+)"
+        - action: labeldrop
+          regex: "prometheus"
+  # -- Grafana dependency chart configuration. For possible values refer [here](https://github.com/grafana/helm-charts/tree/main/charts/grafana#configuration)
+  grafana:
+    enabled: false
+
+  prometheus-node-exporter:
+    enabled: true
+
+  # -- kube-state-metrics dependency chart configuration. For possible values check [here](https://github.com/prometheus-community/helm-charts/blob/main/charts/kube-state-metrics/values.yaml)
+  kube-state-metrics:
+    enabled: true
+
+  # -- Component scraping the kubelets
+  kubelet:
+    enabled: true
+
+  # Component scraping the kube api server
+  kubeApiServer:
+    # -- Enable Kube Api Server metrics scraping
+    enabled: true
+
+  # Component scraping the kube controller manager
+  kubeControllerManager:
+    # -- Enable kube controller manager metrics scraping
+    enabled: true
+
+  # Component scraping coreDns. Use either this or kubeDns
+  coreDns:
+    # -- Enabled CoreDNS metrics scraping
+    enabled: true
+
+
+  # Component scraping etcd
+  kubeEtcd:
+    # -- Enabled KubeETCD metrics scraping
+    enabled: true
+
+  # Component scraping kube scheduler
+  kubeScheduler:
+    # -- Enable KubeScheduler metrics scraping
+    enabled: true
+
+  # Component scraping kube proxy
+  kubeProxy:
+    # -- Enable kube proxy metrics scraping
+    enabled: false
+

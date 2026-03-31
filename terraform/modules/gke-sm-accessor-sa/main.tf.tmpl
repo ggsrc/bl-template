@@ -1,0 +1,28 @@
+resource "google_service_account" "main" {
+  project = var.project_id
+
+  account_id   = var.service_account_name
+  display_name = "GKE Secret Manager Accessor"
+}
+
+resource "google_project_iam_binding" "main" {
+  project = var.project_id
+  role    = "roles/secretmanager.secretAccessor"
+
+  members = [
+    "serviceAccount:${google_service_account.main.email}",
+  ]
+}
+
+# gives the Kubernetes ServiceAccount access to impersonate the IAM service account
+# https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity#kubernetes-sa-to-iam
+resource "google_service_account_iam_member" "sa_workload_identity_user" {
+  service_account_id = google_service_account.main.name
+
+  role = "roles/iam.workloadIdentityUser"
+
+  # gke's service account id
+  # format: "serviceAccount:PROJECT_ID.svc.id.goog[NAMESPACE/K8S_SA_NAME]"
+  member = "serviceAccount:${var.project_id}.svc.id.goog[external-secrets/gcp-secret-manager]"
+}
+

@@ -1,0 +1,101 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  name: node-exporter
+  namespace: monitoring-vm
+spec:
+  groups:
+  - name: NodeExporter
+
+    rules:
+      - alert: HostOutOfMemory
+        expr:
+          '(node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes * 100 < 10) * on(instance)
+          group_left (nodename) node_uname_info{nodename=~".+"}'
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host out of memory (instance {{ $labels.instance }})
+          description:
+            "Node memory is filling up (< 10% left)\n  VALUE = {{ $value }}\n  LABELS = {{ $labels
+            }}"
+
+      - alert: HostMemoryUnderMemoryPressure
+        expr:
+          '(rate(node_vmstat_pgmajfault[1m]) > 1000) * on(instance) group_left (nodename)
+          node_uname_info{nodename=~".+"}'
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host memory under memory pressure (instance {{ $labels.instance }})
+          description:
+            "The node is under heavy memory pressure. High rate of major page faults\n  VALUE = {{
+            $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostOutOfDiskSpace
+        expr:
+          '((node_filesystem_avail_bytes * 100) / node_filesystem_size_bytes < 10 and ON (instance,
+          device, mountpoint) node_filesystem_readonly == 0) * on(instance) group_left (nodename)
+          node_uname_info{nodename=~".+"}'
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host out of disk space (instance {{ $labels.instance }})
+          description:
+            "Disk is almost full (< 10% left)\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostOutOfInodes
+        expr:
+          '(node_filesystem_files_free{fstype!="msdosfs"} / node_filesystem_files{fstype!="msdosfs"}
+          * 100 < 10 and ON (instance, device, mountpoint) node_filesystem_readonly == 0) *
+          on(instance) group_left (nodename) node_uname_info{nodename=~".+"}'
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host out of inodes (instance {{ $labels.instance }})
+          description:
+            "Disk is almost running out of available inodes (< 10% left)\n  VALUE = {{ $value
+            }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostHighCpuLoad
+        expr:
+          '(sum by (instance) (avg by (mode, instance)
+          (rate(node_cpu_seconds_total{mode!="idle"}[2m]))) > 0.8) * on(instance) group_left
+          (nodename) node_uname_info{nodename=~".+"}'
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host high CPU load (instance {{ $labels.instance }})
+          description: "CPU load is > 80%\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostCpuHighIowait
+        expr:
+          '(avg by (instance) (rate(node_cpu_seconds_total{mode="iowait"}[5m])) * 100 > 10) *
+          on(instance) group_left (nodename) node_uname_info{nodename=~".+"}'
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host CPU high iowait (instance {{ $labels.instance }})
+          description:
+            "CPU iowait > 10%. A high iowait means that you are disk or network bound.\n  VALUE = {{
+            $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostConntrackLimit
+        expr:
+          '(node_nf_conntrack_entries / node_nf_conntrack_entries_limit > 0.8) * on(instance)
+          group_left (nodename) node_uname_info{nodename=~".+"}'
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host conntrack limit (instance {{ $labels.instance }})
+          description:
+            "The number of conntrack is approaching limit\n  VALUE = {{ $value }}\n  LABELS = {{
+            $labels }}"
+

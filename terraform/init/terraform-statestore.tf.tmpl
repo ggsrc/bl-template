@@ -1,0 +1,40 @@
+{{- if .TerraformBackendBucket }}
+resource "google_project" "main" {
+  name            = "{{ .TerraformBackendBucket }}"
+  project_id      = "{{ .TerraformBackendBucket }}"
+{{- $org := printf "%v" .OrganizationID -}}
+{{- if and $org (ne $org "0") }}
+  org_id          = var.gcp_common.org_id
+{{- end }}
+  billing_account = var.gcp_common.billing_account
+  labels = {
+    purpose = "terraform-statestore"
+    managed = "terraform"
+  }
+}
+
+resource "google_storage_bucket" "terraform-statestore" {
+  project = google_project.main.project_id
+
+  name          = "{{ .TerraformBackendBucket }}"
+  location      = "US"
+  force_destroy = false
+
+  uniform_bucket_level_access = true
+
+  versioning {
+    enabled = true
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+
+  labels = {
+    purpose = "terraform-statestore"
+    managed = "terraform"
+  }
+}
+{{- end }}
+
+

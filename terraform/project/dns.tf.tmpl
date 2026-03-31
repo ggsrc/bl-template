@@ -1,0 +1,90 @@
+# DNS Configuration for {{ .project_name }}
+
+{{ if .zones }}
+##############################################################################################
+# DNS Managed Zones
+##############################################################################################
+{{ range .zones }}
+resource "google_dns_managed_zone" "{{ .name }}" {
+  name        = "{{ replace .name "_" "-" }}"
+  dns_name    = "{{ .dns_name }}"
+  description = {{ if .description }}"{{ .description }}"{{ else }}"{{ .project_name }} DNS zone"{{ end }}
+
+  {{ if .dnssec_config }}
+  dnssec_config {
+    state = "{{ .dnssec_config.state }}"
+    {{ if .dnssec_config.default_key_specs }}
+    default_key_specs {
+      {{ range .dnssec_config.default_key_specs }}
+      algorithm  = "{{ .algorithm }}"
+      key_length  = {{ .key_length }}
+      key_type    = "{{ .key_type }}"
+      kind        = "{{ .kind }}"
+      {{ end }}
+    }
+    {{ end }}
+  }
+  {{ end }}
+
+  visibility = "{{ .visibility }}"
+  {{ if .private_visibility_config }}
+  private_visibility_config {
+    {{ if .private_visibility_config.networks }}
+    networks {
+      {{ range .private_visibility_config.networks }}
+      network_url = {{ .network_url }}
+      {{ end }}
+    }
+    {{ end }}
+  }
+  {{ end }}
+}
+{{ end }}
+{{ end }}
+
+{{ if .records }}
+##############################################################################################
+# DNS Records
+##############################################################################################
+{{ range .records }}
+resource "google_dns_record_set" "{{ .name }}" {
+  managed_zone = {{ if .zone_reference }}{{ .zone_reference }}{{ else }}google_dns_managed_zone.{{ .zone_name }}.name{{ end }}
+  name         = {{ if .full_name }}"{{ .full_name }}"{{ else }}"{{ .record_name }}.${google_dns_managed_zone.{{ .zone_name }}.dns_name}"{{ end }}
+  type         = "{{ .type }}"
+  ttl          = {{ if .ttl }}{{ .ttl }}{{ else }}300{{ end }}
+  {{ if .rrdatas }}
+  rrdatas = [
+    {{ range $i, $data := .rrdatas }}{{ if $i }},
+    {{ end }}"{{ $data }}"{{ end }}
+  ]
+  {{ end }}
+  {{ if .routing_policy }}
+  routing_policy {
+    {{ if .routing_policy.geo }}
+    geo {
+      {{ range .routing_policy.geo }}
+      location = "{{ .location }}"
+      rrdatas = [
+        {{ range $i, $data := .rrdatas }}{{ if $i }},
+        {{ end }}"{{ $data }}"{{ end }}
+      ]
+      {{ end }}
+    }
+    {{ end }}
+    {{ if .routing_policy.weighted }}
+    weighted {
+      {{ range .routing_policy.weighted }}
+      weight = {{ .weight }}
+      rrdatas = [
+        {{ range $i, $data := .rrdatas }}{{ if $i }},
+        {{ end }}"{{ $data }}"{{ end }}
+      ]
+      {{ end }}
+    }
+    {{ end }}
+  }
+  {{ end }}
+}
+{{ end }}
+{{ end }}
+

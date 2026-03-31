@@ -1,0 +1,154 @@
+##############################################################################################
+# IAM
+##############################################################################################
+# Google recommends custom service accounts that have cloud-platform scope and permissions granted via IAM Roles.
+resource "google_service_account" "gke_node" {
+  account_id   = "gke-node-sa"
+  display_name = "GKE Node Service Account"
+}
+
+# Required to write logs to Cloud logging by managed prometheus.
+resource "google_project_iam_binding" "gke_node_log_writer" {
+  project = var.project_id
+  role    = "roles/logging.logWriter"
+  members = [
+    "serviceAccount:${google_service_account.gke_node.email}",
+    "serviceAccount:firebase-measurement@system.gserviceaccount.com"
+  ]
+}
+
+# Required to send metrics by managed prometheus.
+resource "google_project_iam_binding" "gke_node_metric_writer" {
+  project = var.project_id
+  role    = "roles/monitoring.metricWriter"
+  members = [
+    "serviceAccount:${google_service_account.gke_node.email}"
+  ]
+}
+
+##############################################################################################
+# GKE
+##############################################################################################
+resource "google_container_cluster" "main" {
+  name     = var.cluster_name
+  location = var.region
+
+  # We can't create a cluster with no node pool defined, but we want to only use
+  # separately managed node pools. So we create the smallest possible default
+  # node pool and immediately delete it.
+  remove_default_node_pool = true
+  initial_node_count       = 1
+  node_locations     = var.node_locations
+
+  # IMPORTANT: Creates a VPC native cluster instead of Route based cluster. Otherwise NEG won't work.
+  networking_mode = "VPC_NATIVE"
+  ip_allocation_policy {
+    cluster_ipv4_cidr_block  = var.cluster_ipv4_cidr_block
+    services_ipv4_cidr_block = var.services_ipv4_cidr_block
+  }
+
+  network    = var.network
+  subnetwork = var.subnetwork
+
+  gateway_api_config {
+    # Enable gateway API so that we can create LB with Gateway resource annotations.
+    channel = "CHANNEL_STANDARD"
+  }
+
+  logging_config {
+    # Supported values include: SYSTEM_COMPONENTS, APISERVER, CONTROLLER_MANAGER, SCHEDULER, and WORKLOADS.
+    #enable_components = []
+    enable_components = var.logging_config_enable_components
+  }
+
+  monitoring_config {
+    # Supported values include: SYSTEM_COMPONENTS, APISERVER, CONTROLLER_MANAGER, and SCHEDULER
+    # enable_components = ["SYSTEM_COMPONENTS"]
+    enable_components = var.monitoring_config_enable_components
+    managed_prometheus {
+      # enabled = true
+      # enabled = false
+      enabled = var.managed_prometheus_enabled
+    }
+  }
+
+  # GSA requires workload identity. e.g. external DNS
+  workload_identity_config {
+    workload_pool = "${var.project_id}.svc.id.goog"
+  }
+
+  release_channel {
+    channel = var.release_channel
+  }
+
+  deletion_protection = var.deletion_protection
+}
+
+resource "google_container_node_pool" "main" {
+  name           = "main"
+  location       = google_container_cluster.main.location
+  node_locations = var.node_locations
+  cluster        = google_container_cluster.main.name
+
+  autoscaling {
+    min_node_count  = var.min_node_count
+    max_node_count  = var.max_node_count
+    location_policy = var.location_policy
+    # Optionally set total_min_node_count and total_max_node_count if provided
+    total_min_node_count = var.total_min_node_count
+    total_max_node_count = var.total_max_node_count
+  }
+
+  network_config {
+    # internal IP addresses only
+    enable_private_nodes = true
+  }
+
+  initial_node_count = var.initial_node_count
+
+  node_config {
+    oauth_scopes = [
+      "https://www.googleapis.com/auth/logging.write",
+      "https://www.googleapis.com/auth/monitoring",
+      "https://www.googleapis.com/auth/cloud-platform",
+      "https://www.googleapis.com/auth/devstorage.read_only",
+    ]
+
+    labels = {
+      project = var.project_id
+    }
+
+    service_account = google_service_account.gke_node.email
+
+    # preemptible  = true
+    machine_type  = var.machine_type
+    disk_size_gb  = var.disk_size_gb
+    tags = [
+      "gke-node",
+      "${var.project_id}-gke",
+      "gke-private-node",
+      "gke-nat",
+      "gke-private-nat-pool",
+    ]
+    metadata = {
+      disable-legacy-endpoints = "true"
+    }
+  }
+
+  # 自动升级与修复
+  management {
+    auto_repair  = true
+    auto_upgrade = true
+  }
+
+  # 只允许通过扩容节点来完成升级，每次只允许扩容 1 个节点
+  upgrade_settings {
+    max_unavailable = 0
+    max_surge       = 1
+  }
+
+  lifecycle {
+    ignore_changes = [initial_node_count]
+  }
+}
+

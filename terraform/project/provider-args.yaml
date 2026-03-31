@@ -1,0 +1,22 @@
+version: 1.0.0
+
+# terraform/project/provider 组件的参数定义
+
+parameters:
+  # 组件级参数（对应 config.yaml projects 中的 provider 组件）
+  components:
+    provider:
+      description: "Terraform provider configuration"
+      project_id:
+        type: string
+        description: "GCP Project ID"
+        required: true
+        example: "my-project-123"
+      
+      region:
+        type: string
+        description: "GCP Region"
+        required: false
+        default: "us-west1"
+        enum: ["us-west1", "us-west2", "us-west3", "us-west4", "us-east1", "us-east4", "us-central1", "asia-east1", "asia-northeast1", "europe-west1"]
+        example: "us-west1"

@@ -1,0 +1,103 @@
+components:
+  - name: istio
+    path: 
+    - kubernetes/components/istio/namespace.yaml.tmpl
+    - kubernetes/components/istio/operator.yaml.tmpl
+    - kubernetes/components/istio/kustomization.yaml.tmpl
+    - kubernetes/components/istio/install.tmpl
+    - kubernetes/components/istio/validate.tmpl
+    install: bash ./install
+    installType: custom
+    check: bash ./validate
+    dependencies:
+      - external-secrets-operator
+  - name: sealed-secret
+    path:
+    - kubernetes/components/sealed-secret/kustomization.yaml.tmpl
+    args:
+    - kubernetes/components/sealed-secret/args.yaml
+    installType: kubectl
+  - name: external-secrets-operator
+    path:
+    - kubernetes/components/external-secrets-operator/Chart.yaml
+    - kubernetes/components/external-secrets-operator/values.yaml.tmpl
+    - kubernetes/components/external-secrets-operator/install.tmpl
+    - kubernetes/components/external-secrets-operator/validate.tmpl
+    args:
+    - kubernetes/components/external-secrets-operator/args.yaml
+    install: bash ./install
+    installType: custom
+    check: bash ./validate
+  - name: external-secrets
+    path:
+    - kubernetes/components/external-secrets/namespace.yaml.tmpl
+    - kubernetes/components/external-secrets/cluster-secret-store.yaml.tmpl
+    - kubernetes/components/external-secrets/kustomization.yaml.tmpl
+    installType: kubectl
+    dependencies:
+      - external-secrets-operator
+  - name: argocd
+    path:
+    - kubernetes/components/argocd/namespace.yaml.tmpl
+    - kubernetes/components/argocd/app-namespace.yaml.tmpl
+    - kubernetes/components/argocd/kustomization.yaml.tmpl
+    - kubernetes/components/argocd/argocd-cm.yaml.tmpl
+    - kubernetes/components/argocd/argocd-rbac-cm.yaml.tmpl
+    - kubernetes/components/argocd/argocd-cmd-params-cm.yaml.tmpl
+    - kubernetes/components/argocd/install
+    - kubernetes/components/argocd/gen_ssh_sealed_secrets.sh.tmpl
+    args:
+    - kubernetes/components/argocd/args.yaml
+    install: bash ./install
+    installType: custom
+    dependencies:
+      - sealed-secret
+      - external-secrets
+  - name: victoria-metrics-operator
+    path:
+    - kubernetes/components/victoria-metrics-operator/Chart.yaml
+    - kubernetes/components/victoria-metrics-operator/Chart.lock
+    - kubernetes/components/victoria-metrics-operator/values.yaml
+    - kubernetes/components/victoria-metrics-operator/values-override.yaml.tmpl
+    - kubernetes/components/victoria-metrics-operator/templates/vminsert-internal-lb.yaml
+    - kubernetes/components/victoria-metrics-operator/templates/recoding-rules/node-exporter.yaml
+    - kubernetes/components/victoria-metrics-operator/templates/recoding-rules/k8s.yaml
+    - kubernetes/components/victoria-metrics-operator/install.tmpl
+    - kubernetes/components/victoria-metrics-operator/validate.tmpl
+    install: bash ./install
+    installType: custom
+    check: bash ./validate
+    dependencies:
+      - external-secrets-operator
+      - istio
+  - name: grafana
+    path:
+    - kubernetes/components/grafana/Chart.yaml
+    - kubernetes/components/grafana/Chart.lock
+    - kubernetes/components/grafana/values.yaml
+    - kubernetes/components/grafana/values-corp.yaml.tmpl
+    - kubernetes/components/grafana/templates/external-secret.yaml
+    - kubernetes/components/grafana/install.tmpl
+    install: bash ./install
+    installType: custom
+    dependencies:
+      - victoria-metrics-operator
+  - name: victoria-metrics
+    path:
+    - kubernetes/components/victoria-metrics/kustomization.yaml
+    - kubernetes/components/victoria-metrics/vmalertmanagerconfig.yaml.tmpl
+    - kubernetes/components/victoria-metrics/slack-webhook-url.yaml
+    - kubernetes/components/victoria-metrics/alert-rules/kustomization.yaml
+    - kubernetes/components/victoria-metrics/alert-rules/vmoperator.yaml
+    - kubernetes/components/victoria-metrics/alert-rules/vmhealth.yaml
+    - kubernetes/components/victoria-metrics/alert-rules/vmcluster.yaml
+    - kubernetes/components/victoria-metrics/alert-rules/vmagent.yaml
+    - kubernetes/components/victoria-metrics/alert-rules/node-exporter.yaml
+    - kubernetes/components/victoria-metrics/alert-rules/llm-matcher.yaml
+    - kubernetes/components/victoria-metrics/alert-rules/kube-state-metrics.yaml
+    - kubernetes/components/victoria-metrics/alert-rules/istio.yaml
+    - kubernetes/components/victoria-metrics/install.tmpl
+    install: bash ./install
+    installType: custom
+    dependencies:
+      - victoria-metrics-operator

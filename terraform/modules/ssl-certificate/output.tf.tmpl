@@ -1,0 +1,13 @@
+output "cert_name" {
+  value = google_certificate_manager_certificate.main.name
+}
+
+output "cert_id" {
+  description = "Cert ID with format projects/{{ .project }}/locations/{{ .location }}/certificates/{{ .name }}"
+  value       = google_certificate_manager_certificate.main.id
+}
+
+# output "certmap_name" {
+#   value = google_certificate_manager_certificate_map.main.name
+# }
+

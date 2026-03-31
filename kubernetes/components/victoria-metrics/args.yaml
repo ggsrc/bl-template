@@ -1,0 +1,44 @@
+version: 1.0.0
+
+# kubernetes/components/victoria-metrics 组件的参数定义
+# 应用 Victoria Metrics alert rules  via kustomize
+
+parameters:
+  components:
+    victoria-metrics:
+      namespace:
+        type: string
+        description: "Namespace to apply alert rules (e.g. monitoring-vm)"
+        required: false
+        default: "monitoring-vm"
+      alertCluster:
+        type: string
+        description: "Cluster matcher for alert route (e.g. prd, stg)"
+        required: false
+        default: "prd"
+      slackSecretName:
+        type: string
+        description: "Secret name for Slack webhook URL"
+        required: false
+        default: "slack-webhook-url-alva-infra-alert"
+      slackSecretKey:
+        type: string
+        description: "Secret key for Slack webhook URL"
+        required: false
+        default: "url"
+      slackChannel:
+        type: string
+        description: "Slack channel for alerts"
+        required: false
+        default: "#alva-infra-alert"
+      kustomizeDir:
+        type: string
+        description: "Path to kustomization directory (default: current dir .)"
+        required: false
+        default: "."
+      # 安装脚本会检查 kubectl 是否存在；若设置则同时校验最低版本
+      minKubectlVersion:
+        type: string
+        description: "Minimum kubectl version required by install script (e.g. 1.24). Empty = only check presence"
+        required: false
+        default: ""

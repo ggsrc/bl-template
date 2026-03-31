@@ -1,0 +1,22 @@
+# GitOps configuration for {{ .ApplicationName | default .Name }}
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: {{ .ApplicationName | default .Name }}
+  namespace: {{ .ApplicationNamespace | default "argocd" }}
+spec:
+  destination:
+    namespace: {{ .DestinationNamespace | default .ApplicationNamespace | default "app" }}
+    server: {{ .DestinationServer | default .Server | default "https://kubernetes.default.svc" }}
+  project: {{ .Project | default .ApplicationProject }}
+  source:
+    path: {{ .SourcePath | default .ApplicationPath }}
+    repoURL: {{ .SourceRepoURL | default .ApplicationRepo }}
+    targetRevision: {{ .SourceTargetRevision | default .ApplicationRevision | default "HEAD" }}
+  {{- if or .SyncPolicyPrune .SyncPolicySelfHeal (eq .ApplicationSyncPolicy "Automatic") }}
+  syncPolicy:
+    automated:
+      prune: {{ if ne .SyncPolicyPrune nil }}{{ .SyncPolicyPrune }}{{ else }}true{{ end }}
+      selfHeal: {{ if ne .SyncPolicySelfHeal nil }}{{ .SyncPolicySelfHeal }}{{ else }}true{{ end }}
+  {{- end }}

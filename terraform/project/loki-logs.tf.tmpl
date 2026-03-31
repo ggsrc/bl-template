@@ -1,0 +1,72 @@
+# Loki Logs Configuration for {{ .project_name }}
+
+{{ if .enable_loki_logs }}
+##############################################################################################
+# Loki GCS Bucket
+# GCS bucket for Loki logs storage
+##############################################################################################
+
+resource "google_storage_bucket" "loki_logs" {
+  name                        = "${var.project_id}-{{ .bucket_name }}"
+  location                    = {{ if .location }}"{{ .location }}"{{ else }}var.region{{ end }}
+  uniform_bucket_level_access = true
+  force_destroy               = {{ if .force_destroy }}{{ .force_destroy }}{{ else }}false{{ end }}
+
+  {{ if .lifecycle_rule }}
+  # Lifecycle policy to delete logs older than retention_period + 1 day
+  lifecycle_rule {
+    condition {
+      age = {{ .lifecycle_rule.age }}
+    }
+    action {
+      type = "Delete"
+    }
+  }
+  {{ end }}
+
+  versioning {
+    enabled = {{ if .versioning_enabled }}{{ .versioning_enabled }}{{ else }}false{{ end }}
+  }
+}
+
+##############################################################################################
+# Loki Service Account
+# Service account for Loki to access GCS bucket
+##############################################################################################
+
+resource "google_service_account" "loki_logs" {
+  project = var.project_id
+
+  account_id   = "{{ .service_account_id }}"
+  display_name = {{ if .service_account_display_name }}"{{ .service_account_display_name }}"{{ else }}"Loki logs service account"{{ end }}
+  {{ if .service_account_description }}description  = "{{ .service_account_description }}"
+  {{ end }}
+}
+
+##############################################################################################
+# GCS Bucket IAM Permissions
+# Grant Loki service account access to the GCS bucket
+##############################################################################################
+
+resource "google_storage_bucket_iam_member" "loki_logs_object_admin" {
+  depends_on = [google_storage_bucket.loki_logs]
+  bucket = google_storage_bucket.loki_logs.name
+  role   = "{{ .iam_role }}"
+  member = "serviceAccount:${google_service_account.loki_logs.email}"
+}
+
+##############################################################################################
+# Workload Identity Binding
+# Allows Kubernetes ServiceAccount to impersonate the IAM service account
+##############################################################################################
+
+resource "google_service_account_iam_member" "loki_logs_workload_identity_user" {
+  depends_on = [google_service_account.loki_logs]
+  service_account_id = google_service_account.loki_logs.name
+  role               = "roles/iam.workloadIdentityUser"
+
+  # Kubernetes ServiceAccount in the format: PROJECT_ID.svc.id.goog[NAMESPACE/K8S_SA_NAME]
+  member = "serviceAccount:${var.project_id}.svc.id.goog[{{ .namespace }}/{{ .kubernetes_service_account }}]"
+}
+{{ end }}
+

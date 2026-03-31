@@ -1,0 +1,577 @@
+version: 1.0.0
+
+# gitops 组件的参数定义
+# Parameters are organized by deployment type (Deployment vs StatefulSet) and template type
+
+parameters:
+  # 组件级参数
+  components:
+    # Deployment 类型应用配置
+    deployment:
+      description: "Deployment template configuration parameters for stateless applications"
+      
+      # Deployment 特有配置
+      Tolerations:
+        type: list[object]
+        description: "Pod tolerations for node scheduling (Deployment specific)"
+        required: false
+        default:
+          - key: "nodepool"
+            operator: "Equal"
+            value: "spotvm"
+            effect: "NoSchedule"
+        example:
+          - key: "nodepool"
+            operator: "Equal"
+            value: "spotvm"
+            effect: "NoSchedule"
+      
+      # 共享的容器配置
+      ContainerPorts:
+        type: list[object]
+        description: "Container ports configuration"
+        required: false
+        default:
+          - containerPort: 3000
+            name: http-rest
+          - containerPort: 8080
+            name: http
+          - containerPort: 9090
+            name: grpc
+          - containerPort: 9091
+            name: grpc-mtls
+          - containerPort: 8080
+            name: liveness
+          - containerPort: 8080
+            name: readiness
+          - containerPort: 4014
+            name: http-prometheus
+        example:
+          - containerPort: 3000
+            name: http-rest
+          - containerPort: 8080
+            name: http
+          - containerPort: 9090
+            name: grpc
+      
+      LivenessProbe:
+        type: object
+        description: "Liveness probe configuration"
+        required: false
+        default:
+          httpGet:
+            path: "/health/alive"
+            port: 8080
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          timeoutSeconds: 5
+        example:
+          httpGet:
+            path: "/health/alive"
+            port: 8080
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          timeoutSeconds: 5
+      
+      ReadinessProbe:
+        type: object
+        description: "Readiness probe configuration"
+        required: false
+        default:
+          httpGet:
+            path: "/health/ready"
+            port: 8080
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          timeoutSeconds: 5
+        example:
+          httpGet:
+            path: "/health/ready"
+            port: 8080
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          timeoutSeconds: 5
+      
+      # Service 配置（Deployment 和 StatefulSet 共享）
+      ServicePorts:
+        type: list[object]
+        description: "Service ports configuration"
+        required: false
+        default:
+          - name: http-rest
+            port: 3000
+            targetPort: 3000
+          - name: http
+            port: 8080
+            targetPort: 8080
+          - name: grpc
+            port: 9090
+            targetPort: 9090
+          - name: grpc-mtls
+            port: 9091
+            targetPort: 9091
+          - name: http-prometheus
+            port: 4014
+            targetPort: 4014
+        example:
+          - name: http-rest
+            port: 3000
+            targetPort: 3000
+          - name: http
+            port: 8080
+            targetPort: 8080
+      
+      # HPA 配置
+      HPA:
+        type: object
+        description: "HorizontalPodAutoscaler configuration"
+        required: false
+        default:
+          minReplicas: 1
+          maxReplicas: 10
+          metrics:
+            - type: Resource
+              resource:
+                name: memory
+                target:
+                  type: Utilization
+                  averageUtilization: 75
+            - type: Resource
+              resource:
+                name: cpu
+                target:
+                  type: Utilization
+                  averageUtilization: 85
+        example:
+          minReplicas: 1
+          maxReplicas: 10
+          metrics:
+            - type: Resource
+              resource:
+                name: cpu
+                target:
+                  type: Utilization
+                  averageUtilization: 80
+      
+      # VirtualService 配置
+      VirtualService:
+        type: object
+        description: "Istio VirtualService configuration"
+        required: false
+        default:
+          hosts:
+            - "$(SERVICE_NAME).$(SERVICE_NAMESPACE).svc.cluster.local"
+          gateways:
+            - mesh
+          http:
+            - name: http
+              match:
+                - port: 80
+                  gateways:
+                    - mesh
+              retries:
+                attempts: 3
+                perTryTimeout: "10s"
+              route:
+                - destination:
+                    host: "$(SERVICE_NAME).$(SERVICE_NAMESPACE).svc.cluster.local"
+                    port:
+                      number: 8080
+                  weight: 100
+            - name: grpc
+              match:
+                - port: 9090
+                  gateways:
+                    - mesh
+              retries:
+                attempts: 2
+                perTryTimeout: "30s"
+              route:
+                - destination:
+                    host: "$(SERVICE_NAME).$(SERVICE_NAMESPACE).svc.cluster.local"
+                    port:
+                      number: 9090
+                  weight: 100
+            - name: grpc-mtls
+              match:
+                - port: 9091
+                  gateways:
+                    - mesh
+              retries:
+                attempts: 2
+                perTryTimeout: "30s"
+              route:
+                - destination:
+                    host: "$(SERVICE_NAME).$(SERVICE_NAMESPACE).svc.cluster.local"
+                    port:
+                      number: 9091
+                  weight: 100
+        example:
+          hosts:
+            - "example.com"
+          gateways:
+            - mesh
+      
+      # ServiceMonitor 配置
+      ServiceMonitor:
+        type: object
+        description: "Prometheus ServiceMonitor configuration"
+        required: false
+        default:
+          namespace: monitoring
+          labels:
+            prometheus: enabled
+          namespaceSelector:
+            matchNames:
+              - "$(SERVICE_NAMESPACE)"
+          selector:
+            matchLabels:
+              app: "$(SERVICE_NAME)"
+              version: "APP_VERSION"
+          endpoints:
+            - interval: 30s
+              port: http-prometheus
+        example:
+          namespace: monitoring
+          endpoints:
+            - interval: 30s
+              port: http-prometheus
+      
+      # VMServiceScrape 配置（VictoriaMetrics Operator）
+      VMServiceScrape:
+        type: object
+        description: "VictoriaMetrics VMServiceScrape configuration for VMAgent scraping"
+        required: false
+        default:
+          namespace: monitoring
+          labels:
+            victoriametrics: enabled
+          namespaceSelector:
+            matchNames:
+              - "$(SERVICE_NAMESPACE)"
+          endpoints:
+            - port: http-prometheus
+              interval: 30s
+        example:
+          namespace: monitoring
+          endpoints:
+            - port: http-prometheus
+              interval: 30s
+    
+    # StatefulSet 类型应用配置
+    statefulset:
+      description: "StatefulSet template configuration parameters for stateful applications"
+      
+      # StatefulSet 特有配置
+      ServiceName:
+        type: string
+        description: "Headless service name for StatefulSet"
+        required: false
+        default: "APP_NAME"
+        example: "my-app"
+      
+      # 共享的容器配置
+      ContainerPorts:
+        type: list[object]
+        description: "Container ports configuration"
+        required: false
+        default:
+          - containerPort: 3000
+            name: http-rest
+          - containerPort: 8080
+            name: http
+          - containerPort: 9090
+            name: grpc
+          - containerPort: 8080
+            name: liveness
+          - containerPort: 8080
+            name: readiness
+          - containerPort: 4014
+            name: http-prometheus
+        example:
+          - containerPort: 3000
+            name: http-rest
+          - containerPort: 8080
+            name: http
+          - containerPort: 9090
+            name: grpc
+      
+      LivenessProbe:
+        type: object
+        description: "Liveness probe configuration"
+        required: false
+        default:
+          httpGet:
+            path: "/health/alive"
+            port: 8080
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          timeoutSeconds: 5
+        example:
+          httpGet:
+            path: "/health/alive"
+            port: 8080
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          timeoutSeconds: 5
+      
+      ReadinessProbe:
+        type: object
+        description: "Readiness probe configuration"
+        required: false
+        default:
+          httpGet:
+            path: "/health/ready"
+            port: 8080
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          timeoutSeconds: 5
+        example:
+          httpGet:
+            path: "/health/ready"
+            port: 8080
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          timeoutSeconds: 5
+      
+      # Service 配置（StatefulSet 和 Deployment 共享）
+      ServicePorts:
+        type: list[object]
+        description: "Service ports configuration"
+        required: false
+        default:
+          - name: http-rest
+            port: 3000
+            targetPort: 3000
+          - name: http
+            port: 8080
+            targetPort: 8080
+          - name: grpc
+            port: 9090
+            targetPort: 9090
+          - name: grpc-mtls
+            port: 9091
+            targetPort: 9091
+          - name: http-prometheus
+            port: 4014
+            targetPort: 4014
+        example:
+          - name: http-rest
+            port: 3000
+            targetPort: 3000
+          - name: http
+            port: 8080
+            targetPort: 8080
+      
+      # HPA 配置（StatefulSet 也可以使用 HPA）
+      HPA:
+        type: object
+        description: "HorizontalPodAutoscaler configuration"
+        required: false
+        default:
+          minReplicas: 1
+          maxReplicas: 10
+          metrics:
+            - type: Resource
+              resource:
+                name: memory
+                target:
+                  type: Utilization
+                  averageUtilization: 75
+            - type: Resource
+              resource:
+                name: cpu
+                target:
+                  type: Utilization
+                  averageUtilization: 85
+        example:
+          minReplicas: 1
+          maxReplicas: 5
+          metrics:
+            - type: Resource
+              resource:
+                name: cpu
+                target:
+                  type: Utilization
+                  averageUtilization: 80
+      
+      # VirtualService 配置
+      VirtualService:
+        type: object
+        description: "Istio VirtualService configuration"
+        required: false
+        default:
+          hosts:
+            - "$(SERVICE_NAME).$(SERVICE_NAMESPACE).svc.cluster.local"
+          gateways:
+            - mesh
+          http:
+            - name: http
+              match:
+                - port: 80
+                  gateways:
+                    - mesh
+              retries:
+                attempts: 3
+                perTryTimeout: "10s"
+              route:
+                - destination:
+                    host: "$(SERVICE_NAME).$(SERVICE_NAMESPACE).svc.cluster.local"
+                    port:
+                      number: 8080
+                  weight: 100
+            - name: grpc
+              match:
+                - port: 9090
+                  gateways:
+                    - mesh
+              retries:
+                attempts: 2
+                perTryTimeout: "30s"
+              route:
+                - destination:
+                    host: "$(SERVICE_NAME).$(SERVICE_NAMESPACE).svc.cluster.local"
+                    port:
+                      number: 9090
+                  weight: 100
+            - name: grpc-mtls
+              match:
+                - port: 9091
+                  gateways:
+                    - mesh
+              retries:
+                attempts: 2
+                perTryTimeout: "30s"
+              route:
+                - destination:
+                    host: "$(SERVICE_NAME).$(SERVICE_NAMESPACE).svc.cluster.local"
+                    port:
+                      number: 9091
+                  weight: 100
+        example:
+          hosts:
+            - "example.com"
+          gateways:
+            - mesh
+      
+      # ServiceMonitor 配置
+      ServiceMonitor:
+        type: object
+        description: "Prometheus ServiceMonitor configuration"
+        required: false
+        default:
+          namespace: monitoring
+          labels:
+            prometheus: enabled
+          namespaceSelector:
+            matchNames:
+              - "$(SERVICE_NAMESPACE)"
+          selector:
+            matchLabels:
+              app: "$(SERVICE_NAME)"
+              version: "APP_VERSION"
+          endpoints:
+            - interval: 30s
+              port: http-prometheus
+        example:
+          namespace: monitoring
+          endpoints:
+            - interval: 30s
+              port: http-prometheus
+      
+      # VMServiceScrape 配置（VictoriaMetrics Operator）
+      VMServiceScrape:
+        type: object
+        description: "VictoriaMetrics VMServiceScrape configuration for VMAgent scraping"
+        required: false
+        default:
+          namespace: monitoring
+          labels:
+            victoriametrics: enabled
+          namespaceSelector:
+            matchNames:
+              - "$(SERVICE_NAMESPACE)"
+          endpoints:
+            - port: http-prometheus
+              interval: 30s
+        example:
+          namespace: monitoring
+          endpoints:
+            - port: http-prometheus
+              interval: 30s
+    # ArgoCD Application 配置
+    app:
+      description: "ArgoCD Application configuration parameters"
+      
+      # Application 基础配置
+      ApplicationName:
+        type: string
+        description: "ArgoCD Application name"
+        required: true
+        example: "hello-world"
+      
+      ApplicationNamespace:
+        type: string
+        description: "Namespace where ArgoCD Application resource is created"
+        required: false
+        default: "argocd"
+        example: "argocd"
+      
+      # Destination 配置
+      DestinationNamespace:
+        type: string
+        description: "Target namespace where application will be deployed"
+        required: false
+        default: "app"
+        example: "app"
+      
+      DestinationServer:
+        type: string
+        description: "Kubernetes server URL where application will be deployed"
+        required: false
+        default: "https://kubernetes.default.svc"
+        example: "https://kubernetes.default.svc"
+      
+      # Project 配置
+      Project:
+        type: string
+        description: "ArgoCD project name"
+        required: false
+        default: "default"
+        example: "default"
+      
+      # Source 配置
+      SourcePath:
+        type: string
+        description: "Path in Git repository to application manifests"
+        required: true
+        example: "your-username/hello-world.git"
+      
+      SourceRepoURL: 
+
+        type: string
+        description: "Git repository URL containing application manifests"
+        required: true
+        example: "https://github.com/your-username/hello-world.git"
+      
+      SourceTargetRevision:
+        type: string
+        description: "Git branch, tag, or commit to sync from"
+        required: false
+        default: "HEAD"
+        example: "HEAD"
+      
+      # SyncPolicy 配置
+      SyncPolicyPrune:
+        type: boolean
+        description: "Automatically delete resources when they are removed from Git"
+        required: false
+        default: true
+        example: true
+      
+      SyncPolicySelfHeal:
+        type: boolean
+        description: "Automatically sync when cluster state deviates from Git state"
+        required: false
+        default: true
+        example: true

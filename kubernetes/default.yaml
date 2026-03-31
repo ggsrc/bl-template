@@ -1,0 +1,185 @@
+version: 1.0.0
+global: {}
+projects:
+  - name: prd
+    components:
+      - name: 0-external-secrets-operator
+        parameters:
+          namespace: external-secrets-operator
+          release-name: external-secrets-operator
+          replica-count: 1
+          image-tag: "v2.0.1"
+          min-helm-version: "v3.18.4"
+          min-kubectl-version: "1.24"
+      - name: 0-external-secrets
+        parameters:
+          namespace: external-secrets
+          project-id: prd
+          secret-manager-service-account-email: sa-sm-accessor@prd.iam.gserviceaccount.com
+          service-account-name: external-secrets-sa
+      - name: 0-sealed-secret
+        parameters:
+          namespace: sealed-secret
+          controller-manifest-url: https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.32.2/controller.yaml
+      - name: 1-istio
+        parameters:
+          namespace: istio
+          istio-operator-version: 1.20.0
+          istio-version: 1.20.0
+          istio-namespace: istio
+          istio-operator-namespace: istio-operator
+          istio-operator-service-account: istio-operator
+      - name: 2-argocd
+        parameters:
+          namespace: argocd
+          argocd-url: https://app.example.com/argocd
+          argocd-manifest-url: https://raw.githubusercontent.com/argoproj/argo-cd/v2.11.7/manifests/install.yaml
+          dex-config:
+            connectors:
+              - type: github
+                id: github
+                name: GitHub
+                config:
+                  clientID: XXXXXXX
+                  clientSecret: XXXXXXXX
+                  orgs:
+                    - name: example-org
+          RBACPolicies:
+            - policy: "p, role:org-admin, applications, *, default/*, allow"
+            - policy: "p, role:org-admin, clusters, get, *, allow"
+            - policy: "p, role:org-admin, repositories, get, *, allow"
+            - policy: "p, role:org-admin, repositories, create, *, allow"
+            - policy: "p, role:org-admin, repositories, update, *, allow"
+            - policy: "p, role:org-admin, repositories, delete, *, allow"
+            - policy: "p, role:org-backend, applications, *, default/*, allow"
+          RBACRoleBindings:
+            - group: "SiriusPlatform:Infra"
+              role: "role:org-admin"
+            - group: "SiriusPlatform:backend"
+              role: "role:org-backend"
+      - name: 3-victoria-metrics-operator
+        parameters:
+          namespace: monitoring-vm
+          release-name: victoriametrics
+          cluster: prd
+          env: prd
+          remote-write-url: "http://10.10.0.8:8480/insert/0/prometheus/api/v1/write"
+          vmagent-cpu-limit: "3"
+          vmagent-memory-limit: "2Gi"
+          vmagent-cpu-request: "1500m"
+          vmagent-memory-request: "1Gi"
+      - name: 4-victoria-metrics
+        parameters:
+          namespace: monitoring-vm
+          alert-cluster: prd
+  - name: stg
+    components:
+      - name: 0-external-secrets-operator
+        parameters:
+          namespace: external-secrets-operator
+          release-name: external-secrets-operator
+          replica-count: 1
+          image-tag: "v2.0.1"
+          min-helm-version: "v3.18.4"
+          min-kubectl-version: "1.24"
+      - name: 0-external-secrets
+        parameters:
+          namespace: external-secrets
+          project-id: stg
+          secret-manager-service-account-email: sa-sm-accessor@stg.iam.gserviceaccount.com
+          service-account-name: external-secrets-sa
+      - name: 0-sealed-secret
+        parameters:
+          namespace: sealed-secret
+          controller-manifest-url: https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.32.2/controller.yaml
+      - name: 1-istio
+        parameters:
+          namespace: istio
+          istio-operator-version: 1.20.0
+          istio-version: 1.20.0
+          istio-namespace: istio
+          istio-operator-namespace: istio-operator
+          istio-operator-service-account: istio-operator
+      - name: 2-argocd
+        parameters:
+          namespace: argocd
+          argocd-url: https://app.example.com/argocd
+          argocd-manifest-url: https://raw.githubusercontent.com/argoproj/argo-cd/v2.11.7/manifests/install.yaml
+          dex-config:
+            connectors:
+              - type: github
+                id: github
+                name: GitHub
+                config:
+                  clientID: XXXXXXX
+                  clientSecret: XXXXXXXX
+                  orgs:
+                    - name: example-org
+          RBACPolicies:
+            - policy: "p, role:org-admin, applications, *, default/*, allow"
+            - policy: "p, role:org-admin, clusters, get, *, allow"
+            - policy: "p, role:org-admin, repositories, get, *, allow"
+            - policy: "p, role:org-admin, repositories, create, *, allow"
+            - policy: "p, role:org-admin, repositories, update, *, allow"
+            - policy: "p, role:org-admin, repositories, delete, *, allow"
+            - policy: "p, role:org-backend, applications, *, default/*, allow"
+          RBACRoleBindings:
+            - group: "SiriusPlatform:Infra"
+              role: "role:org-admin"
+            - group: "SiriusPlatform:backend"
+              role: "role:org-backend"
+      - name: 3-victoria-metrics-operator
+        parameters:
+          namespace: monitoring-vm
+          release-name: victoriametrics
+          cluster: stg
+          env: stg
+          remote-write-url: "http://10.10.0.8:8480/insert/0/prometheus/api/v1/write"
+          vmagent-cpu-limit: "2"
+          vmagent-memory-limit: "2Gi"
+          vmagent-cpu-request: "500m"
+          vmagent-memory-request: "500Mi"
+      - name: 4-victoria-metrics
+        parameters:
+          namespace: monitoring-vm
+          alert-cluster: stg
+  - name: corp
+    components:
+      - name: 0-external-secrets
+        parameters:
+          namespace: external-secrets
+          project-id: corp
+          secret-manager-service-account-email: sa-sm-accessor@corp.iam.gserviceaccount.com
+          service-account-name: external-secrets-sa
+      - name: 0-sealed-secret
+        parameters:
+          namespace: sealed-secret
+          controller-manifest-url: https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.32.2/controller.yaml
+      - name: 1-istio
+        parameters:
+          namespace: istio
+          istio-operator-version: 1.20.0
+          istio-version: 1.20.0
+          istio-namespace: istio
+          istio-operator-namespace: istio-operator
+          istio-operator-service-account: istio-operator
+      - name: 2-argocd
+        parameters:
+          namespace: argocd
+          argocd-url: https://app.example.com/argocd
+          argocd-manifest-url: https://raw.githubusercontent.com/argoproj/argo-cd/v2.11.7/manifests/install.yaml
+      - name: 3-victoria-metrics-operator
+        parameters:
+          namespace: monitoring-vm
+          release-name: victoriametrics
+          cluster: corp
+          env: corp
+      - name: 4-grafana
+        parameters:
+          namespace: grafana
+          release-name: grafana
+          image-tag: "12.3.1"
+          root-url: "https://grafana.corp.alva.xyz"
+          vm-datasource-url: "http://vmselect-victoriametrics-vmks.monitoring-vm.svc.cluster.local:8481/select/0/prometheus"
+          loki-datasource-url: "http://loki-gateway.loki.svc.cluster.local"
+          hosted-domain: "alva.xyz"

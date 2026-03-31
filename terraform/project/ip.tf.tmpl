@@ -1,0 +1,34 @@
+# Reserved IP addresses for {{ .project_name }}
+# Use for LB, Gateway, CDN, DNS, or whitelist; reference in cert/dns/cdn via outputs.
+
+{{ if .global_addresses }}
+{{ range .global_addresses }}
+resource "google_compute_global_address" "{{ .name }}" {
+  name         = "{{ .name }}"
+  address_type = "{{ .address_type | default "EXTERNAL" }}"
+  {{ if .purpose }}purpose  = "{{ .purpose }}"
+  {{ end }}
+}
+{{ end }}
+{{ end }}
+
+{{ if .internal_addresses }}
+{{ range .internal_addresses }}
+resource "google_compute_address" "{{ .name }}" {
+  name         = "{{ .name }}"
+  address_type = "INTERNAL"
+  subnetwork   = {{ .subnetwork }}
+  {{ if .region }}region     = "{{ .region }}"
+  {{ end }}
+}
+{{ end }}
+{{ end }}
+
+{{ if .output_addresses }}
+{{ range .output_addresses }}
+output "{{ .output_name }}" {
+  description = "Reserved IP address for {{ .resource_name }}"
+  value       = google_compute_global_address.{{ .resource_name }}.address
+}
+{{ end }}
+{{ end }}

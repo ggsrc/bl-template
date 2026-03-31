@@ -1,0 +1,296 @@
+version: 1.0.0
+
+# terraform/project/cdn 组件的参数定义
+# 这些参数用于创建完整的 CDN 配置（Storage Bucket、Backend Bucket、URL Map、SSL Certificate、Forwarding Rule 等）
+
+parameters:
+  # 组件级参数（对应 config.yaml projects 中的 cdn 组件）
+  components:
+    cdn:
+      cdn_configs:
+        type: array
+        description: "List of CDN configurations to create"
+        required: false
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              description: "CDN configuration name (used as resource identifier)"
+              required: true
+              pattern: "^[a-z0-9-]+$"
+              example: "app_cdn"
+            bucket_name:
+              type: string
+              description: "Name of the storage bucket"
+              required: true
+              pattern: "^[a-z0-9-]+$"
+            backend_bucket_name:
+              type: string
+              description: "Name of the backend bucket"
+              required: true
+              pattern: "^[a-z0-9-]+$"
+            location:
+              type: string
+              description: "Bucket location"
+              required: false
+              default: "US"
+              example: "US"
+            uniform_bucket_level_access:
+              type: boolean
+              description: "Enable uniform bucket-level access"
+              required: false
+              default: false
+            force_destroy:
+              type: boolean
+              description: "Force destroy bucket even if it contains objects"
+              required: false
+              default: false
+            enable_website:
+              type: boolean
+              description: "Enable static website hosting"
+              required: false
+              default: false
+            website:
+              type: object
+              description: "Website configuration"
+              required: false
+              properties:
+                main_page_suffix:
+                  type: string
+                  description: "Main page suffix"
+                  default: "index.html"
+                not_found_page:
+                  type: string
+                  description: "404 page"
+                  default: "404.html"
+            cors:
+              type: object
+              description: "CORS configuration"
+              required: false
+              properties:
+                origin:
+                  type: array
+                  description: "Allowed origins"
+                  items:
+                    type: string
+                  default: ["*"]
+                method:
+                  type: array
+                  description: "Allowed HTTP methods"
+                  items:
+                    type: string
+                    enum: ["GET", "HEAD", "PUT", "POST", "DELETE", "OPTIONS"]
+                  default: ["GET", "HEAD"]
+                response_header:
+                  type: array
+                  description: "Allowed response headers"
+                  items:
+                    type: string
+                  default: ["*"]
+                max_age_seconds:
+                  type: integer
+                  description: "Max age for preflight requests"
+                  default: 3600
+            enable_public_access:
+              type: boolean
+              description: "Enable public read access to bucket"
+              required: false
+              default: false
+            enable_cdn:
+              type: boolean
+              description: "Enable CDN on backend bucket"
+              required: false
+              default: true
+            compression_mode:
+              type: string
+              description: "Compression mode for backend bucket"
+              required: false
+              enum: ["AUTOMATIC", "DISABLED"]
+              example: "AUTOMATIC"
+            cdn_policy:
+              type: object
+              description: "CDN policy configuration"
+              required: false
+              properties:
+                cache_mode:
+                  type: string
+                  description: "Cache mode"
+                  enum: ["USE_ORIGIN_HEADERS", "FORCE_CACHE_ALL", "CACHE_ALL_STATIC"]
+                  example: "USE_ORIGIN_HEADERS"
+                default_ttl:
+                  type: integer
+                  description: "Default TTL in seconds"
+                max_ttl:
+                  type: integer
+                  description: "Maximum TTL in seconds"
+                client_ttl:
+                  type: integer
+                  description: "Client TTL in seconds"
+            url_map_name:
+              type: string
+              description: "Name of the URL map"
+              required: false
+              default: "cdn-url-map"
+            host_rules:
+              type: array
+              description: "List of host rules for URL map"
+              required: false
+              items:
+                type: object
+                properties:
+                  hosts:
+                    type: array
+                    description: "List of hostnames"
+                    items:
+                      type: string
+                  path_matcher:
+                    type: string
+                    description: "Path matcher name"
+            path_matchers:
+              type: array
+              description: "List of path matchers for URL map"
+              required: false
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    description: "Path matcher name"
+                    required: true
+                  default_service:
+                    type: string
+                    description: "Default backend service reference"
+                  default_url_redirect:
+                    type: object
+                    description: "Default URL redirect configuration"
+                    properties:
+                      host_redirect:
+                        type: string
+                        description: "Host to redirect to"
+                      https_redirect:
+                        type: boolean
+                        description: "Redirect to HTTPS"
+                        default: true
+                      strip_query:
+                        type: boolean
+                        description: "Strip query string"
+                        default: false
+                      redirect_response_code:
+                        type: string
+                        description: "Redirect response code"
+                        enum: ["MOVED_PERMANENTLY_DEFAULT", "FOUND", "SEE_OTHER", "TEMPORARY_REDIRECT", "PERMANENT_REDIRECT"]
+            enable_http_redirect:
+              type: boolean
+              description: "Enable HTTP to HTTPS redirect"
+              required: false
+              default: false
+            http_redirect_name:
+              type: string
+              description: "Name of the HTTP redirect URL map"
+              required: false
+              default: "http-redirect"
+            http_redirect_code:
+              type: string
+              description: "HTTP redirect response code"
+              required: false
+              default: "MOVED_PERMANENTLY_DEFAULT"
+              enum: ["MOVED_PERMANENTLY_DEFAULT", "FOUND", "SEE_OTHER", "TEMPORARY_REDIRECT", "PERMANENT_REDIRECT"]
+            http_redirect_strip_query:
+              type: boolean
+              description: "Strip query string in HTTP redirect"
+              required: false
+              default: false
+            http_redirect_ip_reference:
+              type: string
+              description: "IP address reference for HTTP redirect (e.g., google_compute_global_address.cdn_public_address.address)"
+              required: false
+            enable_https:
+              type: boolean
+              description: "Enable HTTPS proxy and forwarding rule"
+              required: false
+              default: true
+            use_managed_certificate:
+              type: boolean
+              description: "Use Google-managed SSL certificate"
+              required: false
+              default: true
+            certificate_name:
+              type: string
+              description: "Name of the managed SSL certificate"
+              required: false
+              default: "cdn-managed-certificate"
+            certificate_random_id:
+              type: boolean
+              description: "Use random ID for certificate name"
+              required: false
+              default: false
+            domains:
+              type: array
+              description: "List of domains for SSL certificate"
+              required: false
+              items:
+                type: string
+              example: ["example.com"]
+            ssl_certificates:
+              type: array
+              description: "List of SSL certificate references (when not using managed certificate)"
+              required: false
+              items:
+                type: string
+            https_proxy_name:
+              type: string
+              description: "Name of the HTTPS proxy"
+              required: false
+              default: "cdn-https-proxy"
+            ip_address_name:
+              type: string
+              description: "Name of the global IP address"
+              required: false
+              default: "cdn-public-address"
+            ip_version:
+              type: string
+              description: "IP version"
+              required: false
+              default: "IPV4"
+              enum: ["IPV4", "IPV6"]
+            forwarding_rule_name:
+              type: string
+              description: "Name of the global forwarding rule"
+              required: false
+              default: "cdn-global-forwarding-https-rule"
+            lifecycle_rules:
+              type: array
+              description: "Lifecycle rules for the bucket"
+              required: false
+              items:
+                type: object
+                properties:
+                  condition:
+                    type: object
+                    properties:
+                      age:
+                        type: integer
+                        description: "Age in days"
+                      matches_storage_class:
+                        type: array
+                        description: "Storage classes to match"
+                        items:
+                          type: string
+                  action:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                        description: "Action type"
+                        enum: ["Delete", "SetStorageClass", "AbortIncompleteMultipartUpload"]
+            versioning:
+              type: object
+              description: "Versioning configuration"
+              required: false
+              properties:
+                enabled:
+                  type: boolean
+                  description: "Enable versioning"
+                  default: false
+

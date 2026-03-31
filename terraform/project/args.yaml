@@ -1,0 +1,54 @@
+version: 1.0.0
+
+# terraform/project 目录的项目级别全局参数定义
+# 这些参数适用于 project 目录下的所有组件
+# project_name 为逻辑名（如 prd、stg），用于资源命名、locals；GCP project ID 由 project_id 提供
+
+parameters:
+  # 项目级别的全局参数
+  global:
+    project_name:
+      type: string
+      description: "Project logical name (e.g. prd, stg); used for resource naming, locals; not sent to GCP"
+      required: true
+      validation:
+        - kind: required
+        - kind: stringLength
+          min: 2
+          max: 30
+          message: "project_name 长度为 2-30 个字符"
+        - kind: pattern
+          value: "^[a-z0-9][a-z0-9-]*[a-z0-9]$"
+          message: "project_name：仅小写字母/数字/连字符，以字母或数字开头、以字母或数字结尾"
+      example: "prd"
+
+    project_id:
+      type: string
+      description: "GCP Project ID (filled by init-args; must be 6-30 chars, globally unique)"
+      required: false
+      validation:
+        - kind: stringLength
+          min: 6
+          max: 30
+          message: "GCP Project ID 长度为 6-30 个字符"
+        - kind: pattern
+          value: "^[a-z][a-z0-9-]{4,28}[a-z0-9]$"
+          message: "GCP Project ID：仅小写字母/数字/连字符，以字母开头、以字母或数字结尾"
+      example: "my-org-prd-abc123"
+
+    region:
+      type: string
+      description: "Default GCP region for this project"
+      required: false
+      default: "us-west1"
+      enum: ["us-west1", "us-west2", "us-west3", "us-west4", "us-east1", "us-east4", "us-central1", "asia-east1", "asia-northeast1", "europe-west1"]
+      validation:
+        - kind: enum
+          values: ["us-west1", "us-west2", "us-west3", "us-west4", "us-east1", "us-east4", "us-central1", "asia-east1", "asia-northeast1", "europe-west1"]
+      example: "us-west1"
+
+    domain:
+      type: string
+      description: "Optional primary domain for this project (exposed in locals)"
+      required: false
+      example: "prd.example.com"

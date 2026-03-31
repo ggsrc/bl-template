@@ -1,0 +1,73 @@
+version: 1.0.0
+
+# kubernetes/components/external-secrets 组件的参数定义
+
+parameters:
+  # 组件级参数
+  components:
+    external-secrets:
+      description: "External Secrets Operator configuration parameters"
+      
+      # 基础配置
+      Namespace:
+        type: string
+        description: "External Secrets namespace"
+        required: false
+        default: "external-secrets"
+        example: "external-secrets"
+      
+      # GCP Secret Manager 配置
+      project_id:
+        type: string
+        description: "GCP Project ID where secrets are stored"
+        required: true
+        example: "prd"
+      
+      SecretManagerServiceAccountEmail:
+        type: string
+        description: "GCP Service Account email with Secret Manager access (format: sa-name@project-id.iam.gserviceaccount.com)"
+        required: true
+        example: "sa-sm-accessor@prd.iam.gserviceaccount.com"
+      
+      # ServiceAccount 配置
+      ServiceAccountName:
+        type: string
+        description: "Kubernetes ServiceAccount name for GCP Secret Manager access"
+        required: false
+        default: "gcp-secret-manager"
+        example: "gcp-secret-manager"
+      
+      # ClusterSecretStore 配置
+      ClusterSecretStoreName:
+        type: string
+        description: "ClusterSecretStore resource name"
+        required: false
+        default: "gcp-secret-store"
+        example: "gcp-secret-store"
+      
+      # GKE Workload Identity 配置
+      ClusterLocation:
+        type: string
+        description: "GKE cluster location (region or zone)"
+        required: false
+        default: "us-west1"
+        example: "us-west1"
+      
+      ClusterName:
+        type: string
+        description: "GKE cluster name"
+        required: false
+        default: "app"
+        example: "prd-cluster"
+      
+      # Namespace 标签配置
+      NamespaceLabels:
+        type: map[string]string
+        description: "Labels to add to External Secrets namespace"
+        required: false
+        default:
+          istio-injection: "enabled"
+        example:
+          istio-injection: "enabled"
+          prometheus.io/scrape: "true"
+

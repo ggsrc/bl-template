@@ -1,0 +1,51 @@
+# Outputs for {{ .project_name }}
+# Certificate map、GKE、外部 DNS CNAME 等输出；Gateway IP 请使用 ip 组件的 output_addresses，不在此重复
+
+{{ if .external_dns_records }}
+{{ range .external_dns_records }}
+output "{{ .output_name }}" {
+  description = "DNS CNAME record to add in external DNS for certificate validation ({{ .dns_authorization_name }})"
+  value = {
+    name   = google_certificate_manager_dns_authorization.{{ .dns_authorization_name }}.dns_resource_record[0].name
+    type   = google_certificate_manager_dns_authorization.{{ .dns_authorization_name }}.dns_resource_record[0].type
+    data   = google_certificate_manager_dns_authorization.{{ .dns_authorization_name }}.dns_resource_record[0].data
+    domain = google_certificate_manager_dns_authorization.{{ .dns_authorization_name }}.domain
+  }
+}
+{{ if .cert_id_output_name }}
+output "{{ .cert_id_output_name }}" {
+  description = "Certificate ID for {{ .dns_authorization_name }} (use in Gateway/certificate map)"
+  value       = google_certificate_manager_certificate.{{ .dns_authorization_name }}.id
+}
+{{ end }}
+{{ end }}
+{{ end }}
+
+{{ if .certificate_maps }}
+{{ range .certificate_maps }}
+output "{{ .output_prefix }}_certificate_map_id" {
+  description = "Certificate map ID for {{ .output_prefix }} - use in Gateway/Load Balancer"
+  value       = google_certificate_manager_certificate_map.{{ .map_name }}.id
+}
+
+output "{{ .output_prefix }}_certificate_map_name" {
+  description = "Certificate map name for {{ .output_prefix }} - use in Kubernetes Gateway (gcp://certificatemanager/PROJECT_ID/locations/global/certificateMaps/NAME)"
+  value       = google_certificate_manager_certificate_map.{{ .map_name }}.name
+}
+{{ end }}
+{{ end }}
+
+{{ if .gke }}
+{{ if .gke.output_endpoint }}
+output "gke_endpoint" {
+  description = "GKE cluster API endpoint"
+  value       = module.{{ .gke.module_name | default "gke" }}.endpoint
+}
+{{ end }}
+{{ if .gke.output_cluster_name }}
+output "gke_cluster_name" {
+  description = "GKE cluster name"
+  value       = module.{{ .gke.module_name | default "gke" }}.cluster_name
+}
+{{ end }}
+{{ end }}

@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: APP_NAME
+spec:
+  serviceName: APP_NAME
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: APP_NAME
+      version: APP_VERSION
+  template:
+    metadata:
+      annotations:
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
+      labels:
+        app: APP_NAME
+        version: APP_VERSION
+    spec:
+      serviceAccountName: APP_NAME
+      containers:
+        - image: APP_IMAGE
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          envFrom:
+            - configMapRef:
+                name: APP_NAME
+          imagePullPolicy: Always
+          name: main
+          ports:
+            - containerPort: 3000
+              name: http-rest
+            - containerPort: 8080
+              name: http
+            - containerPort: 9090
+              name: grpc
+            - containerPort: 8080
+              name: liveness
+            - containerPort: 8080
+              name: readiness
+            - containerPort: 4014
+              name: http-prometheus
+          {{- if .LivenessProbe }}
+          livenessProbe:
+            {{- if .LivenessProbe.httpGet }}
+            httpGet:
+              path: {{ .LivenessProbe.httpGet.path | quote }}
+              port: {{ .LivenessProbe.httpGet.port }}
+            {{- end }}
+            {{- if .LivenessProbe.initialDelaySeconds }}
+            initialDelaySeconds: {{ .LivenessProbe.initialDelaySeconds }}
+            {{- end }}
+            {{- if .LivenessProbe.periodSeconds }}
+            periodSeconds: {{ .LivenessProbe.periodSeconds }}
+            {{- end }}
+            {{- if .LivenessProbe.timeoutSeconds }}
+            timeoutSeconds: {{ .LivenessProbe.timeoutSeconds }}
+            {{- end }}
+          {{- else }}
+          livenessProbe:
+            httpGet:
+              path: /health/alive
+              port: 8080
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            timeoutSeconds: 5
+          {{- end }}
+          {{- if .ReadinessProbe }}
+          readinessProbe:
+            {{- if .ReadinessProbe.httpGet }}
+            httpGet:
+              path: {{ .ReadinessProbe.httpGet.path | quote }}
+              port: {{ .ReadinessProbe.httpGet.port }}
+            {{- end }}
+            {{- if .ReadinessProbe.initialDelaySeconds }}
+            initialDelaySeconds: {{ .ReadinessProbe.initialDelaySeconds }}
+            {{- end }}
+            {{- if .ReadinessProbe.periodSeconds }}
+            periodSeconds: {{ .ReadinessProbe.periodSeconds }}
+            {{- end }}
+            {{- if .ReadinessProbe.timeoutSeconds }}
+            timeoutSeconds: {{ .ReadinessProbe.timeoutSeconds }}
+            {{- end }}
+          {{- else }}
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8080
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            timeoutSeconds: 5
+          {{- end }}
+          resources:
+            requests:
+              cpu: 100m
+              memory: 100Mi
+            limits:
+              cpu: 200m
+              memory: 200Mi

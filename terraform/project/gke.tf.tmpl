@@ -1,0 +1,82 @@
+# GKE cluster configuration for {{ .project_name }}
+module "gke" {
+  source       = "../modules/gke"
+  cluster_name = {{ if .clusterName }}"{{ .clusterName }}"{{ else }}"{{ .project_name }}-cluster"{{ end }}
+  project_id   = {{ if .project_id }}"{{ .project_id }}"{{ else }}var.project_id{{ end }}
+  region       = var.region
+  network      = google_compute_network.main.name
+  subnetwork   = google_compute_subnetwork.default.name
+
+  cluster_ipv4_cidr_block  = {{ if .clusterIpv4CidrBlock }}"{{ .clusterIpv4CidrBlock }}"{{ else }}"10.0.0.0/14"{{ end }}
+  services_ipv4_cidr_block = {{ if .servicesIpv4CidrBlock }}"{{ .servicesIpv4CidrBlock }}"{{ else }}"10.4.0.0/19"{{ end }}
+
+  node_locations     = {{ if .nodeLocations }}[{{ range $i, $v := .nodeLocations }}{{ if $i }}, {{ end }}"{{ $v }}"{{ end }}]{{ else }}["us-west1-a"]{{ end }}
+  min_node_count     = {{ if .minNodeCount }}{{ .minNodeCount }}{{ else }}1{{ end }}
+  max_node_count     = {{ if .maxNodeCount }}{{ .maxNodeCount }}{{ else }}50{{ end }}
+  initial_node_count = {{ if .initialNodeCount }}{{ .initialNodeCount }}{{ else }}1{{ end }}
+  location_policy    = {{ if .locationPolicy }}"{{ .locationPolicy }}"{{ else }}"ANY"{{ end }}
+  {{ if .releaseChannel }}release_channel = "{{ .releaseChannel }}"
+  {{ end }}machine_type = {{ if .machineType }}"{{ .machineType }}"{{ else }}"e2-medium"{{ end }}
+  {{ if .deletionProtection }}deletion_protection = {{ .deletionProtection }}
+  {{ end }}{{ if .loggingConfigEnableComponents }}logging_config_enable_components = [{{ range $i, $v := .loggingConfigEnableComponents }}{{ if $i }}, {{ end }}"{{ $v }}"{{ end }}]
+  {{ end }}{{ if .monitoringConfigEnableComponents }}monitoring_config_enable_components = [{{ range $i, $v := .monitoringConfigEnableComponents }}{{ if $i }}, {{ end }}"{{ $v }}"{{ end }}]
+  {{ end }}{{ if .managedPrometheusEnabled }}managed_prometheus_enabled = {{ .managedPrometheusEnabled }}
+  {{ end }}{{ if .totalMinNodeCount }}total_min_node_count = {{ .totalMinNodeCount }}
+  {{ end }}  {{ if .totalMaxNodeCount }}total_max_node_count = {{ .totalMaxNodeCount }}
+  {{ end }}{{ if .diskSizeGb }}disk_size_gb = {{ .diskSizeGb }}
+  {{ else }}disk_size_gb = 20
+  {{ end }}
+}
+
+data "google_client_config" "current" {}
+
+provider "kubernetes" {
+  host                   = "https://${module.gke.endpoint}"
+  cluster_ca_certificate = base64decode(module.gke.master_auth.0.cluster_ca_certificate)
+  token                  = data.google_client_config.current.access_token
+}
+
+{{ if .nodePools }}
+{{ range .nodePools }}
+module "{{ .name }}_node_pool" {
+  source = "../modules/gke-node-pool"
+
+  name = "{{ .name }}"
+  {{ if .taints }}taints = [
+    {{ range $i, $taint := .taints }}{{ if $i }},{{ end }}
+    {
+      key    = "{{ $taint.key }}"
+      value  = "{{ $taint.value }}"
+      effect = "{{ $taint.effect }}"
+    }{{ end }}
+  ]
+  {{ end }}{{ if .labels }}labels = {
+    {{ range $key, $value := .labels }}
+    "{{ $key }}" = "{{ $value }}"
+    {{ end }}
+  }
+  {{ end }}
+  cluster_name          = module.gke.cluster_name
+  location              = var.region
+  project_id            = {{ if $.project_id }}"{{ $.project_id }}"{{ else }}var.project_id{{ end }}
+  service_account_email = module.gke.node_service_account_email
+  node_locations        = {{ if .nodeLocations }}[{{ range $i, $v := .nodeLocations }}{{ if $i }}, {{ end }}"{{ $v }}"{{ end }}]{{ else }}{{ if $.nodeLocations }}[{{ range $i, $v := $.nodeLocations }}{{ if $i }}, {{ end }}"{{ $v }}"{{ end }}]{{ else }}["us-west1-a"]{{ end }}{{ end }}
+
+  machine_type = "{{ .machineType }}"
+  min_nodes    = {{ .minNodes }}
+  max_nodes     = {{ .maxNodes }}
+  {{ if .spot }}spot         = true
+  {{ end }}
+}
+{{ end }}
+{{ end }}
+
+# Access secret manager secrets - used by external secrets operator
+module "sm_accessor" {
+  source = "../modules/gke-sm-accessor-sa"
+
+  project_id = {{ if .project_id }}"{{ .project_id }}"{{ else }}var.project_id{{ end }}
+
+  # Must wait for GKE cluster to create the Workload Identity Pool
+  depends_on = [module.gke]
+}

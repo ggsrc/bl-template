@@ -1,0 +1,47 @@
+# Create a DNS authorization
+resource "google_certificate_manager_dns_authorization" "main" {
+  project = var.project
+
+  name        = var.component_name
+  description = var.component_name
+  domain      = var.domain
+}
+
+# Add CNAME record to DNS configuration
+resource "google_dns_record_set" "main" {
+  name         = google_certificate_manager_dns_authorization.main.dns_resource_record[0].name
+  managed_zone = var.dns_managed_zone
+  project      = var.zone_project
+  type         = google_certificate_manager_dns_authorization.main.dns_resource_record[0].type
+  ttl          = 300
+  rrdatas      = [google_certificate_manager_dns_authorization.main.dns_resource_record[0].data]
+}
+
+# Create a Google-managed certificate referencing the DNS authorization
+resource "google_certificate_manager_certificate" "main" {
+  name        = "${var.component_name}-cert"
+  description = "Certificate for ${var.domain} and *.${var.domain}"
+  managed {
+    domains = [var.domain, "*.${var.domain}"]
+    #domains = ["{var.domain}", "*.${var.domain}"]
+    dns_authorizations = [
+      google_certificate_manager_dns_authorization.main.id
+    ]
+  }
+}
+
+# # Create a certificate map for Gateway to use
+# # https://cloud.google.com/kubernetes-engine/docs/how-to/secure-gateway
+# resource "google_certificate_manager_certificate_map" "main" {
+#   name        = "${var.component_name}-certmap"
+#   description = "${var.domain} certificate map"
+# }
+
+# resource "google_certificate_manager_certificate_map_entry" "main" {
+#   name         = "${var.component_name}-certmap-entry"
+#   description  = ""
+#   map          = google_certificate_manager_certificate_map.main.name
+#   certificates = [google_certificate_manager_certificate.main.id]
+#   matcher      = "PRIMARY"
+# }
+

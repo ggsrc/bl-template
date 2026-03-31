@@ -1,0 +1,29 @@
+{{- if .Values }}
+{{- $vmstack := index .Values "victoria-metrics-k8s-stack" }}
+{{- if and $vmstack (index $vmstack "vmcluster") }}
+{{- $app := index $vmstack "vmcluster" }}
+{{- if $app.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    cloud.google.com/load-balancer-type: "Internal"
+  name: vminsert-victoriametrics-vmks-lb
+  namespace: monitoring-vm
+spec:
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: http
+    port: 8480
+    protocol: TCP
+    targetPort: 8480
+  selector:
+    app.kubernetes.io/component: monitoring
+    app.kubernetes.io/instance: victoriametrics-vmks
+    app.kubernetes.io/name: vminsert
+    managed-by: vm-operator
+  sessionAffinity: None
+  type: LoadBalancer
+{{- end }}
+{{- end }}
+{{- end }}

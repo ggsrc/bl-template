@@ -1,0 +1,169 @@
+# corp/环境覆盖：由 blcli 渲染，参考 example/alva/k8s/alva-ai-corp/1-2-grafana/values-corp.yaml
+# 与 values.yaml 一起使用：helm upgrade -i -f values.yaml -f values-corp.yaml
+grafana:
+  image:
+    registry: docker.io
+    repository: grafana/grafana
+    tag: "{{ default `12.3.1` .imageTag }}"
+    pullPolicy: IfNotPresent
+
+  rbac:
+    create: true
+    namespaced: false
+  serviceAccount:
+    create: true
+
+  replicas: {{ default 1 .replicas }}
+
+  headlessService: false
+  automountServiceAccountToken: true
+
+  podDisruptionBudget:
+   minAvailable: 1
+
+  deploymentStrategy:
+    type: RollingUpdate
+
+  testFramework:
+    enabled: true
+    imagePullPolicy: IfNotPresent
+    securityContext: {}
+    containerSecurityContext: {}
+    resources:
+     limits:
+       cpu: 1
+       memory: 1Gi
+     requests:
+       cpu: 100m
+       memory: 256Mi
+
+  createConfigmap: true
+
+  service:
+    enabled: true
+    type: ClusterIP
+    port: 80
+    targetPort: 3000
+
+  serviceMonitor:
+    enabled: true
+    path: /metrics
+    interval: 30s
+    scheme: http
+    scrapeTimeout: 30s
+    relabelings: []
+    metricRelabelings: []
+
+  persistence:
+    type: pvc
+    enabled: true
+    accessModes:
+      - ReadWriteOnce
+    size: {{ default `10Gi` .persistenceSize }}
+    finalizers:
+      - kubernetes.io/pvc-protection
+    lookupVolumeName: true
+
+  initChownData:
+    enabled: true
+
+  plugins:
+    - victoriametrics-metrics-datasource
+    - redis-app
+    - redis-datasource
+    - redis-explorer-app
+    - grafana-googlesheets-datasource
+    - grafana-github-datasource
+    - grafana-clickhouse-datasource
+    - yesoreyeram-infinity-datasource
+
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+      - name: victoria-metrics
+        type: prometheus
+        url: {{ default `http://vmselect-victoriametrics-vmks.monitoring-vm.svc.cluster.local:8481/select/0/prometheus` .vmDatasourceUrl }}
+        access: proxy
+        jsonData:
+          httpMethod: POST
+          manageAlerts: true
+          timeInterval: 15s
+          queryTimeout: 90s
+          prometheusType: Prometheus
+          cacheLevel: "High"
+          disableRecordingRules: false
+          incrementalQueryOverlapWindow: 10m
+      - name: victoria-metrics-native
+        type: victoriametrics-metrics-datasource
+        url: {{ default `http://vmselect-victoriametrics-vmks.monitoring-vm.svc.cluster.local:8481/select/0/prometheus` .vmDatasourceUrl }}
+        access: proxy
+        isDefault: true
+        jsonData:
+          httpMethod: POST
+          manageAlerts: true
+          timeInterval: 15s
+          queryTimeout: 90s
+          disableMetricsLookup: false
+      - name: loki-logs
+        type: loki
+        access: proxy
+        url: {{ default `http://loki-gateway.loki.svc.cluster.local` .lokiDatasourceUrl }}
+        jsonData:
+          timeout: 30
+          maxLines: 1000
+          httpHeaderName1: X-Scope-OrgID
+        secureJsonData:
+          httpHeaderValue1: fake
+
+  envFromSecrets:
+  - name: grafana-google-auth
+    optional: false
+
+  grafana.ini:
+    paths:
+      data: /var/lib/grafana/
+      logs: /var/log/grafana
+      plugins: /var/lib/grafana/plugins
+      provisioning: /etc/grafana/provisioning
+    analytics:
+      check_for_updates: true
+    log:
+      mode: console
+    server:
+      root_url: {{ default `https://example.com/grafana` .rootUrl }}
+    auth:
+      disable_login_form: true
+    auth.basic:
+      enabled: false
+    auth.google:
+      enabled: true
+      allow_sign_up: true
+      auto_login: false
+      client_id: "$__env{GOOGLE_AUTH_CLIENT_ID}"
+      client_secret: "$__env{GOOGLE_AUTH_CLIENT_SECRET}"
+      scopes: openid email profile https://www.googleapis.com/auth/cloud-identity.groups.readonly
+      auth_url: https://accounts.google.com/o/oauth2/v2/auth
+      token_url: https://oauth2.googleapis.com/token
+      api_url: https://openidconnect.googleapis.com/v1/userinfo
+      hosted_domain: {{ default `example.com` .hostedDomain }}
+      use_pkce: true
+    feature_toggles:
+      provisioning: true
+      kubernetesDashboards: true
+
+  sidecar:
+    resources:
+      limits:
+        cpu: 100m
+        memory: 100Mi
+      requests:
+        cpu: 50m
+        memory: 50Mi
+
+  networkPolicy:
+    enabled: false
+
+  useStatefulSet: false
+
+  assertNoLeakedSecrets: true

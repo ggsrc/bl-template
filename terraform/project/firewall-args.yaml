@@ -1,0 +1,86 @@
+version: 1.0.0
+
+# terraform/project/firewall 组件的参数定义
+# 用于创建 VPC 防火墙规则（如允许 VPC peering 来源访问某端口）
+
+parameters:
+  components:
+    firewall:
+      network:
+        type: string
+        description: "VPC network reference (e.g. google_compute_network.main.name or local.vpc_name)"
+        required: false
+        default: "google_compute_network.main.name"
+        example: "google_compute_network.main.name"
+      rules:
+        type: array
+        description: "List of firewall rules"
+        required: false
+        default: []
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              description: "Firewall rule name (GCP and Terraform identifier)"
+              example: "allow-peering-corp-to-lb"
+            direction:
+              type: string
+              description: "INGRESS or EGRESS"
+              required: false
+              default: "INGRESS"
+              enum: ["INGRESS", "EGRESS"]
+            priority:
+              type: integer
+              description: "Priority (0-65535)"
+              required: false
+              default: 1000
+            source_ranges:
+              type: array
+              description: "List of CIDR blocks (INGRESS) or destination ranges (EGRESS)"
+              items:
+                type: string
+              example: ["10.140.0.0/16"]
+            source_tags:
+              type: array
+              description: "Source instance tags (optional)"
+              required: false
+              items:
+                type: string
+            target_tags:
+              type: array
+              description: "Target instance tags (optional)"
+              required: false
+              items:
+                type: string
+            allow:
+              type: array
+              description: "List of allow blocks: protocol and optional ports"
+              items:
+                type: object
+                properties:
+                  protocol:
+                    type: string
+                    example: "tcp"
+                  ports:
+                    type: array
+                    items:
+                      type: string
+                    example: ["10901"]
+            deny:
+              type: array
+              description: "List of deny blocks (optional)"
+              required: false
+              items:
+                type: object
+                properties:
+                  protocol:
+                    type: string
+                  ports:
+                    type: array
+                    items:
+                      type: string
+            description:
+              type: string
+              description: "Rule description"
+              required: false

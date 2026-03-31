@@ -1,0 +1,152 @@
+#!/bin/bash
+
+# ArgoCD installation script
+# This script installs ArgoCD using kustomize
+set -e
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Configuration
+NAMESPACE="${ARGOCD_NAMESPACE:-argocd}"
+SSH_SECRET_FILE="github-ssh-sealed-secret.yaml"
+GEN_SSH_SCRIPT="${ARGOCD_GEN_SEALED_SECRET_SCRIPT:-gen_ssh_sealed_secrets.sh}"
+KUBERNETES_INIT_SCRIPT="${ARGOCD_KUBERNETES_INIT_SCRIPT:-../../init.sh}"
+SSH_KEYS_DIR="${ARGOCD_KEYS_DIR:-../../keys}"
+SSH_PRIVATE_KEY_PATH="${ARGOCD_SSH_PRIVATE_KEY_PATH:-${SSH_KEYS_DIR}/argocd_github}"
+
+# Function to print colored messages
+info() {
+    echo -e "${GREEN}[INFO]${NC} $1"
+}
+
+warn() {
+    echo -e "${YELLOW}[WARN]${NC} $1"
+}
+
+error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+# Check if kubectl is available
+if ! command -v kubectl &> /dev/null; then
+    error "kubectl is not installed or not in PATH"
+    exit 1
+fi
+
+# Check if kustomize is available
+if ! command -v kustomize &> /dev/null; then
+    error "kustomize is not installed or not in PATH"
+    error "Install kustomize: https://kubectl.docs.kubernetes.io/installation/kustomize/"
+    exit 1
+fi
+
+# Check kubectl connection
+if ! kubectl cluster-info &> /dev/null; then
+    error "Cannot connect to Kubernetes cluster. Please check kubectl configuration."
+    exit 1
+fi
+
+CURRENT_CONTEXT=$(kubectl config current-context)
+info "Current Kubernetes context: ${CURRENT_CONTEXT}"
+warn "Please ensure you are connected to the correct cluster"
+
+# Ensure SSH key material exists before generating sealed secret
+if [ ! -f "${SSH_PRIVATE_KEY_PATH}" ] && [ -f "${KUBERNETES_INIT_SCRIPT}" ]; then
+    if [ ! -x "${KUBERNETES_INIT_SCRIPT}" ]; then
+        chmod +x "${KUBERNETES_INIT_SCRIPT}"
+    fi
+    info "Generating ArgoCD SSH keys via ${KUBERNETES_INIT_SCRIPT}"
+    "./${KUBERNETES_INIT_SCRIPT}"
+fi
+
+# Generate SSH sealed secret before kustomize build
+if [ -f "${GEN_SSH_SCRIPT}" ]; then
+    if [ ! -x "${GEN_SSH_SCRIPT}" ]; then
+        chmod +x "${GEN_SSH_SCRIPT}"
+    fi
+    if [ -f "${SSH_PRIVATE_KEY_PATH}" ]; then
+        info "Generating SSH sealed secret via ${GEN_SSH_SCRIPT}"
+        "./${GEN_SSH_SCRIPT}" "${SSH_PRIVATE_KEY_PATH}"
+    fi
+fi
+
+# Check if SSH sealed secret exists
+if [ ! -f "${SSH_SECRET_FILE}" ]; then
+    warn "GitHub SSH sealed secret file (${SSH_SECRET_FILE}) not found"
+    if [ -f "${GEN_SSH_SCRIPT}" ]; then
+        warn "SSH private key not found at ${SSH_PRIVATE_KEY_PATH}"
+        info "To generate the SSH sealed secret manually, run:"
+        info "  ./${GEN_SSH_SCRIPT} <path_to_ssh_private_key>"
+        if [ -t 0 ]; then
+            read -p "Do you want to continue without SSH secret? (y/N): " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                info "Installation cancelled"
+                exit 0
+            fi
+        else
+            warn "Non-interactive mode: continuing without SSH secret"
+        fi
+    else
+        warn "Continuing without SSH secret file"
+    fi
+else
+    info "Found SSH sealed secret file: ${SSH_SECRET_FILE}"
+fi
+
+# Ensure kustomize can run: create placeholder if resource is missing
+if [ ! -f "${SSH_SECRET_FILE}" ]; then
+    info "Creating placeholder ${SSH_SECRET_FILE} for kustomize build (replace with real sealed secret later)"
+    cat > "${SSH_SECRET_FILE}" << 'PLACEHOLDER'
+# Placeholder - replace with output of ./gen_ssh_sealed_secrets.sh <path_to_ssh_private_key>
+apiVersion: v1
+kind: Secret
+metadata:
+  name: github-ssh-placeholder
+  namespace: argocd
+type: Opaque
+PLACEHOLDER
+fi
+
+# Build kustomization
+info "Building kustomization..."
+if ! kustomize build . > /tmp/argocd-manifests.yaml; then
+    error "Failed to build kustomization"
+    exit 1
+fi
+
+# Apply manifests
+info "Applying ArgoCD manifests..."
+if ! kubectl apply -f /tmp/argocd-manifests.yaml; then
+    error "Failed to apply ArgoCD manifests"
+    rm -f /tmp/argocd-manifests.yaml
+    exit 1
+fi
+
+# Clean up temporary file
+rm -f /tmp/argocd-manifests.yaml
+
+# Wait for ArgoCD to be ready
+info "Waiting for ArgoCD to be ready..."
+if kubectl wait --for=condition=available --timeout=300s deployment/argocd-server -n "${NAMESPACE}" 2>/dev/null; then
+    info "ArgoCD server is ready"
+else
+    warn "ArgoCD server may still be starting. Check status with:"
+    warn "  kubectl get pods -n ${NAMESPACE}"
+fi
+
+# Get ArgoCD server info
+info "ArgoCD installation completed!"
+echo ""
+info "To access ArgoCD UI:"
+info "  1. Port forward: kubectl port-forward svc/argocd-server -n ${NAMESPACE} 8080:443"
+info "  2. Get admin password: kubectl -n ${NAMESPACE} get secret argocd-initial-admin-secret -o jsonpath=\"{.data.password}\" | base64 -d"
+info "  3. Login: https://localhost:8080 (username: admin)"
+echo ""
+info "To check ArgoCD status:"
+info "  kubectl get pods -n ${NAMESPACE}"
+info "  kubectl get svc -n ${NAMESPACE}"

@@ -1,0 +1,96 @@
+variable "name" {
+  description = "Name of the node pool"
+  type        = string
+}
+
+variable "cluster_name" {
+  description = "Name of the GKE cluster"
+  type        = string
+}
+
+variable "location" {
+  description = "Location of the GKE cluster"
+  type        = string
+}
+
+variable "project_id" {
+  description = "Project ID"
+  type        = string
+}
+
+variable "service_account_email" {
+  description = "Node Service Account Email"
+  type        = string
+  default     = "default"
+}
+
+variable "node_locations" {
+  description = "List of zones in which the node pool's nodes should be located"
+  type        = list(string)
+  default     = []
+}
+
+variable "machine_type" {
+  description = "Machine type for the nodes"
+  type        = string
+  default     = "e2-medium"
+}
+
+variable "min_nodes" {
+  description = "Minimum number of nodes"
+  type        = number
+  default     = 1
+}
+
+variable "max_nodes" {
+  description = "Maximum number of nodes"
+  type        = number
+  default     = 3
+}
+
+variable "initial_node_count" {
+  description = "Initial number of nodes in the node pool"
+  type        = number
+  default     = 1
+}
+
+variable "taints" {
+  description = "List of Kubernetes taints to be applied to each node"
+  type = list(object({
+    key    = string
+    value  = string
+    effect = string
+  }))
+  default = []
+}
+
+variable "labels" {
+  description = "Labels to apply to the nodes"
+  type        = map(string)
+  default     = {}
+}
+
+variable "disk_size_gb" {
+  description = "Size of the disk attached to each node"
+  type        = number
+  default     = 50
+}
+
+variable "disk_type" {
+  description = "Type of the disk attached to each node"
+  type        = string
+  default     = "pd-balanced"
+}
+
+variable "spot" {
+  description = "Use spot instances for the node pool"
+  type        = bool
+  default     = false
+}
+
+variable "preemptible" {
+  description = "Use preemptible instances for the node pool"
+  type        = bool
+  default     = false
+}
+

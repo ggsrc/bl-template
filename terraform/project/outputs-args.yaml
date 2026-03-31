@@ -1,0 +1,62 @@
+version: 1.0.0
+
+# terraform/project/outputs 组件的参数定义
+# 控制要输出的证书 map、Gateway IP、GKE 等信息，供 K8s Gateway / 外部 DNS 使用
+
+parameters:
+  components:
+    outputs:
+      # 要输出的 Certificate Map（id/name），供 Gateway/LB 引用
+      certificate_maps:
+        type: array
+        description: "List of certificate maps to output (id and name)"
+        required: false
+        default: []
+        items:
+          type: object
+          properties:
+            map_name:
+              type: string
+              description: "Certificate map resource name (must match cert component)"
+              example: "main"
+            output_prefix:
+              type: string
+              description: "Prefix for output names (e.g. app -> app_certificate_map_id)"
+              example: "app"
+      # 外部 DNS 的 CNAME 记录信息（来自 cert 的 dns_authorization），供用户在外网 DNS 添加
+      external_dns_records:
+        type: array
+        description: "Output dns_resource_record for dns_authorization certs (add CNAME in external DNS)"
+        required: false
+        default: []
+        items:
+          type: object
+          properties:
+            dns_authorization_name:
+              type: string
+              description: "Terraform resource name of google_certificate_manager_dns_authorization"
+              example: "alva_xyz"
+            output_name:
+              type: string
+              description: "Output variable name (e.g. alva_xyz_dns_record)"
+              example: "alva_xyz_dns_record"
+            cert_id_output_name:
+              type: string
+              description: "Optional output name for certificate ID (e.g. alva_xyz_cert_id)"
+              required: false
+      # 是否输出 GKE 集群 endpoint 与 cluster_name
+      gke:
+        type: object
+        description: "Output GKE cluster info (endpoint, cluster_name)"
+        required: false
+        properties:
+          output_endpoint:
+            type: boolean
+            default: true
+          output_cluster_name:
+            type: boolean
+            default: true
+          module_name:
+            type: string
+            description: "GKE module name (default gke)"
+            default: "gke"

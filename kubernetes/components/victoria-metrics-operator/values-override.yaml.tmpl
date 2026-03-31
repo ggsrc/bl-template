@@ -1,0 +1,26 @@
+# 环境覆盖：由 blcli 渲染，参考 example/alva/k8s/common/victoria-metrics/values-stg.yaml values-prd.yaml
+# 与 values.yaml 一起使用：helm upgrade -i -f values.yaml -f values-override.yaml
+victoria-metrics-k8s-stack:
+  vmsingle:
+    enabled: false
+  vmcluster:
+    enabled: false
+  vmagent:
+    enabled: true
+    spec:
+      remoteWrite:
+        - url: {{ default "http://10.10.0.8:8480/insert/0/prometheus/api/v1/write" .remoteWriteUrl }}
+      selectAllByDefault: true
+      scrapeInterval: {{ default "20s" .scrapeInterval }}
+      externalLabels:
+        cluster: {{ default "stg" .cluster }}
+        env: {{ default "stg" .env }}
+      resources:
+        limits:
+          cpu: "{{ default "2" .vmagentCpuLimit }}"
+          memory: "{{ default "2Gi" .vmagentMemoryLimit }}"
+        requests:
+          cpu: "{{ default "500m" .vmagentCpuRequest }}"
+          memory: "{{ default "500Mi" .vmagentMemoryRequest }}"
+    ingress:
+      enabled: false

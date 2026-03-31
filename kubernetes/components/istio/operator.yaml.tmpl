@@ -1,0 +1,261 @@
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+metadata:
+  name: {{ .IstioOperatorName | default "istio-default" }}
+  namespace: {{ .IstioSystemNamespace | default "istio-system" }}
+spec:
+  # 使用配置档案
+  profile: {{ .IstioProfile | default "default" }}
+  
+  # Istio 版本
+  tag: {{ .IstioVersion | default "1.27.0" }}
+  
+  # Hub 配置 - 镜像仓库
+  hub: {{ .IstioHub | default "docker.io/istio" }}
+  
+  # 全局配置
+  meshConfig:
+    # 启用访问日志（输出到 stdout）
+    accessLogFile: {{ .AccessLogFile | default "/dev/stdout" }}
+    accessLogEncoding: {{ .AccessLogEncoding | default "JSON" }}
+    
+    # 默认配置
+    defaultConfig:
+      # 避免 istio-ingress chart 渲染时 nil pointer (proxyMetadata)
+      proxyMetadata: {}
+      # 分布式追踪配置
+      {{- if .TracingEnabled }}
+      tracing:
+        {{- if eq .TracingProvider "zipkin" }}
+        zipkin:
+          address: {{ .TracingAddress | default "jaeger-collector.istio-system:9411" }}
+        {{- else if eq .TracingProvider "jaeger" }}
+        zipkin:
+          address: {{ .TracingAddress | default "jaeger-collector.istio-system:9411" }}
+        {{- end }}
+      {{- end }}
+      
+      # Envoy 统计配置
+      {{- if .ProxyStatsEnabled }}
+      proxyStatsMatcher:
+        inclusionRegexps:
+          {{- if .ProxyStatsRegexps }}
+          {{- range .ProxyStatsRegexps }}
+          - {{ . }}
+          {{- end }}
+          {{- else }}
+          - ".*"
+          {{- end }}
+      {{- end }}
+    
+    # 自动 mTLS 配置
+    enableAutoMtls: {{ .EnableAutoMtls | default false }}
+    
+    # 出站流量策略 (ALLOW_ANY 或 REGISTRY_ONLY)
+    outboundTrafficPolicy:
+      mode: {{ .OutboundTrafficPolicy | default "ALLOW_ANY" }}
+    
+    # 默认服务发现模式
+    defaultServiceExportTo:
+      {{- if .DefaultServiceExportTo }}
+      {{- range .DefaultServiceExportTo }}
+      - {{ . }}
+      {{- end }}
+      {{- else }}
+      - "*"
+      {{- end }}
+    defaultVirtualServiceExportTo:
+      {{- if .DefaultVirtualServiceExportTo }}
+      {{- range .DefaultVirtualServiceExportTo }}
+      - {{ . }}
+      {{- end }}
+      {{- else }}
+      - "*"
+      {{- end }}
+    defaultDestinationRuleExportTo:
+      {{- if .DefaultDestinationRuleExportTo }}
+      {{- range .DefaultDestinationRuleExportTo }}
+      - {{ . }}
+      {{- end }}
+      {{- else }}
+      - "*"
+      {{- end }}
+  
+  # 组件配置
+  components:
+    # Pilot (istiod) 配置
+    pilot:
+      enabled: {{ .PilotEnabled | default true }}
+      {{- if not (eq .PilotEnabled false) }}
+      k8s:
+        # 副本数配置
+        replicaCount: {{ .PilotReplicaCount | default 1 }}
+        
+        # 资源配置
+        resources:
+          requests:
+            cpu: {{ .PilotCpuRequest | default "100m" }}
+            memory: {{ .PilotMemoryRequest | default "512Mi" }}
+          limits:
+            cpu: {{ .PilotCpuLimit | default "1000m" }}
+            memory: {{ .PilotMemoryLimit | default "1Gi" }}
+        
+        # 节点污点容忍（GKE nodepool 等）
+        tolerations:
+          - key: nodepool
+            operator: Equal
+            value: on-demand
+            effect: NoSchedule
+          - key: nodepool
+            operator: Equal
+            value: spotvm
+            effect: NoSchedule
+        
+        # 环境变量
+        env:
+          {{- if .PilotEnv }}
+          {{- range $key, $value := .PilotEnv }}
+          - name: {{ $key }}
+            value: {{ $value | quote }}
+          {{- end }}
+          {{- else }}
+          - name: PILOT_ENABLE_STATUS
+            value: "true"
+          - name: PILOT_ENABLE_PROTOCOL_SNIFFING_FOR_OUTBOUND
+            value: "true"
+          - name: PILOT_ENABLE_PROTOCOL_SNIFFING_FOR_INBOUND
+            value: "true"
+          {{- end }}
+      {{- end }}
+    
+    # Ingress Gateway 配置
+    ingressGateways:
+      - name: {{ .IngressGatewayName | default "istio-ingressgateway" }}
+        enabled: {{ .IngressGatewayEnabled | default true }}
+        {{- if not (eq .IngressGatewayEnabled false) }}
+        namespace: {{ .IngressGatewayNamespace | default "istio-ingress" }}
+        k8s:
+          # 副本数配置
+          replicaCount: {{ .IngressGatewayReplicaCount | default 1 }}
+          
+          # 资源配置
+          resources:
+            requests:
+              cpu: {{ .IngressGatewayCpuRequest | default "50m" }}
+              memory: {{ .IngressGatewayMemoryRequest | default "128Mi" }}
+            limits:
+              cpu: {{ .IngressGatewayCpuLimit | default "1000m" }}
+              memory: {{ .IngressGatewayMemoryLimit | default "512Mi" }}
+          
+          # 节点污点容忍（GKE nodepool 等）
+          tolerations:
+            - key: nodepool
+              operator: Equal
+              value: on-demand
+              effect: NoSchedule
+            - key: nodepool
+              operator: Equal
+              value: spotvm
+              effect: NoSchedule
+          
+          # Service 配置
+          service:
+            type: {{ .IngressGatewayServiceType | default "LoadBalancer" }}
+            {{- if .IngressGatewayPorts }}
+            ports:
+              {{- range .IngressGatewayPorts }}
+              - name: {{ .name }}
+                port: {{ .port }}
+                protocol: {{ .protocol }}
+                targetPort: {{ .targetPort }}
+              {{- end }}
+            {{- else }}
+            ports:
+              - name: http2
+                port: 80
+                protocol: TCP
+                targetPort: 8080
+              - name: https
+                port: 443
+                protocol: TCP
+                targetPort: 8443
+            {{- end }}
+        {{- end }}
+    
+    # Egress Gateway 配置
+    egressGateways:
+      - name: {{ .EgressGatewayName | default "istio-egressgateway" }}
+        enabled: {{ .EgressGatewayEnabled | default false }}
+        {{- if .EgressGatewayEnabled }}
+        namespace: {{ .EgressGatewayNamespace | default "istio-egress" }}
+        k8s:
+          replicaCount: {{ .EgressGatewayReplicaCount | default 1 }}
+          resources:
+            requests:
+              cpu: {{ .EgressGatewayCpuRequest | default "100m" }}
+              memory: {{ .EgressGatewayMemoryRequest | default "256Mi" }}
+            limits:
+              cpu: {{ .EgressGatewayCpuLimit | default "1000m" }}
+              memory: {{ .EgressGatewayMemoryLimit | default "1Gi" }}
+          tolerations:
+            - key: nodepool
+              operator: Equal
+              value: on-demand
+              effect: NoSchedule
+            - key: nodepool
+              operator: Equal
+              value: spotvm
+              effect: NoSchedule
+        {{- end }}
+  
+  # 值覆盖配置
+  values:
+    global:
+      # 日志级别
+      logging:
+        level: {{ .GlobalLogLevel | default "default:info" | quote }}
+      
+      # 代理配置
+      proxy:
+        # 资源配置
+        resources:
+          requests:
+            cpu: {{ .ProxyCpuRequest | default "100m" }}
+            memory: {{ .ProxyMemoryRequest | default "128Mi" }}
+          limits:
+            cpu: {{ .ProxyCpuLimit | default "2000m" }}
+            memory: {{ .ProxyMemoryLimit | default "1024Mi" }}
+        
+        # 日志级别
+        logLevel: {{ .ProxyLogLevel | default "warning" | quote }}
+        
+        # 组件日志级别
+        componentLogLevel: {{ .ProxyComponentLogLevel | default "misc:error" | quote }}
+      
+      # 多集群配置
+      multiCluster:
+        enabled: {{ .MultiClusterEnabled | default false }}
+      
+      # 网络配置
+      network: {{ .NetworkName | default "" | quote }}
+    
+    # Pilot 配置
+    pilot:
+      # 自动扩缩容配置
+      autoscaleEnabled: {{ .PilotAutoscaleEnabled | default false }}
+    
+    # Gateway 配置
+    gateways:
+      istio-ingressgateway:
+        # 自动扩缩容配置
+        autoscaleEnabled: {{ .IngressGatewayAutoscaleEnabled | default false }}
+    
+    # Telemetry 配置
+    telemetry:
+      enabled: {{ .TelemetryEnabled | default true }}
+      {{- if .TelemetryEnabled }}
+      v2:
+        enabled: {{ .TelemetryV2Enabled | default true }}
+        prometheus:
+          enabled: {{ .TelemetryPrometheusEnabled | default true }}
+      {{- end }}

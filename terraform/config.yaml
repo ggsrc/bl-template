@@ -1,0 +1,194 @@
+
+version: 1.0.0
+
+# Init directory name mappings
+# These define the actual directory names where init items will be generated
+# Supports template variables like {{.GlobalName}}
+init:
+  # Backend directory init items (prepare: true = run first, e.g. create remote state bucket)
+  - name: backend
+    prepare: true
+    path:
+      - terraform/init/main.tf.tmpl
+      - terraform/init/variable.tf.tmpl
+      - terraform/init/terraform-statestore.tf.tmpl
+    destination: terraform/init/0-terraform-statestore/
+    args: terraform/init/args.yaml
+    install: terraform apply -var-file=terraform/init/0-terraform-statestore/*.tf
+    upgrade: terraform apply -var-file=terraform/init/0-terraform-statestore/*.tf
+  
+  # Projects directory init items
+  - name: projects
+    path:
+      - terraform/init/main.tf.tmpl
+      - terraform/init/variable.tf.tmpl
+      - terraform/init/terraform-statestore.tf.tmpl
+    destination: terraform/init/0-terraform-statestore/
+    args: terraform/init/args.yaml
+    install: terraform apply -var-file=terraform/init/0-terraform-statestore/*.tf
+    upgrade: terraform apply -var-file=terraform/init/0-terraform-statestore/*.tf
+  
+  # Projects directory init items
+  - name: projects
+    path:
+      - terraform/init/main.tf.tmpl
+      - terraform/init/variable.tf.tmpl
+      - terraform/init/config.gcs.tfbackend.tmpl
+      - terraform/init/projects.tf.tmpl
+    destination: terraform/init/1-{{.GlobalName}}-projects/
+    args: terraform/init/args.yaml
+    install: terraform apply -var-file=terraform/init/1-{{.GlobalName}}-projects/*.tf
+    upgrade: terraform apply -var-file=terraform/init/1-{{.GlobalName}}-projects/*.tf
+  
+  # Atlantis directory init items
+  - name: atlantis
+    path:
+      - terraform/init/main.tf.tmpl
+      - terraform/init/config.gcs.tfbackend.tmpl
+      - terraform/init/atlantis.tf.tmpl
+    destination: terraform/init/2-atlantis/
+    args: terraform/init/args.yaml
+    install: terraform apply -var-file=terraform/init/2-atlantis/*.tf
+    upgrade: terraform apply -var-file=terraform/init/2-atlantis/*.tf
+
+modules:
+  - name: gke
+    path:
+      - terraform/modules/gke
+  - name: ssl-certificate
+    path:
+      - terraform/modules/ssl-certificate
+  - name: gke-node-pool
+    path:
+      - terraform/modules/gke-node-pool
+  - name: gke-sm-accessor-sa
+    path:
+      - terraform/modules/gke-sm-accessor-sa
+#  - name: security-policy-corp-ip-whitelist
+#    path:
+#      - terraform/modules/security-policy-corp-ip-whitelist
+
+# Project-level global parameters
+project-global: terraform/project/args.yaml
+
+projects:
+  - name: main
+    path:
+      - terraform/project/main.tf.tmpl
+    args: terraform/project/args.yaml
+    install: terraform apply -var-file=terraform/project/main.tf.tmpl
+    upgrade: terraform apply -var-file=terraform/project/main.tf.tmpl
+  - name: modules
+    path:
+      - terraform/project/modules.tf.tmpl
+    args: terraform/project/args.yaml
+    install: terraform apply -var-file=terraform/project/modules.tf.tmpl
+    upgrade: terraform apply -var-file=terraform/project/modules.tf.tmpl
+  - name: outputs
+    path:
+      - terraform/project/outputs.tf.tmpl
+    args: terraform/project/outputs-args.yaml
+    install: terraform apply -var-file=terraform/project/outputs.tf.tmpl
+    upgrade: terraform apply -var-file=terraform/project/outputs.tf.tmpl
+  - name: gke
+    path:
+      - terraform/project/gke.tf.tmpl
+    args: terraform/project/gke-args.yaml
+    install: terraform apply -var-file=terraform/project/gke.tf.tmpl
+    upgrade: terraform apply -var-file=terraform/project/gke.tf.tmpl
+  - name: backend
+    path:
+      - terraform/project/backend.tf.tmpl
+    args: terraform/project/backend-args.yaml
+    dependencies:
+      - main
+    install: terraform apply -var-file=terraform/project/backend.tf.tmpl
+    upgrade: terraform apply -var-file=terraform/project/backend.tf.tmpl
+  - name: variables
+    path:
+      - terraform/project/variables.tf.tmpl
+    args: terraform/project/variables-args.yaml
+    install: terraform apply -var-file=terraform/project/variables.tf.tmpl
+    upgrade: terraform apply -var-file=terraform/project/variables.tf.tmpl
+  - name: provider
+    path:
+      - terraform/project/provider.tf.tmpl
+    args: terraform/project/provider-args.yaml
+    install: terraform apply -var-file=terraform/project/provider.tf.tmpl
+    upgrade: terraform apply -var-file=terraform/project/provider.tf.tmpl
+  - name: vpc
+    path:
+      - terraform/project/vpc.tf.tmpl
+    args: terraform/project/vpc-args.yaml
+    install: terraform apply -var-file=terraform/project/vpc.tf.tmpl
+    upgrade: terraform apply -var-file=terraform/project/vpc.tf.tmpl
+  - name: vpc-peering
+    path:
+      - terraform/project/vpc-peering.tf.tmpl
+    args: terraform/project/vpc-peering-args.yaml
+    dependencies:
+      - vpc
+    install: terraform apply -var-file=terraform/project/vpc-peering.tf.tmpl
+    upgrade: terraform apply -var-file=terraform/project/vpc-peering.tf.tmpl
+  - name: ip
+    path:
+      - terraform/project/ip.tf.tmpl
+    args: terraform/project/ip-args.yaml
+    dependencies:
+      - vpc
+    install: terraform apply -var-file=terraform/project/ip.tf.tmpl
+    upgrade: terraform apply -var-file=terraform/project/ip.tf.tmpl
+  - name: firewall
+    path:
+      - terraform/project/firewall.tf.tmpl
+    args: terraform/project/firewall-args.yaml
+    dependencies:
+      - vpc
+    install: terraform apply -var-file=terraform/project/firewall.tf.tmpl
+    upgrade: terraform apply -var-file=terraform/project/firewall.tf.tmpl
+  - name: dns
+    path:
+      - terraform/project/dns.tf.tmpl
+    args: terraform/project/dns-args.yaml
+    install: terraform apply -var-file=terraform/project/dns.tf.tmpl
+    upgrade: terraform apply -var-file=terraform/project/dns.tf.tmpl
+  - name: cert
+    path:
+      - terraform/project/cert.tf.tmpl
+    args: terraform/project/cert-args.yaml
+    dependencies:
+      - dns
+    install: terraform apply -var-file=terraform/project/cert.tf.tmpl
+    upgrade: terraform apply -var-file=terraform/project/cert.tf.tmpl
+  - name: cdn
+    path:
+      - terraform/project/cdn.tf.tmpl
+    args: terraform/project/cdn-args.yaml
+    dependencies:
+      - cert
+    install: terraform apply -var-file=terraform/project/cdn.tf.tmpl
+    upgrade: terraform apply -var-file=terraform/project/cdn.tf.tmpl
+  - name: artifacts-registry
+    path:
+      - terraform/project/artifacts-registry.tf.tmpl
+    args: terraform/project/artifacts-registry-args.yaml
+    install: terraform apply -var-file=terraform/project/artifacts-registry.tf.tmpl
+    upgrade: terraform apply -var-file=terraform/project/artifacts-registry.tf.tmpl
+  - name: iam
+    path:
+      - terraform/project/iam.tf.tmpl
+    args: terraform/project/iam-args.yaml
+    install: terraform apply -var-file=terraform/project/iam.tf.tmpl
+    upgrade: terraform apply -var-file=terraform/project/iam.tf.tmpl
+  - name: loki-logs
+    path:
+      - terraform/project/loki-logs.tf.tmpl
+    args: terraform/project/loki-logs-args.yaml
+    install: terraform apply -var-file=terraform/project/loki-logs.tf.tmpl
+    upgrade: terraform apply -var-file=terraform/project/loki-logs.tf.tmpl
+  - name: config-gcs-tfbackend
+    path:
+      - terraform/project/config.gcs.tfbackend.tmpl
+    args: []
+    install: terraform init -upgrade -backend-config=config.gcs.tfbackend
+    upgrade: terraform init -upgrade -backend-config=config.gcs.tfbackend

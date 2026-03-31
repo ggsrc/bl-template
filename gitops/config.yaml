@@ -1,0 +1,79 @@
+version: 1.0.0
+
+# GitOps base templates configuration
+# These templates are used to generate Kubernetes manifests for applications
+
+app-templates:
+  deployment:
+    - name: deployment
+      path: gitops/base-deployment.yaml.tmpl
+      args: gitops/args.yaml
+      description: "Base deployment template for stateless applications"
+    - name: service
+      path: gitops/base-service.yaml.tmpl
+      args: gitops/args.yaml
+      description: "Base service template for exposing applications"
+    - name: configmap
+      path: gitops/base-cm.yaml.tmpl
+      description: "Base ConfigMap template for application configuration"
+  
+    - name: serviceaccount
+      path: gitops/base-sa.yaml.tmpl
+      description: "Base ServiceAccount template for application identity"
+  
+    - name: hpa
+      path: gitops/base-hpa.yaml.tmpl
+      description: "Base HorizontalPodAutoscaler template for auto-scaling"
+  
+    - name: virtualservice
+      path: gitops/base-vs.yaml.tmpl
+      description: "Base Istio VirtualService template for traffic routing"
+  
+    - name: vmServiceScrape
+      path: gitops/base-vmscrape.yaml.tmpl
+      description: "Base VMServiceScrape template for VictoriaMetrics monitoring"
+  
+    - name: app
+      path: gitops/app.yaml.tmpl
+      args: gitops/args.yaml
+      description: "Application definition template for GitOps tools (ArgoCD/FluxCD)"
+
+  statefulset:
+    - name: statefulset
+      path: gitops/base-statefulset.yaml.tmpl
+      args: gitops/args.yaml
+      description: "Base statefulset template for stateful applications"
+    
+    - name: service
+      path: gitops/base-service.yaml.tmpl
+      args: gitops/args.yaml
+      description: "Base service template for exposing applications"
+    
+    - name: configmap
+      path: gitops/base-cm.yaml.tmpl
+      description: "Base ConfigMap template for application configuration"
+    
+    - name: serviceaccount
+      path: gitops/base-sa.yaml.tmpl
+      description: "Base ServiceAccount template for application identity"
+    
+    - name: hpa
+      path: gitops/base-hpa.yaml.tmpl
+      description: "Base HorizontalPodAutoscaler template for auto-scaling"
+    
+    - name: virtualservice
+      path: gitops/base-vs.yaml.tmpl
+      description: "Base Istio VirtualService template for traffic routing"
+    
+    - name: vmServiceScrape
+      path: gitops/base-vmscrape.yaml.tmpl
+      description: "Base VMServiceScrape template for VictoriaMetrics monitoring"
+    
+    - name: app
+      path: gitops/app.yaml.tmpl
+      args: gitops/args.yaml
+      description: "Application definition template for GitOps tools (ArgoCD/FluxCD)"
+
+argocd:
+  path: gitops/app.yaml.tmpl
+  args: gitops/args.yaml

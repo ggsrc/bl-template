@@ -1,0 +1,56 @@
+locals {
+  project_services = {
+{{- range $project, $services := .ProjectServices }}
+    "{{ $project }}" = [
+{{- range $service := $services }}
+      "{{ $service }}",
+{{- end }}
+    ]
+{{- end }}
+  }
+}
+
+resource "google_project" "projects" {
+  for_each = local.project_services
+
+  # each.key 已经是在配置阶段生成好的全局唯一 project_id（如 org-prd-xxxx）
+  name            = each.key
+  project_id      = each.key
+{{- $org := printf "%v" .OrganizationID -}}
+{{- if and $org (ne $org "0") }}
+  org_id          = var.gcp_common.org_id
+{{- end }}
+  billing_account = var.gcp_common.billing_account
+  deletion_policy = "ABANDON" # PREVENT=禁止删除 | ABANDON=仅从 state 移除不删 GCP | DELETE=真正删除 GCP 项目
+  labels = {
+    "terraform" : "true"
+  }
+}
+
+resource "google_project_service" "project_services" {
+  for_each = {
+    for item in flatten([
+      for project_id, services in local.project_services : [
+        for service in services : {
+          key     = "${project_id}-${service}"
+          project = project_id
+          service = service
+        }
+      ]
+    ]) : item.key => item
+  }
+
+  project = each.value.project
+  service = each.value.service
+
+  disable_dependent_services = false
+  disable_on_destroy         = false
+
+  depends_on = [google_project.projects]
+}
+
+# 逻辑名（ProjectServices/ProjectIDs 的 key） -> 实际 project_id
+output "project_ids" {
+  value       = { for k, p in google_project.projects : k => p.project_id }
+  description = "Map of project logical name to GCP project_id"
+}

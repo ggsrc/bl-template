@@ -1,0 +1,168 @@
+# CDN Configuration for {{ .project_name }}
+
+{{ if .cdn_configs }}
+{{ range .cdn_configs }}
+##############################################################################################
+# CDN Configuration: {{ .name }}
+##############################################################################################
+
+# Storage Bucket
+resource "google_storage_bucket" "{{ .name }}_cdn_bucket" {
+  name                        = "{{ .bucket_name }}"
+  location                    = "{{ .location }}"
+  uniform_bucket_level_access = {{ if .uniform_bucket_level_access }}{{ .uniform_bucket_level_access }}{{ else }}false{{ end }}
+  {{ if .force_destroy }}force_destroy = {{ .force_destroy }}
+  {{ end }}{{ if .enable_website }}
+  website {
+    main_page_suffix = "{{ .website.main_page_suffix }}"
+    not_found_page   = "{{ .website.not_found_page }}"
+  }
+  {{ end }}{{ if .cors }}
+  cors {
+    origin          = {{ if .cors.origin }}[{{ range $i, $o := .cors.origin }}{{ if $i }}, {{ end }}"{{ $o }}"{{ end }}]{{ else }}["*"]{{ end }}
+    method          = [{{ range $i, $m := .cors.method }}{{ if $i }}, {{ end }}"{{ $m }}"{{ end }}]
+    response_header = [{{ range $i, $h := .cors.response_header }}{{ if $i }}, {{ end }}"{{ $h }}"{{ end }}]
+    {{ if .cors.max_age_seconds }}max_age_seconds = {{ .cors.max_age_seconds }}{{ end }}
+  }
+  {{ end }}{{ if .lifecycle_rules }}
+  {{ range .lifecycle_rules }}
+  lifecycle_rule {
+    condition {
+      {{ if .condition.age }}age = {{ .condition.age }}{{ end }}
+      {{ if .condition.matches_storage_class }}matches_storage_class = [{{ range $i, $sc := .condition.matches_storage_class }}{{ if $i }}, {{ end }}"{{ $sc }}"{{ end }}]{{ end }}
+    }
+    action {
+      type = "{{ .action.type }}"
+    }
+  }
+  {{ end }}
+  {{ end }}{{ if .versioning }}
+  versioning {
+    enabled = {{ .versioning.enabled }}
+  }
+  {{ end }}
+}
+
+{{ if .enable_public_access }}
+resource "google_storage_bucket_iam_member" "{{ .name }}_all_users_viewers" {
+  bucket = google_storage_bucket.{{ .name }}_cdn_bucket.name
+  role   = "roles/storage.legacyObjectReader"
+  member = "allUsers"
+}
+{{ end }}
+
+# Backend Bucket
+resource "google_compute_backend_bucket" "{{ .name }}_cdn_backend_bucket" {
+  name        = "{{ .backend_bucket_name }}"
+  bucket_name = google_storage_bucket.{{ .name }}_cdn_bucket.name
+  enable_cdn  = {{ if .enable_cdn }}{{ .enable_cdn }}{{ else }}true{{ end }}
+  {{ if .compression_mode }}compression_mode = "{{ .compression_mode }}"
+  {{ end }}{{ if .cdn_policy }}
+  cdn_policy {
+    {{ if .cdn_policy.cache_mode }}cache_mode = "{{ .cdn_policy.cache_mode }}"
+    {{ end }}{{ if .cdn_policy.default_ttl }}default_ttl = {{ .cdn_policy.default_ttl }}
+    {{ end }}{{ if .cdn_policy.max_ttl }}max_ttl = {{ .cdn_policy.max_ttl }}
+    {{ end }}{{ if .cdn_policy.client_ttl }}client_ttl = {{ .cdn_policy.client_ttl }}
+    {{ end }}
+  }
+  {{ end }}
+}
+
+# URL Map
+resource "google_compute_url_map" "{{ .name }}_cdn_url_map" {
+  name            = "{{ .url_map_name }}"
+  default_service = google_compute_backend_bucket.{{ .name }}_cdn_backend_bucket.id
+  {{ if .host_rules }}
+  {{ range .host_rules }}
+  host_rule {
+    hosts        = {{ if .hosts }}[{{ range $i, $h := .hosts }}{{ if $i }}, {{ end }}"{{ $h }}"{{ end }}]{{ else }}[]{{ end }}
+    path_matcher = "{{ .path_matcher }}"
+  }
+  {{ end }}
+  {{ end }}{{ if .path_matchers }}
+  {{ range .path_matchers }}
+  path_matcher {
+    name            = "{{ .name }}"
+    {{ if .default_service }}default_service = {{ .default_service }}
+    {{ end }}{{ if .default_url_redirect }}
+    default_url_redirect {
+      {{ if .default_url_redirect.host_redirect }}host_redirect = "{{ .default_url_redirect.host_redirect }}"
+      {{ end }}{{ if .default_url_redirect.https_redirect }}https_redirect = {{ .default_url_redirect.https_redirect }}
+      {{ end }}{{ if .default_url_redirect.strip_query }}strip_query = {{ .default_url_redirect.strip_query }}
+      {{ end }}{{ if .default_url_redirect.redirect_response_code }}redirect_response_code = "{{ .default_url_redirect.redirect_response_code }}"
+      {{ end }}
+    }
+    {{ end }}
+  }
+  {{ end }}
+  {{ end }}
+}
+
+# Global IP for this CDN (created when HTTP redirect and/or HTTPS is enabled, so both can share it)
+{{ if or .enable_http_redirect .enable_https }}
+resource "google_compute_global_address" "{{ .name }}_cdn_public_address" {
+  name         = "{{ .ip_address_name }}"
+  ip_version   = "{{ .ip_version }}"
+  address_type = "EXTERNAL"
+}
+{{ end }}
+
+{{ if .enable_http_redirect }}
+# HTTP to HTTPS Redirect
+resource "google_compute_url_map" "{{ .name }}_http_redirect" {
+  name = "{{ .http_redirect_name }}"
+
+  default_url_redirect {
+    redirect_response_code = "{{ .http_redirect_code }}"
+    strip_query            = {{ if .http_redirect_strip_query }}{{ .http_redirect_strip_query }}{{ else }}false{{ end }}
+    https_redirect         = true
+  }
+}
+
+resource "google_compute_target_http_proxy" "{{ .name }}_http_redirect" {
+  name    = "{{ .http_redirect_name }}"
+  url_map = google_compute_url_map.{{ .name }}_http_redirect.self_link
+}
+
+resource "google_compute_global_forwarding_rule" "{{ .name }}_http_redirect" {
+  name       = "{{ .http_redirect_name }}"
+  target     = google_compute_target_http_proxy.{{ .name }}_http_redirect.self_link
+  ip_address = {{ if .http_redirect_ip_reference }}{{ .http_redirect_ip_reference }}{{ else }}google_compute_global_address.{{ .name }}_cdn_public_address.address{{ end }}
+  port_range = "80"
+}
+{{ end }}
+
+{{ if .enable_https }}
+# HTTPS Proxy
+{{ if .use_managed_certificate }}
+resource "google_compute_managed_ssl_certificate" "{{ .name }}_cdn_certificate" {
+  name = "{{ .certificate_name }}"
+  {{ if .certificate_random_id }}
+  lifecycle {
+    create_before_destroy = true
+  }
+  {{ end }}
+  managed {
+    domains = [{{ range $i, $domain := .domains }}{{ if $i }}, {{ end }}"{{ $domain }}"{{ end }}]
+  }
+}
+{{ end }}
+
+resource "google_compute_target_https_proxy" "{{ .name }}_cdn_https_proxy" {
+  name             = "{{ .https_proxy_name }}"
+  url_map          = google_compute_url_map.{{ .name }}_cdn_url_map.id
+  ssl_certificates = [{{ if .use_managed_certificate }}google_compute_managed_ssl_certificate.{{ .name }}_cdn_certificate.id{{ else }}{{ range $i, $cert := .ssl_certificates }}{{ if $i }}, {{ end }}{{ $cert }}{{ end }}{{ end }}]
+}
+
+# HTTPS Forwarding Rule
+resource "google_compute_global_forwarding_rule" "{{ .name }}_cdn_global_forwarding_rule" {
+  name       = "{{ .forwarding_rule_name }}"
+  target     = google_compute_target_https_proxy.{{ .name }}_cdn_https_proxy.id
+  ip_address = google_compute_global_address.{{ .name }}_cdn_public_address.address
+  port_range = "443"
+}
+{{ end }}
+
+{{ end }}
+{{ end }}
+

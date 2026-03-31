@@ -1,0 +1,74 @@
+version: 1.0.0
+
+# kubernetes/components/sealed-secret 组件的参数定义
+
+parameters:
+  # 组件级参数
+  components:
+    sealed-secret:
+      description: "Sealed Secrets controller configuration parameters"
+      
+      # 基础配置
+      Namespace:
+        type: string
+        description: "Namespace where Sealed Secrets controller is deployed (typically kube-system)"
+        required: false
+        default: "kube-system"
+        example: "kube-system"
+      
+      # 版本配置
+      SealedSecretsVersion:
+        type: string
+        description: "Sealed Secrets controller version"
+        required: false
+        default: "v0.32.2"
+        example: "v0.32.2"
+      
+      # Manifest 配置
+      ControllerManifestURL:
+        type: string
+        description: "URL to Sealed Secrets controller manifest"
+        required: false
+        default: "https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.32.2/controller.yaml"
+        example: "https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.32.2/controller.yaml"
+      
+      # Controller 配置
+      ControllerName:
+        type: string
+        description: "Sealed Secrets controller name"
+        required: false
+        default: "sealed-secrets-controller"
+        example: "sealed-secrets-controller"
+      
+      # 资源限制配置（可选，用于自定义 controller 资源）
+      ControllerResources:
+        type: object
+        description: "Resource requests and limits for Sealed Secrets controller"
+        required: false
+        default: {}
+        example:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "256Mi"
+      
+      # 副本数配置
+      ControllerReplicas:
+        type: integer
+        description: "Number of controller replicas (for HA setup)"
+        required: false
+        default: 1
+        minimum: 1
+        example: 1
+      
+      # 更新策略配置
+      UpdateStrategy:
+        type: string
+        description: "Update strategy for controller deployment (RollingUpdate, Recreate)"
+        required: false
+        default: "RollingUpdate"
+        enum: ["RollingUpdate", "Recreate"]
+        example: "RollingUpdate"
+

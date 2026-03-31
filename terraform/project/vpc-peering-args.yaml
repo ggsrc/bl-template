@@ -1,0 +1,33 @@
+version: 1.0.0
+
+# terraform/project/vpc-peering 组件参数
+# 用于声明 VPC Peering；有跨项目依赖时由 blcli 写入子目录，apply 后移回项目根
+
+parameters:
+  components:
+    vpc-peering:
+      vpc_peerings:
+        type: array
+        description: "List of VPC peering connections"
+        required: false
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              description: "Name of the VPC peering connection"
+              required: true
+            peer_network:
+              type: string
+              description: "Full URL of the peer network (e.g., https://www.googleapis.com/compute/v1/projects/PROJECT_ID/global/networks/NETWORK_NAME)"
+              required: true
+            export_custom_routes:
+              type: boolean
+              description: "Export custom routes to peer network"
+              required: false
+              default: true
+            import_custom_routes:
+              type: boolean
+              description: "Import custom routes from peer network"
+              required: false
+              default: true

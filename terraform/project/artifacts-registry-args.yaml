@@ -1,0 +1,94 @@
+version: 1.0.0
+
+# terraform/project/artifacts-registry 组件的参数定义
+# 这些参数用于创建 Artifact Registry Repository 和 IAM 配置
+
+parameters:
+  # 组件级参数（对应 config.yaml projects 中的 artifacts-registry 组件）
+  components:
+    artifacts-registry:
+      repositories:
+        type: array
+        description: "List of artifact registry repositories to create"
+        required: false
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              description: "Repository name (used as resource identifier)"
+              required: true
+              pattern: "^[a-z0-9-]+$"
+              example: "my_app"
+            repository_id:
+              type: string
+              description: "Repository ID"
+              required: true
+              pattern: "^[a-z0-9-]+$"
+              example: "my-app"
+            description:
+              type: string
+              description: "Description of the repository"
+              required: false
+              example: "Build artifacts for Github repo my-app"
+            format:
+              type: string
+              description: "Repository format"
+              required: true
+              enum: ["DOCKER", "MAVEN", "NPM", "PYTHON", "APT", "YUM"]
+              example: "DOCKER"
+            location:
+              type: string
+              description: "Repository location (defaults to var.region if not specified)"
+              required: false
+              example: "us-west1"
+            labels:
+              type: object
+              description: "Labels for the repository"
+              required: false
+              additionalProperties:
+                type: string
+            docker_config:
+              type: object
+              description: "Docker configuration (only for DOCKER format)"
+              required: false
+              properties:
+                immutable_tags:
+                  type: boolean
+                  description: "Enable immutable tags"
+                  default: true
+      
+      iam_members:
+        type: array
+        description: "List of IAM members for repositories"
+        required: false
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              description: "IAM member name (used as resource identifier)"
+              required: true
+              pattern: "^[a-z0-9-]+$"
+              example: "repo_iam_reader"
+            repository_name:
+              type: string
+              description: "Repository name (must match name in repositories array)"
+              required: true
+              example: "my_app"
+            location:
+              type: string
+              description: "Repository location (defaults to var.region if not specified)"
+              required: false
+            role:
+              type: string
+              description: "IAM role"
+              required: true
+              enum: ["roles/artifactregistry.reader", "roles/artifactregistry.writer", "roles/artifactregistry.admin"]
+              example: "roles/artifactregistry.reader"
+            member:
+              type: string
+              description: "IAM member (user, service account, or group)"
+              required: true
+              example: "serviceAccount:gke-node-sa@project.iam.gserviceaccount.com"
+

@@ -1,0 +1,27 @@
+# Terraform Configs for Projects Creation
+
+## Terraform Deployment
+
+This project should generally be deployed locally.
+
+This is primarily because project creation and billing account binding demand high-level permissions—privileges that should not be extended to Atlantis.
+
+Therefore, the configuration needs to be deployed manually from a local environment.
+
+```bash
+# init
+terraform init -upgrade -backend-config=config.gcs.tfbackend
+
+# show the diff
+terraform plan
+
+# apply the changes
+terraform apply
+```
+
+## App Information
+
+- Global Name: {{ .GlobalName }}
+- Domain: {{ .Domain }}
+- Version: {{ .Version }}
+

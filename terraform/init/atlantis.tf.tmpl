@@ -1,0 +1,103 @@
+locals {
+  project_id = "{{ .ProjectID }}"
+
+  # Define all projects that Atlantis needs access to, and the specific role it should have in each.
+  # Key = project_id, Value = role_name
+  project_iam_members = {
+{{- range $project_id, $role := .ProjectIAMMembers }}
+    "{{ $project_id }}" = "{{ $role }}",
+{{- end }}
+  }
+
+  # Define GCS buckets where Atlantis needs 'storage.objectAdmin' permissions.
+  # Key = bucket_name, Value = project_id (the project the bucket resides in)
+  # The project_id is used to determine which project should have the deny policy applied,
+  # or if the bucket itself exists within a project also receiving project-level IAM.
+  gcs_buckets_object_admin = {
+{{- if .GCSBucketsObjectAdmin }}
+{{- range $bucket_name, $project_id := .GCSBucketsObjectAdmin }}
+    "{{ $bucket_name }}" = "{{ $project_id }}",
+{{- end }}
+{{- end }}
+  }
+}
+
+resource "google_service_account" "atlantis-iac-sa" {
+  project = local.project_id
+
+  account_id   = "atlantis-iac-sa" # need to satisfy `^[a-z](?:[-a-z0-9]{4,28}[a-z0-9])$`
+  display_name = "atlantis terraform pull requests automation"
+}
+
+# gives the Kubernetes ServiceAccount access to impersonate the IAM service account
+# https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity#kubernetes-sa-to-iam
+resource "google_service_account_iam_member" "sa_workload_identity_user" {
+  service_account_id = google_service_account.atlantis-iac-sa.name
+
+  role = "roles/iam.workloadIdentityUser"
+
+  # gke's service account id
+  # format: "serviceAccount:PROJECT_ID.svc.id.goog[NAMESPACE/K8S_SA_NAME]"
+  member = "serviceAccount:${local.project_id}.svc.id.goog[atlantis/atlantis]"
+}
+
+# ----------------------------------------------------------------
+
+# --- Project-level IAM Permissions for Atlantis ---
+# This resource dynamically grants specified roles to the Atlantis service account
+# across all projects defined in `local.project_iam_members`.
+resource "google_project_iam_member" "atlantis_project_roles" {
+  for_each = local.project_iam_members # Iterate over the project-role map
+
+  project = each.key   # Current project ID from the map key
+  role    = each.value # Current role from the map value
+  member  = "serviceAccount:${google_service_account.atlantis-iac-sa.email}"
+}
+
+# --- GCS Bucket Object Admin Permissions for Atlantis ---
+# This resource grants 'roles/storage.objectAdmin' to the Atlantis service account
+# for all GCS buckets defined in `local.gcs_buckets_object_admin`.
+resource "google_storage_bucket_iam_member" "atlantis_gcs_bucket_object_admin" {
+  for_each = local.gcs_buckets_object_admin # Iterate over the bucket map
+
+  bucket = each.key # Current bucket name from the map key
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${google_service_account.atlantis-iac-sa.email}"
+}
+
+# --- IAM Deny Policy for Secret Manager Access ---
+# This policy explicitly denies all Secret Manager related permissions to the
+# Atlantis service account in each specified project.
+# This ensures that even if 'roles/owner' or other broad roles are granted,
+# Secret Manager access is explicitly blocked.
+#
+# NOTE: This policy can only be applied or updated by users with `roles/iam.denyAdmin`
+# at the organization level.
+resource "google_iam_deny_policy" "deny_atlantis_secret_manager" {
+  # Apply this deny policy to every project where Atlantis has IAM bindings.
+  # `keys(local.project_iam_members)` gets a list of all project IDs from the map.
+  for_each = toset(keys(local.project_iam_members))
+
+  # An identifier for the resource that the deny policy is attached to.
+  # https://cloud.google.com/iam/docs/deny-overview#attachment-point
+  # `each.key` here represents the current project ID.
+  parent = urlencode("cloudresourcemanager.googleapis.com/projects/${each.key}")
+
+  name = "deny-atlantis-access-secret-manager"
+  # A user-friendly name for the policy.
+  display_name = "Deny Secret Manager Access for Atlantis"
+
+  rules {
+    deny_rule {
+      # The list of specific Secret Manager permissions to deny.
+      # https://cloud.google.com/iam/docs/deny-permissions-support
+      denied_permissions = [
+        "secretmanager.googleapis.com/*.*",
+      ]
+
+      # The principal(s) to whom these permissions are denied.
+      # https://cloud.google.com/iam/docs/principal-identifiers#deny
+      denied_principals = ["principal://iam.googleapis.com/projects/-/serviceAccounts/${google_service_account.atlantis-iac-sa.email}"]
+    }
+  }
+}

@@ -1,0 +1,20 @@
+variable "project" {
+  description = "GCP Project ID"
+}
+
+variable "zone_project" {
+  description = "GCP Project ID for the zone， added to support cross project DNS zone. By default, it is the same as the project"
+}
+
+variable "dns_managed_zone" {
+  description = "DNS managed zone"
+}
+
+variable "component_name" {
+  description = "Name of the component to provision certificates for"
+}
+
+variable "domain" {
+  description = "domain name to provision certificates for"
+}
+

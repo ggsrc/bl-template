@@ -1,0 +1,323 @@
+
+argocd:
+  project: 
+  - stg
+  - prd
+apps:
+  - name: hello-world
+    kind: deployment
+    image: hashicorp/http-echo:0.2.3
+    repo: https://github.com/your-username/hello-world.git
+    project: 
+    - name: stg
+      parameters:
+        SourceRepoURL: https://github.com/your-org/gitops.git
+        SourcePath: stg/hello-world
+        ContainerArgs:
+          - "-listen=:8080"
+          - "-text=Hello from hello-world"
+        ContainerPorts:
+          - containerPort: 3000
+            name: http-rest
+          - containerPort: 8080
+            name: http
+          - containerPort: 9090
+            name: grpc
+          - containerPort: 9091
+            name: grpc-mtls
+          - containerPort: 8080
+            name: liveness
+          - containerPort: 8080
+            name: readiness
+          - containerPort: 4014
+            name: http-prometheus
+        LivenessProbe:
+          httpGet:
+            path: "/healthz"
+            port: 8080
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          timeoutSeconds: 5
+        ReadinessProbe:
+          httpGet:
+            path: "/healthz"
+            port: 8080
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          timeoutSeconds: 5
+        Tolerations:
+          - key: "nodepool"
+            operator: "Equal"
+            value: "spotvm"
+            effect: "NoSchedule"  
+        ServicePorts:
+          - name: http-rest
+            port: 3000
+            targetPort: 3000
+          - name: http
+            port: 8080
+            targetPort: 8080
+          - name: grpc
+            port: 9090
+            targetPort: 9090
+          - name: grpc-mtls
+            port: 9091
+            targetPort: 9091
+          - name: http-prometheus
+            port: 4014
+            targetPort: 4014
+        HPA:
+          minReplicas: 1
+          maxReplicas: 10
+          metrics:
+            - type: Resource
+              resource:
+                name: memory
+                target:
+                  type: Utilization
+                  averageUtilization: 75
+            - type: Resource
+              resource:
+                name: cpu
+                target:
+                  type: Utilization
+                  averageUtilization: 85
+        ServiceMonitor:
+          namespace: monitoring
+          labels:
+            prometheus: enabled
+          namespaceSelector:
+            matchNames:
+              - stg
+          selector:
+            matchLabels:
+              app: hello-world
+              version: 1.0.0
+          endpoints:
+            - interval: 30s
+              port: http-prometheus
+        VMServiceScrape:
+          namespace: monitoring
+          labels:
+            victoriametrics: enabled
+          namespaceSelector:
+            matchNames:
+              - stg
+          endpoints:
+            - port: http-prometheus
+              interval: 30s
+        ApplicationName: hello-world
+        ApplicationNamespace: app
+        ApplicationProject: default
+        ApplicationRepo: https://github.com/your-org/hello-world.git
+        ApplicationPath: stg/hello-world
+        ApplicationRevision: 1.0.0
+        ApplicationSyncPolicy: Automatic
+        ApplicationSyncOptions: Create,Delete,Prune,Rollback,Suspend,Resume,Restart 
+    - name: prd
+      parameters:
+        SourceRepoURL: https://github.com/your-org/gitops.git
+        SourcePath: prd/hello-world
+        ContainerArgs:
+          - "-listen=:8080"
+          - "-text=Hello from hello-world"
+        ApplicationName: hello-world
+        ApplicationNamespace: app
+        ApplicationProject: default
+        ApplicationRepo: https://github.com/your-org/hello-world.git
+        ApplicationPath: prd/hello-world
+        ApplicationRevision: 1.0.0
+        ApplicationSyncPolicy: Automatic
+        ApplicationSyncOptions: Create,Delete,Prune,Rollback,Suspend,Resume,Restart
+        ContainerPorts:
+          - containerPort: 3000
+            name: http-rest
+          - containerPort: 8080
+            name: http
+          - containerPort: 9090
+            name: grpc
+          - containerPort: 9091
+            name: grpc-mtls
+          - containerPort: 8080
+            name: liveness
+          - containerPort: 8080
+            name: readiness
+          - containerPort: 4014
+            name: http-prometheus
+        LivenessProbe:
+          httpGet:
+            path: "/healthz"
+            port: 8080
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          timeoutSeconds: 5
+        ReadinessProbe:
+          httpGet:
+            path: "/healthz"
+            port: 8080
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          timeoutSeconds: 5
+        Tolerations:
+          - key: "nodepool"
+            operator: "Equal"
+            value: "spotvm"
+            effect: "NoSchedule"  
+        ServicePorts:
+          - name: http-rest
+            port: 3000
+            targetPort: 3000
+          - name: http
+            port: 8080
+            targetPort: 8080
+          - name: grpc
+            port: 9090
+            targetPort: 9090
+          - name: grpc-mtls
+            port: 9091
+            targetPort: 9091
+          - name: http-prometheus
+            port: 4014
+            targetPort: 4014
+        HPA:
+          minReplicas: 1
+          maxReplicas: 10
+          metrics:
+            - type: Resource
+              resource:
+                name: memory
+                target:
+                  type: Utilization
+                  averageUtilization: 75
+            - type: Resource
+              resource:
+                name: cpu
+                target:
+                  type: Utilization
+                  averageUtilization: 85
+        ServiceMonitor:
+          namespace: monitoring
+          labels:
+            prometheus: enabled
+          namespaceSelector:
+            matchNames:
+              - prd
+          selector:
+            matchLabels:
+              app: hello-world
+              version: 1.0.0
+          endpoints:
+            - interval: 30s
+              port: http-prometheus
+        VMServiceScrape:
+          namespace: monitoring
+          namespaceSelector:
+            matchNames:
+              - prd
+          endpoints:
+            - port: http-prometheus
+              interval: 30s
+  - name: hello-world-2
+    kind: statefulset
+    repo: https://github.com/your-username/hello-world-2.git
+    project: 
+    - name: stg
+      parameters:
+        SourceRepoURL: https://github.com/your-org/gitops.git
+        SourcePath: stg/hello-world-2
+        ApplicationName: hello-world-2
+        ApplicationNamespace: app
+        ApplicationProject: default
+        ApplicationRepo: https://github.com/your-org/hello-world-2.git
+        ApplicationPath: stg/hello-world-2
+        ApplicationRevision: 1.0.0
+        ApplicationSyncPolicy: Automatic
+        ApplicationSyncOptions: Create,Delete,Prune,Rollback,Suspend,Resume,Restart
+        ContainerPorts:
+          - containerPort: 3000
+            name: http-rest
+          - containerPort: 8080
+            name: http
+          - containerPort: 9090
+            name: grpc
+          - containerPort: 9091
+            name: grpc-mtls
+          - containerPort: 8080
+            name: liveness
+          - containerPort: 8080
+            name: readiness
+          - containerPort: 4014
+            name: http-prometheus
+        LivenessProbe:
+          httpGet:
+            path: "/healthz"
+            port: 8080
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          timeoutSeconds: 5
+        ReadinessProbe:
+          httpGet:
+            path: "/healthz"
+            port: 8080
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          timeoutSeconds: 5
+        Tolerations:
+          - key: "nodepool"
+            operator: "Equal"
+            value: "spotvm"
+            effect: "NoSchedule"  
+        ServicePorts:
+          - name: http-rest
+            port: 3000
+            targetPort: 3000
+          - name: http
+            port: 8080
+            targetPort: 8080
+          - name: grpc
+            port: 9090
+            targetPort: 9090
+          - name: grpc-mtls
+            port: 9091
+            targetPort: 9091
+          - name: http-prometheus
+            port: 4014
+            targetPort: 4014
+        HPA:
+          minReplicas: 1
+          maxReplicas: 10
+          metrics:
+            - type: Resource
+              resource:
+                name: memory
+                target:
+                  type: Utilization
+                  averageUtilization: 75
+            - type: Resource
+              resource:
+                name: cpu
+                target:
+                  type: Utilization
+                  averageUtilization: 85
+        ServiceMonitor:
+          namespace: monitoring
+          labels:
+            prometheus: enabled
+          namespaceSelector:
+            matchNames:
+              - stg
+          selector:
+            matchLabels:
+              app: hello-world-2
+              version: 1.0.0
+          endpoints:
+            - interval: 30s
+              port: http-prometheus
+        VMServiceScrape:
+          namespace: monitoring
+          namespaceSelector:
+            matchNames:
+              - stg
+          endpoints:
+            - port: http-prometheus
+              interval: 30s

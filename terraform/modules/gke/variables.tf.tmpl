@@ -1,0 +1,105 @@
+variable "project_id" {
+  description = "Project ID"
+}
+
+variable "cluster_name" {
+  description = "Name of the GKE cluster"
+}
+
+variable "network" {
+  description = "Name of the VPC network"
+}
+
+variable "subnetwork" {
+  description = "Name of the VPC subnetwork"
+}
+
+variable "cluster_ipv4_cidr_block" {
+  description = "Secondary IP range of cluster pod IPv4 CIDR"
+}
+
+variable "services_ipv4_cidr_block" {
+  description = "Secondary IP range of cluster services IPv4 CIDR"
+}
+
+variable "master_ipv4_cidr_block" {
+  description = "The IP range in CIDR notation to use for the hosted master network. This range must not overlap with any other ranges in use within the cluster's network."
+  type        = string
+  default     = "172.16.0.0/28"
+}
+
+variable "region" {
+  description = "Region of the GKE cluster"
+}
+
+variable "node_locations" {
+  description = "AZs to place the nodes in"
+  default     = ["us-west1-a"]
+}
+
+variable "machine_type" {
+  description = "Primary node pool machine type"
+}
+
+variable "min_node_count" {
+  default = 1
+}
+
+variable "max_node_count" {
+  default = 50
+}
+
+variable "initial_node_count" {
+  default = 1
+}
+
+variable "logging_config_enable_components" {
+  default = []
+}
+
+## 20250520 added by sirius
+variable "monitoring_config_enable_components" {
+  type    = list(string)
+  default = ["SYSTEM_COMPONENTS"] # 如果你默认想关掉，改成 []
+}
+
+
+variable "managed_prometheus_enabled" {
+  type    = bool
+  default = false
+}
+
+variable "total_min_node_count" {
+  description = "Minimum total number of nodes across all locations."
+  default     = null
+}
+
+variable "total_max_node_count" {
+  description = "Maximum total number of nodes across all locations."
+  default     = null
+}
+
+variable "location_policy" {
+  description = "Location policy for node autoscaling (e.g., ANY, BALANCED)."
+  default     = "BALANCED"
+}
+
+variable "release_channel" {
+  description = "GKE release channel (e.g., RAPID, REGULAR, STABLE, EXTENDED)"
+  type        = string
+  # Extended - Stay on a minor version beyond the standard support period.
+  default = "EXTENDED"
+}
+
+variable "deletion_protection" {
+  description = "Whether or not to enable deletion protection on the GKE cluster."
+  type        = bool
+  default     = true
+}
+
+variable "disk_size_gb" {
+  description = "Size of the node boot disk in GB (main node pool)."
+  type        = number
+  default     = 20
+}
+
