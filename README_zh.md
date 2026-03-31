@@ -1,7 +1,6 @@
 # bl-template
 
 blcli template repository for one-click generation of GCP environment infrastructure configurations.
-For Chinese documentation, see [README_zh.md](./README_zh.md).
 
 ## Repository Purpose
 
@@ -35,12 +34,12 @@ bl-template/
 │   ├── base/           # Base components (required)
 │   └── optional/        # Optional components
 ├── gitops/             # GitOps configurations
-│   ├── config.yaml     # app-templates (deployment/statefulset) and argocd definitions
-│   ├── args.yaml       # parameter definitions (including ArgoCD Application fields)
-│   ├── default.yaml    # defaults: argocd.project and apps[] (name, kind, image, repo, project...)
-│   ├── app.yaml.tmpl   # ArgoCD Application template
-│   └── base-*.tmpl     # base templates for deployment/statefulset/service/configmap
-└── README.md           # this file
+│   ├── config.yaml     # app-templates（deployment/statefulset）、argocd 组件定义
+│   ├── args.yaml       # 参数定义（含 ArgoCD Application 相关）
+│   ├── default.yaml    # 默认值：argocd.project、apps[]（name、kind、image、repo、project 等）
+│   ├── app.yaml.tmpl   # ArgoCD Application 模板
+│   └── base-*.tmpl     # deployment/statefulset/service/configmap 等基础模板
+└── README.md           # 本文件
 ```
 
 ## Core Components
@@ -94,14 +93,14 @@ Defines Kubernetes cluster initialization components:
 
 #### gitops/config.yaml
 
-Defines GitOps templates and ArgoCD configuration:
+定义 GitOps 模板与 ArgoCD 配置：
 
-- **app-templates**: Base application templates
-  - `deployment`: Deployment-style applications (path/args point to template and parameters)
-  - `statefulset`: StatefulSet-style applications
-- **argocd**: ArgoCD-related templates (for example `app.yaml.tmpl` to generate ArgoCD Application resources)
+- **app-templates**：应用基础模板
+  - `deployment`：Deployment 类应用（path、args 指向模板与参数）
+  - `statefulset`：StatefulSet 类应用
+- **argocd**：ArgoCD 相关模板（如 app.yaml.tmpl，用于生成 ArgoCD Application）
 
-Used together with `gitops/args.yaml` and `gitops/default.yaml`. `default.yaml` provides defaults and includes `argocd.project` and `apps[]` (each app contains fields such as name, kind, image, repo, and project).
+配合 `gitops/args.yaml` 与 `gitops/default.yaml` 使用。`default.yaml` 提供默认值，结构包含 `argocd.project` 与 `apps[]`（每个 app 含 name、kind、image、repo、project 等）。
 
 ### 2. args.yaml
 
@@ -180,61 +179,61 @@ See [ARGS_DESIGN.md](./ARGS_DESIGN.md) for full parameter and validation documen
 
 For detailed design, please refer to [ARGS_DESIGN.md](./ARGS_DESIGN.md)
 
-## blcli Usage
+## blcli 用法说明
 
-This repository is used as a `blcli` template repository through `-r`, either with a local path or a GitHub URL.
+本仓库作为 blcli 的模板仓库，通过 `-r` 指定本地路径或 GitHub 地址使用。
 
-### 1. Generate parameter file (`init-args`)
+### 1. 生成参数文件（init-args）
 
-Collect parameter definitions from multiple `args.yaml` levels in the template repository, and generate an editable `args.yaml`:
+从模板仓库收集各层 `args.yaml` 定义，生成一份可编辑的 `args.yaml`：
 
 ```bash
 blcli init-args -r github.com/ggsrc/bl-template -o args.yaml
-# Or use a local path
+# 或使用本地路径
 blcli init-args -r /path/to/bl-template -o args.yaml
 ```
 
-The generated `args.yaml` includes sections such as `global`, `terraform`, `kubernetes`, and `gitops` (depending on template `config/args` definitions).
+生成的 `args.yaml` 包含 `global`、`terraform`、`kubernetes`、`gitops` 等段（取决于模板中的 config/args 定义）。
 
-### 2. Generate infrastructure configuration (`init`)
+### 2. 生成基础设施配置（init）
 
-Generate Terraform, Kubernetes, and GitOps configuration from `args.yaml` and templates:
+根据 `args.yaml` 和模板生成 Terraform、Kubernetes、GitOps 配置：
 
 ```bash
-# Generate all modules (terraform + kubernetes + gitops, if present in args)
+# 生成全部（terraform + kubernetes + gitops，若 args 中有对应段）
 blcli init -r github.com/ggsrc/bl-template -a args.yaml
 
-# Generate terraform only
+# 只生成 terraform
 blcli init terraform -r github.com/ggsrc/bl-template -a args.yaml
 
-# Generate kubernetes only
+# 只生成 kubernetes
 blcli init kubernetes -r github.com/ggsrc/bl-template -a args.yaml
 
-# Generate with custom output and overwrite
+# 生成时指定输出目录与覆盖
 blcli init -r /path/to/bl-template -a args.yaml --output ./workspace/output -w
 ```
 
-- **Terraform**: Output to `{workspace}/terraform/` (init, gcp projects, modules, etc.).
-- **Kubernetes**: Output to `{workspace}/kubernetes/{project}/{component}/` based on `kubernetes.projects[]` and `components`.
-- **GitOps**: When `args.yaml` includes `gitops.argocd` and `gitops.apps`, output by project × app into `{workspace}/gitops/{project}/{app_name}/`, including deployment/statefulset, service, configmap, and `app.yaml` (ArgoCD Application).
+- **Terraform**：输出到 `{workspace}/terraform/`（init、gcp 项目、modules 等）。
+- **Kubernetes**：按 `kubernetes.projects[]` 与 `components` 输出到 `{workspace}/kubernetes/{project}/{component}/`。
+- **GitOps**：当 `args.yaml` 含 `gitops.argocd` 与 `gitops.apps` 时，按 project × app 输出到 `{workspace}/gitops/{project}/{app_name}/`，包含 deployment/statefulset、service、configmap、`app.yaml`（ArgoCD Application）等。
 
-### 3. Apply GitOps (`apply gitops`)
+### 3. 应用 GitOps（apply gitops）
 
-Run `kubectl apply` on ArgoCD Applications in the generated GitOps directory. Actual app deployment is synced by ArgoCD:
+对生成的 GitOps 目录中的 ArgoCD Application 执行 `kubectl apply`，实际应用由 ArgoCD 同步部署：
 
 ```bash
 blcli apply gitops -d ./workspace/output/gitops --args args.yaml
 ```
 
-### 4. Initialize and push repositories to GitHub (`apply init-repos`)
+### 4. 初始化仓库并推送到 GitHub（apply init-repos）
 
-For `terraform`, `kubernetes`, and `gitops` directories generated by `blcli init`, run `git init`, create GitHub repositories, commit, and push (interactive `Y` confirmations required):
+对 `blcli init` 生成的 terraform、kubernetes、gitops 三个目录分别执行 git init、创建 GitHub 仓库、提交并推送（需在提示时输入 Y 确认）：
 
 ```bash
 blcli apply init-repos -o myorg -d ./workspace/output
 ```
 
-Requires [gh](https://cli.github.com/) installed and authenticated (`gh auth login`).
+需要已安装并登录 [gh](https://cli.github.com/)（`gh auth login`）。
 
 ## Template Syntax
 
