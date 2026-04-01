@@ -2,7 +2,7 @@ apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMServiceScrape
 metadata:
   name: {{ .ApplicationName | default "APP_NAME" }}
-  namespace: {{ if .VMServiceScrape }}{{ .VMServiceScrape.namespace | default "monitoring" }}{{ else }}monitoring{{ end }}
+  namespace: {{ if .VMServiceScrape }}{{ .VMServiceScrape.namespace | default "monitoring" }}{{ else }}monitoring-vm{{ end }}
   labels:
     {{- if and .VMServiceScrape .VMServiceScrape.labels }}
     {{- range $k, $v := .VMServiceScrape.labels }}
