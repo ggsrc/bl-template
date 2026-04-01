@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: argocd
+  name: {{ if .Namespace }}{{ .Namespace }}{{ else }}argocd{{ end }}
   labels:
     prometheus.io/scrape: "true"
     prometheus.io/port: "8080"
