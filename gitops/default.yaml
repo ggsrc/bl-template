@@ -109,7 +109,7 @@ apps:
         ApplicationName: hello-world
         ApplicationNamespace: app
         ApplicationProject: default
-        ApplicationRepo: https://github.com/your-org/hello-world.git
+        ApplicationRepo: https://github.com/your-org/gitops.git
         ApplicationPath: stg/hello-world
         ApplicationRevision: 1.0.0
         ApplicationSyncPolicy: Automatic
@@ -124,7 +124,7 @@ apps:
         ApplicationName: hello-world
         ApplicationNamespace: app
         ApplicationProject: default
-        ApplicationRepo: https://github.com/your-org/hello-world.git
+        ApplicationRepo: https://github.com/your-org/gitops.git
         ApplicationPath: prd/hello-world
         ApplicationRevision: 1.0.0
         ApplicationSyncPolicy: Automatic
@@ -228,7 +228,7 @@ apps:
         ApplicationName: hello-world-2
         ApplicationNamespace: app
         ApplicationProject: default
-        ApplicationRepo: https://github.com/your-org/hello-world-2.git
+        ApplicationRepo: https://github.com/your-org/gitops.git
         ApplicationPath: stg/hello-world-2
         ApplicationRevision: 1.0.0
         ApplicationSyncPolicy: Automatic
