@@ -2,7 +2,11 @@
 
 # bl-template
 
-**面向 [blcli](https://github.com/ggsrc/blcli) 的企业级 GCP 平台模板** — 一份自描述仓库覆盖 Terraform、Kubernetes 与 ArgoCD GitOps。
+**一份配置，走完云平台全链路。**
+
+*One config. Full cloud platform lifecycle.*
+
+面向 [blcli](https://github.com/ggsrc/blcli) 的企业级平台模板 — **当前以 GCP 为首个完整实现**，一份自描述仓库覆盖 Terraform、Kubernetes 与 ArgoCD GitOps。
 
 [![GitHub stars](https://img.shields.io/github/stars/ggsrc/bl-template?style=flat-square)](https://github.com/ggsrc/bl-template/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/ggsrc/bl-template?style=flat-square)](https://github.com/ggsrc/bl-template/network/members)

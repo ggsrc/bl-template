@@ -1,8 +1,12 @@
-# bl-template
-
 <div align="center">
 
-**Enterprise GCP platform template for [blcli](https://github.com/ggsrc/blcli)** — Terraform, Kubernetes, and ArgoCD GitOps from one self-describing repository.
+# bl-template
+
+**One config. Full cloud platform lifecycle.**
+
+*一份配置，走完云平台全链路。*
+
+Enterprise **GCP-first** platform template for [blcli](https://github.com/ggsrc/blcli) — Terraform, Kubernetes, and ArgoCD GitOps from one self-describing repository.
 
 [![GitHub stars](https://img.shields.io/github/stars/ggsrc/bl-template?style=flat-square)](https://github.com/ggsrc/bl-template/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/ggsrc/bl-template?style=flat-square)](https://github.com/ggsrc/bl-template/network/members)
