@@ -1,7 +1,84 @@
 # bl-template
 
-blcli template repository for one-click generation of GCP environment infrastructure configurations.
+<div align="center">
+
+**Enterprise GCP platform template for [blcli](https://github.com/ggsrc/blcli)** — Terraform, Kubernetes, and ArgoCD GitOps from one self-describing repository.
+
+[![GitHub stars](https://img.shields.io/github/stars/ggsrc/bl-template?style=flat-square)](https://github.com/ggsrc/bl-template/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/ggsrc/bl-template?style=flat-square)](https://github.com/ggsrc/bl-template/network/members)
+[![blcli](https://img.shields.io/badge/powered%20by-blcli-blue?style=flat-square)](https://github.com/ggsrc/blcli)
+[![Personal template](https://img.shields.io/badge/personal-bl--template--personal-green?style=flat-square)](https://github.com/ggsrc/bl-template-personal)
+
+[Quick Start](#blcli-usage) · [中文说明](README_zh.md) · [ARGS_DESIGN](ARGS_DESIGN.md)
+
+</div>
+
+<!-- ADOPTION:START -->
+**Adoption snapshot:** tracked via GitHub stars and forks · [Star this repo](https://github.com/ggsrc/bl-template) when you fork or use it with blcli
+<!-- ADOPTION:END -->
+
 For Chinese documentation, see [README_zh.md](./README_zh.md).
+
+---
+
+## What is bl-template?
+
+Official **enterprise** template repository for [blcli](https://github.com/ggsrc/blcli). Use it under a GCP Organization to generate multi-project, multi-environment infrastructure — Terraform for GCP resources, Kubernetes platform components, and ArgoCD GitOps applications — from `config.yaml`, `args.yaml`, and Go templates.
+
+```
+bl-template  +  args.yaml  +  blcli  →  corp / stg / prd  →  apply with blcli
+```
+
+Fork this repo to customize modules and components while keeping the same blcli protocol.
+
+---
+
+## Who is it for?
+
+| Audience | When to use bl-template |
+|----------|-------------------------|
+| Platform / SRE teams | Multi-project GCP org (e.g. corp, stg, prd), production GitOps with ArgoCD |
+| Teams standardizing on blcli | Want a batteries-included reference implementation to fork |
+| Not you? | Solo developers → use [bl-template-personal](https://github.com/ggsrc/bl-template-personal) instead |
+
+---
+
+## Why this template?
+
+- **Self-describing** — `config.yaml` declares components and dependencies; `args.yaml` documents every parameter for `blcli init-args` and `explain`.
+- **Full stack** — Terraform init + projects + modules, Kubernetes base/optional components, GitOps app templates and ArgoCD Applications.
+- **Convention over configuration** — args discovery from `path`, dependency ordering in config, `default.yaml` for sensible defaults.
+- **blcli-native** — Designed for `init-args` → `init` → `apply` → `status` → `rollback`; not a standalone Terraform-only blueprint.
+
+| Without bl-template | With bl-template |
+|---|---|
+| Assemble CFT modules + K8s manifests + ArgoCD by hand | One forkable repo, one args file |
+| Undocumented parameters | `args.yaml` + [ARGS_DESIGN.md](./ARGS_DESIGN.md) |
+| Unknown install order | `dependencies` in `config.yaml`, enforced by blcli |
+
+---
+
+## How it compares
+
+| Approach | Scope | bl-template |
+|----------|-------|-------------|
+| [CFT](https://github.com/GoogleCloudPlatform/cloud-foundation-toolkit) / [Fabric FAST](https://github.com/GoogleCloudPlatform/cloud-foundation-fabric) | Enterprise GCP landing zone (Terraform) | Adds Kubernetes + GitOps templates wired for blcli |
+| [Kubestack catalog](https://github.com/kbst/catalog) | Kustomize services in Terraform | External template repo + args protocol; GCP-focused defaults |
+| DIY fork of public modules | Full control | Opinionated layout, docs, and blcli integration out of the box |
+
+---
+
+## Who uses bl-template?
+
+We are collecting adopters. If you fork or run this template in production, [open a PR](https://github.com/ggsrc/bl-template/edit/main/README.md) to add your org below (logo optional). The list is mirrored to [README_zh.md](README_zh.md) automatically.
+
+<!-- ADOPTERS:START -->
+<!-- Example:
+- [Your Org](https://example.com) — GCP platform on blcli + bl-template
+-->
+<!-- ADOPTERS:END -->
+
+---
 
 ## Repository Purpose
 

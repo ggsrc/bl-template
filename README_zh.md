@@ -1,4 +1,84 @@
+<div align="center">
+
 # bl-template
+
+**面向 [blcli](https://github.com/ggsrc/blcli) 的企业级 GCP 平台模板** — 一份自描述仓库覆盖 Terraform、Kubernetes 与 ArgoCD GitOps。
+
+[![GitHub stars](https://img.shields.io/github/stars/ggsrc/bl-template?style=flat-square)](https://github.com/ggsrc/bl-template/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/ggsrc/bl-template?style=flat-square)](https://github.com/ggsrc/bl-template/network/members)
+[![blcli](https://img.shields.io/badge/powered%20by-blcli-blue?style=flat-square)](https://github.com/ggsrc/blcli)
+[![个人版模板](https://img.shields.io/badge/个人版-bl--template--personal-green?style=flat-square)](https://github.com/ggsrc/bl-template-personal)
+
+[快速开始](#blcli-用法说明) · [英文文档](README.md) · [ARGS_DESIGN](ARGS_DESIGN.md)
+
+</div>
+
+<!-- ADOPTION:START -->
+**采用情况：** 通过 GitHub Stars / Forks 观测 · 若本模板对你有帮助，欢迎 [Star](https://github.com/ggsrc/bl-template)
+<!-- ADOPTION:END -->
+
+---
+
+## bl-template 是什么？
+
+[blcli](https://github.com/ggsrc/blcli) 的**企业版**官方模板仓。在 GCP Organization 下生成多项目、多环境基础设施：Terraform 管云资源，Kubernetes 管平台组件，GitOps 管 ArgoCD 应用。结构由 `config.yaml`、`args.yaml` 与 Go 模板定义。
+
+```
+bl-template  +  args.yaml  +  blcli  →  corp / stg / prd  →  用 blcli apply 部署
+```
+
+可 fork 本仓定制模块与组件，无需修改 blcli 本身。
+
+---
+
+## 适合谁？
+
+| 用户 | 何时选用 bl-template |
+|------|----------------------|
+| 平台 / SRE 团队 | 多项目 GCP（如 corp、stg、prd）、生产级 ArgoCD GitOps |
+| 已标准化 blcli 的团队 | 需要可 fork 的参考实现 |
+| 个人开发者 | 请用 [bl-template-personal](https://github.com/ggsrc/bl-template-personal) |
+
+---
+
+## 为什么选这个模板？
+
+- **自描述** — `config.yaml` 声明组件与依赖；`args.yaml` 描述参数，供 `init-args` / `explain` 使用。
+- **全栈** — Terraform（init / projects / modules）+ Kubernetes（base / optional）+ GitOps（应用模板与 ArgoCD Application）。
+- **约定优于配置** — 从 `path` 发现 args、config 里声明依赖顺序、`default.yaml` 提供默认值。
+- **为 blcli 设计** — 适配 `init-args → init → apply → status → rollback`，不是纯 Terraform 蓝图。
+
+| 没有 bl-template | 有 bl-template |
+|---|---|
+| 手工拼 CFT 模块 + K8s 清单 + ArgoCD | 一个可 fork 仓库 + 一份 args |
+| 参数无文档 | `args.yaml` + [ARGS_DESIGN.md](./ARGS_DESIGN.md) |
+| 安装顺序靠经验 | `config.yaml` 的 `dependencies`，由 blcli 执行 |
+
+---
+
+## 和常见方案怎么比？
+
+| 方案 | 范围 | bl-template |
+|------|------|-------------|
+| [CFT](https://github.com/GoogleCloudPlatform/cloud-foundation-toolkit) / [Fabric FAST](https://github.com/GoogleCloudPlatform/cloud-foundation-fabric) | 企业 GCP Landing Zone（Terraform） | 增加与 blcli 集成的 K8s + GitOps 模板 |
+| [Kubestack catalog](https://github.com/kbst/catalog) | Terraform 中的 Kustomize 服务 | 外部模板仓 + args 协议；默认面向 GCP |
+| 自建模块拼装 | 完全自控 | 约定、文档与 blcli 集成开箱即用 |
+
+---
+
+## 谁在用？
+
+欢迎补充早期案例。若你在生产或实验中 fork/使用本模板，请 [提 PR 编辑 README.md](https://github.com/ggsrc/bl-template/edit/main/README.md)（logo 可选）；列表会自动同步到本页。
+
+<!-- ADOPTERS:START -->
+<!-- Example:
+- [Your Org](https://example.com) — GCP platform on blcli + bl-template
+-->
+<!-- ADOPTERS:END -->
+
+---
+
+# bl-template（技术文档）
 
 blcli template repository for one-click generation of GCP environment infrastructure configurations.
 
