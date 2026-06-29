@@ -18,7 +18,7 @@ Enterprise **GCP-first** platform template for [blcli](https://github.com/ggsrc/
 </div>
 
 <!-- ADOPTION:START -->
-**Adoption snapshot:** tracked via GitHub stars and forks · [Star this repo](https://github.com/ggsrc/bl-template) when you fork or use it with blcli
+**Adoption snapshot (2026-06-29):** 0 GitHub stars · 0 forks · powered by [blcli](https://github.com/ggsrc/blcli)
 <!-- ADOPTION:END -->
 
 For Chinese documentation, see [README_zh.md](./README_zh.md).

@@ -18,7 +18,7 @@
 </div>
 
 <!-- ADOPTION:START -->
-**采用情况：** 通过 GitHub Stars / Forks 观测 · 若本模板对你有帮助，欢迎 [Star](https://github.com/ggsrc/bl-template)
+**采用情况（2026-06-29）：** 0 GitHub Stars · 0 Forks · 配合 [blcli](https://github.com/ggsrc/blcli) 使用
 <!-- ADOPTION:END -->
 
 ---
