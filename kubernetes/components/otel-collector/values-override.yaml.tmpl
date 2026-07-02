@@ -11,3 +11,9 @@ opentelemetry-collector:
         endpoint: {{ default `http://uptrace.uptrace.svc.cluster.local:4317` .uptraceEndpoint }}
         tls:
           insecure: {{ default true .uptraceInsecure }}
+    service:
+      pipelines:
+        logs:
+          exporters:
+            - otlphttp/loki
+            - otlp/uptrace

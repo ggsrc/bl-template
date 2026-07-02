@@ -32,6 +32,15 @@ parameters:
       gcpServiceAccountEmail:
         type: string
         default: ""
+      gatewayAccessKey:
+        type: string
+        default: "minioadmin"
+      gatewaySecretKey:
+        type: string
+        default: "minioadmin"
+      storageClassName:
+        type: string
+        default: "juicefs-sc"
       replicas:
         type: integer
         default: 1

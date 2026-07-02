@@ -12,7 +12,6 @@
 # bytebase.option.externalPg
 {{- $externalPgURLEnable := .Values.bytebase.option.externalPg.enable -}}
 {{- $externalPgURL := .Values.bytebase.option.externalPg.url -}}
-{{- $externalPgURL := .Values.bytebase.option.externalPg.url -}}
 {{- $externalPgExistingPgURLSecret := .Values.bytebase.option.externalPg.existingPgURLSecret -}}
 {{- $externalPgExistingPgURLSecretKey := .Values.bytebase.option.externalPg.existingPgURLSecretKey -}}
 {{- $externalPgHost := .Values.bytebase.option.externalPg.pgHost | default "host" -}}
@@ -76,7 +75,7 @@ spec:
             - /bin/sh
             - -c
             - |
-              echo $(echo $PG_PASSWORD \
+              printf '%s' "$PG_PASSWORD" \
               | sed \
                 -e 's/%/%25/g' \
                 -e 's/ /%20/g' \
@@ -108,7 +107,7 @@ spec:
                 -e 's/|/%7c/g' \
                 -e 's/}/%7d/g' \
                 -e 's/~/%7e/g' \
-              ) > /mnt/bytebase-shared-volume/pg_escaped_password
+              > /mnt/bytebase-shared-volume/pg_escaped_password
           volumeMounts:
             - mountPath: /mnt/bytebase-shared-volume
               name: bytebase-shared-volume
@@ -184,9 +183,9 @@ spec:
             httpGet:
               path: /healthz
               port: {{ $port }}
-            initialDelaySeconds: 300
-            periodSeconds: 300
-            timeoutSeconds: 60
+            initialDelaySeconds: 90
+            periodSeconds: 30
+            timeoutSeconds: 10
           volumeMounts:
             - mountPath: {{ $data }}
               {{- if $persistenceExistingClaim }}
@@ -235,7 +234,9 @@ metadata:
   labels:
     {{- include "bytebase.labels" . | nindent 4}}
 spec:
+  {{- if $persistenceStorageClass }}
   storageClassName: {{ $persistenceStorageClass | quote }}
+  {{- end }}
   accessModes:
   - ReadWriteOnce
   resources:

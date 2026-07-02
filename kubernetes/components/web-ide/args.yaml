@@ -63,7 +63,7 @@ parameters:
         default: "google-client-secret"
       oauthCookieSecret:
         type: string
-        description: "oauth2-proxy cookie secret"
+        description: "oauth2-proxy cookie secret (must be a 16, 24, or 32 byte base64-encoded string, e.g. openssl rand -base64 32)"
         required: false
         default: "CHANGE_ME_TO_A_RANDOM_SECRET"
       oauthCookieDomains:
