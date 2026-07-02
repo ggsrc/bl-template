@@ -1,0 +1,63 @@
+version: 1.0.0
+
+# kubernetes/components/cnpg 组件的参数定义
+# 参考 alva-infra/k8s/common/cloudnative-pg/
+
+parameters:
+  components:
+    cnpg:
+      namespace:
+        type: string
+        description: "Namespace to install CloudNativePG operator"
+        required: false
+        default: "cnpg"
+      releaseName:
+        type: string
+        description: "Helm release name"
+        required: false
+        default: "cloudnative-pg"
+      valuesFiles:
+        type: string
+        description: "Space-separated values files. Use values.yaml values-override.yaml after rendering"
+        required: false
+        default: "values.yaml values-override.yaml"
+      imageTag:
+        type: string
+        description: "CloudNativePG operator image tag"
+        required: false
+        default: "1.29.1"
+      replicaCount:
+        type: integer
+        description: "Operator replica count"
+        required: false
+        default: 1
+      cpuLimit:
+        type: string
+        description: "Operator resources limits cpu"
+        required: false
+        default: "1"
+      memoryLimit:
+        type: string
+        description: "Operator resources limits memory"
+        required: false
+        default: "2Gi"
+      cpuRequest:
+        type: string
+        description: "Operator resources requests cpu"
+        required: false
+        default: "100m"
+      memoryRequest:
+        type: string
+        description: "Operator resources requests memory"
+        required: false
+        default: "200Mi"
+      minHelmVersion:
+        type: string
+        description: "Minimum helm version required by install script"
+        required: false
+        default: ""
+      minKubectlVersion:
+        type: string
+        description: "Minimum kubectl version required by install script"
+        required: false
+        default: ""

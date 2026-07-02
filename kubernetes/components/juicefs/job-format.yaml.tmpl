@@ -1,0 +1,32 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: juicefs-format
+  namespace: {{ default "juicefs" .namespace }}
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: format
+          image: {{ default `juicedata/mount` .formatImageRepository }}:{{ default `ce-v1.3.1` .formatImageTag }}
+          command:
+            - sh
+            - -c
+            - juicefs format --storage={{ default `s3` .storageType }} --bucket={{ default `s3://example-bucket` .bucket }} --access-key=$ACCESS_KEY --secret-key=$SECRET_KEY $METAURL {{ default `juicefs-vol` .volumeName }}
+          env:
+            - name: METAURL
+              valueFrom:
+                secretKeyRef:
+                  name: juicefs-secret
+                  key: metaurl
+            - name: ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: juicefs-secret
+                  key: gateway-access-key
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: juicefs-secret
+                  key: gateway-secret-key

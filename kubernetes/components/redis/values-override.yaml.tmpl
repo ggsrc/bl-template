@@ -1,0 +1,37 @@
+# 环境覆盖：由 blcli 渲染，参考 alva-infra/gitops/alva-ai-infra/components-stg/2-redis/overlays/stg-values-shared.yaml
+# 与 values.yaml 一起使用：helm upgrade -i -f values.yaml -f values-override.yaml
+redis:
+  image:
+    registry: docker.io
+    repository: bitnami/redis
+  auth:
+    existingSecret: {{ default `redis-shared` .existingSecret }}
+    existingSecretPasswordKey: {{ default `REDIS_PASSWORD` .existingSecretPasswordKey }}
+  sentinel:
+    resources:
+      requests:
+        cpu: {{ default `150m` .cpuRequest }}
+        memory: {{ default `100M` .memoryRequest }}
+      limits:
+        cpu: {{ default `1000m` .cpuLimit }}
+        memory: {{ default `500M` .memoryLimit }}
+{{- if .enableInternalLB }}
+  extraDeploy:
+    - apiVersion: v1
+      kind: Service
+      metadata:
+        name: {{ default `redis-shared-lb` .internalLBServiceName }}
+        namespace: {{ default `redis` .namespace }}
+        annotations:
+          cloud.google.com/load-balancer-type: "Internal"
+      spec:
+        type: LoadBalancer
+        ports:
+          - name: redis
+            port: 6379
+            protocol: TCP
+            targetPort: 6379
+        selector:
+          app.kubernetes.io/name: redis
+          app.kubernetes.io/component: master
+{{- end }}

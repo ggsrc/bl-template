@@ -1,0 +1,40 @@
+version: 1.0.0
+
+parameters:
+  components:
+    n9e:
+      namespace:
+        type: string
+        required: false
+        default: "n9e"
+      releaseName:
+        type: string
+        required: false
+        default: "n9e"
+      valuesFiles:
+        type: string
+        required: false
+        default: "values.yaml values-override.yaml"
+      minHelmVersion:
+        type: string
+        required: false
+        default: ""
+      minKubectlVersion:
+        type: string
+        required: false
+        default: ""
+      externalURL:
+        type: string
+        default: "https://n9e.example.com"
+      imageRepository:
+        type: string
+        default: "flashcatcloud/nightingale"
+      imageTag:
+        type: string
+        default: "8.5.1"
+      prometheusHost:
+        type: string
+        default: "vmagent-victoriametrics-vmks.monitoring-vm.svc.cluster.local"
+      prometheusPort:
+        type: string
+        default: "8429"

@@ -1,0 +1,8 @@
+paradedb:
+  cluster:
+    instances: {{ default 1 .instances }}
+    storage:
+      size: {{ default `20Gi` .storageSize }}
+  version:
+    postgresql: "{{ default `17` .postgresqlVersion }}"
+    paradedb: "{{ default `0.15.11` .paradedbVersion }}"

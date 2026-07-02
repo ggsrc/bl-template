@@ -1,0 +1,55 @@
+version: 1.0.0
+
+parameters:
+  components:
+    bytebase:
+      namespace:
+        type: string
+        required: false
+        default: "bytebase"
+      releaseName:
+        type: string
+        required: false
+        default: "bytebase"
+      valuesFiles:
+        type: string
+        required: false
+        default: "values.yaml values-override.yaml"
+      minHelmVersion:
+        type: string
+        required: false
+        default: ""
+      minKubectlVersion:
+        type: string
+        required: false
+        default: ""
+      version:
+        type: string
+        default: "3.1.0"
+      externalURL:
+        type: string
+        default: "https://bytebase.example.com"
+      externalPgEnable:
+        type: boolean
+        default: false
+      pgHost:
+        type: string
+        default: ""
+      pgPort:
+        type: string
+        default: ""
+      pgUsername:
+        type: string
+        default: ""
+      pgDatabase:
+        type: string
+        default: "bytebase"
+      existingPgPasswordSecret:
+        type: string
+        default: ""
+      existingPgPasswordSecretKey:
+        type: string
+        default: ""
+      persistenceSize:
+        type: string
+        default: "20Gi"

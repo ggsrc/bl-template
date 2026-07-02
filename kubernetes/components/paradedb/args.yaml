@@ -1,0 +1,37 @@
+version: 1.0.0
+
+parameters:
+  components:
+    paradedb:
+      namespace:
+        type: string
+        required: false
+        default: "paradedb"
+      releaseName:
+        type: string
+        required: false
+        default: "paradedb"
+      valuesFiles:
+        type: string
+        required: false
+        default: "values.yaml values-override.yaml"
+      minHelmVersion:
+        type: string
+        required: false
+        default: ""
+      minKubectlVersion:
+        type: string
+        required: false
+        default: ""
+      instances:
+        type: integer
+        default: 1
+      storageSize:
+        type: string
+        default: "20Gi"
+      postgresqlVersion:
+        type: string
+        default: "17"
+      paradedbVersion:
+        type: string
+        default: "0.15.11"

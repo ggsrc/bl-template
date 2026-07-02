@@ -1,0 +1,15 @@
+kafka:
+  image:
+    registry: docker.io
+    repository: bitnami/kafka
+  kraft:
+    enabled: true
+  listeners:
+    client:
+      protocol: PLAINTEXT
+  controller:
+    replicaCount: 1
+  broker:
+    replicaCount: 1
+  persistence:
+    enabled: false

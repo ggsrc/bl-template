@@ -48,7 +48,7 @@ bl-template  +  args.yaml  +  blcli  →  corp / stg / prd  →  用 blcli apply
 ## 为什么选这个模板？
 
 - **自描述** — `config.yaml` 声明组件与依赖；`args.yaml` 描述参数，供 `init-args` / `explain` 使用。
-- **全栈** — Terraform（init / projects / modules）+ Kubernetes（base / optional）+ GitOps（应用模板与 ArgoCD Application）。
+- **全栈** — Terraform（init / projects / modules）+ Kubernetes（核心栈 + 可选组件）+ GitOps（应用模板与 ArgoCD Application）。
 - **约定优于配置** — 从 `path` 发现 args、config 里声明依赖顺序、`default.yaml` 提供默认值。
 - **为 blcli 设计** — 适配 `init-args → init → apply → status → rollback`，不是纯 Terraform 蓝图。
 
@@ -113,10 +113,11 @@ bl-template/
 │   ├── modules/         # Reusable Terraform modules
 │   ├── project/        # Project-level Terraform configurations
 │   └── projects/       # Project deployment configurations
-├── kubernetes/         # Kubernetes configurations
-│   ├── config.yaml     # Kubernetes component configuration definitions
-│   ├── base/           # Base components (required)
-│   └── optional/        # Optional components
+├── kubernetes/         # Kubernetes 配置
+│   ├── config.yaml     # 已注册的全部组件（核心 + 可选）
+│   ├── default.yaml    # init-args 默认启用的核心栈
+│   ├── OPTIONAL_COMPONENTS.md  # 可选组件说明
+│   └── components/     # 组件模板（Helm / Kustomize）
 ├── gitops/             # GitOps configurations
 │   ├── config.yaml     # app-templates（deployment/statefulset）、argocd 组件定义
 │   ├── args.yaml       # 参数定义（含 ArgoCD Application 相关）
@@ -162,18 +163,11 @@ Defines three main sections:
 
 #### kubernetes/config.yaml
 
-Defines Kubernetes cluster initialization components:
+定义 Kubernetes 平台全部组件。**核心栈**由 `default.yaml` 提供（多环境 prd/stg/corp）。**可选组件**仅在 `config.yaml` 注册，默认不写入 args — 详见 [kubernetes/OPTIONAL_COMPONENTS.md](kubernetes/OPTIONAL_COMPONENTS.md)。
 
-- **init**: Initialization components (required)
-  - `namespace`: Namespace
-  - `istio`: Service mesh
-  - `victoria-metrics`: Monitoring system
+**核心（default.yaml 典型）：** external-secrets-operator、external-secrets、sealed-secret、istio、argocd、victoria-metrics-operator、victoria-metrics、grafana（corp）
 
-- **optional**: Optional components
-  - `cnpg`: CloudNativePG database operator
-  - `web-ide`: Web IDE
-  - `redis`: Redis
-  - `kiali`: Service mesh visualization
+**可选（在 args.yaml 中 opt-in）：** cnpg、redis、paradedb、kafka、juicefs、loki、otel-collector、uptrace、n9e、bytebase；bl-template 另含 web-ide、navigation。均使用官方上游镜像。
 
 #### gitops/config.yaml
 
@@ -279,6 +273,19 @@ blcli init-args -r /path/to/bl-template -o args.yaml
 
 生成的 `args.yaml` 包含 `global`、`terraform`、`kubernetes`、`gitops` 等段（取决于模板中的 config/args 定义）。
 
+**v1.5 增强：**
+
+```bash
+# 交互式向导
+blcli init-args -r ./bl-template --wizard -o workspace/config/args.yaml
+
+# 仅预览，不写文件
+blcli init-args -r ./bl-template --preview -o workspace/config/args.yaml
+
+# 校验 args（init 前）
+blcli check args --args workspace/config/args.yaml -r ./bl-template
+```
+
 ### 2. 生成基础设施配置（init）
 
 根据 `args.yaml` 和模板生成 Terraform、Kubernetes、GitOps 配置：
@@ -318,6 +325,10 @@ blcli apply init-repos -o myorg -d ./workspace/output
 ```
 
 需要已安装并登录 [gh](https://cli.github.com/)（`gh auth login`）。
+
+### 5. CI 校验（GitHub Actions）
+
+本仓库提供 `.github/workflows/blcli-validate.yml` 样板：在 PR 中预览 args 并运行 `blcli check args`。详见 [blcli CI 文档](https://github.com/ggsrc/blcli/blob/main/docs/zh/CI.md)。
 
 ## Template Syntax
 

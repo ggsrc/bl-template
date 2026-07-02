@@ -1,0 +1,11 @@
+# ParadeDB via official chart; requires CNPG operator.
+paradedb:
+  type: paradedb
+  mode: standalone
+  version:
+    postgresql: "17"
+    paradedb: "0.15.11"
+  cluster:
+    instances: 1
+    storage:
+      size: 20Gi

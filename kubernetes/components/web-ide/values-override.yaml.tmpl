@@ -1,0 +1,66 @@
+# 环境覆盖：由 blcli 渲染，参考 alva-infra/k8s/common/web-ide/values-stg.yaml values-prd.yaml
+# 与 values.yaml 一起使用：helm upgrade -i -f values.yaml -f values-override.yaml
+ingress:
+  enabled: false
+  annotations:
+    kubernetes.io/ingress.class: "istio"
+  hosts:
+    - host: {{ default `web-ide.example.com` .webIdeHost }}
+      paths:
+        - /
+
+extraArgs:
+  - --auth
+  - none
+  - --bind-addr
+  - 0.0.0.0:8080
+  - --user-data-dir
+  - /home
+  - --user-workspace-base-dir
+  - /home
+  - --user-workspace-type
+  - folder
+  - --create-user-workspace-file
+  - "false"
+  - --extensions-dir
+  - /home/extensions
+
+oauth2Proxy:
+  enabled: {{ default true .oauth2ProxyEnabled }}
+  clientId: "{{ default `` .oauthClientID }}"
+  redirectUrl: "{{ default `https://web-ide.example.com/oauth2/callback` .oauthRedirectURL }}"
+  secretName: {{ default `web-ide-secrets` .oauthSecretName }}
+  clientSecretKey: {{ default `google-client-secret` .oauthClientSecretKey }}
+  cookieSecret: "{{ default `CHANGE_ME_TO_A_RANDOM_SECRET` .oauthCookieSecret }}"
+  cookieDomains: "{{ default `.example.com` .oauthCookieDomains }}"
+  emailDomains:
+    - "{{ default `example.com` .hostedDomain }}"
+
+extraVars:
+  - name: DISABLE_TELEMETRY
+    value: "true"
+  - name: PASSWORD
+    value: ""
+
+resources:
+  limits:
+    cpu: {{ default `2000m` .cpuLimit }}
+    memory: {{ default `4Gi` .memoryLimit }}
+  requests:
+    cpu: {{ default `1000m` .cpuRequest }}
+    memory: {{ default `2Gi` .memoryRequest }}
+
+persistence:
+  enabled: true
+  accessMode: ReadWriteOnce
+  size: {{ default `20Gi` .persistenceSize }}
+
+securityContext:
+  enabled: true
+  fsGroup: 1000
+  runAsUser: 1000
+
+volumePermissions:
+  enabled: true
+  securityContext:
+    runAsUser: 0

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: navigation
+  namespace: {{ default "navigation" .namespace }}
+spec:
+  type: ClusterIP
+  selector:
+    app: navigation
+  ports:
+    - port: 80
+      targetPort: 8080

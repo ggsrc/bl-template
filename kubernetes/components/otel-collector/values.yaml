@@ -1,0 +1,211 @@
+# https://github.com/open-telemetry/opentelemetry-helm-charts/tree/main/charts/opentelemetry-collector
+opentelemetry-collector:
+  image:
+    repository: "ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-k8s"
+  command:
+    name: "otelcol-k8s"
+
+  mode: daemonset
+  replicaCount: 1
+  # https://opentelemetry.io/docs/kubernetes/collector/components/
+  presets:
+    kubernetesAttributes:
+      enabled: true
+    # Collect infra's logs via filelog.
+    # NOTE: application-level logs should be sent to otel via sdk direcly, instead of print into stdout/stderr.
+    logsCollection:
+      enabled: true
+      # Do not include the collector itself's log, to prevent log looping
+      includeCollectorLogs: false
+
+  config:
+    receivers:
+      # jaeger: null
+      # prometheus: null
+      # zipkin: null
+      filelog:
+        exclude:
+          - /var/log/pods/monitoring_otel-collector-opentelemetry-collector*_*/opentelemetry-collector/*.log
+        include:
+          - /var/log/pods/*/*/*.log
+        include_file_name: false
+        include_file_path: true
+        operators:
+          # Step 1: Use the container operator to parse the container runtime log header.
+          # It strips the timestamp and stream (stdout/stderr) and places the application log itself into the 'body' field.
+          # https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/pkg/stanza/docs/operators/container.md
+          - id: container-parser
+            type: container
+            max_log_size: 102400
+          # Step 2: Try to parse logs in JSON format.
+          - type: json_parser
+            if: 'body matches "^{.*}$"'
+            on_error: send_quiet
+            # Parse the 'body' field as JSON and place the results into 'attributes'.
+            parse_to: attributes
+            # Use the severity configuration block to extract the level.
+            severity:
+              # First, try to parse from the 'attributes.level' field.
+              parse_from: attributes.level
+          # Step 3: Parse logs in plain text format.
+          - type: regex_parser
+            if: 'attributes.level == nil'
+            on_error: send_quiet
+            # Regex to capture common log level keywords from the text.
+            regex: \b(?P<level>(?i)(DEBUG|INFO|WARN|WARNING|ERROR|ERR|FATAL|CRITICAL))\b
+            # Use the severity configuration block to normalize the captured level.
+            severity:
+              parse_from: attributes.level
+              # Establish a mapping to unify different captured strings into standard OTEL levels.
+              mapping:
+                debug: debug
+                info: info
+                warn:
+                  - warn
+                  - warning
+                error:
+                  - error
+                  - err
+                  - fatal
+                  - critical
+          # Step 4 (Final Step): Set a default severity if it was not parsed successfully.
+          - type: add
+            # This 'if' condition checks if the 'level' field was NOT set by previous parsers.
+            if: 'attributes.level == nil'
+            # If it wasn't set, add the field with a value of "unknown".
+            field: attributes.level
+            value: "unknown"
+        retry_on_failure:
+          enabled: true
+        start_at: end
+    exporters:
+      # otel-agent => loki
+      otlphttp:
+        endpoint: http://loki.loki.svc.cluster.local:3100/otlp
+        headers:
+          # loki require such a ID by default
+          X-Scope-OrgID: "fake"
+
+    processors:
+      k8s_attributes:
+        passthrough: false
+        filter:
+          node_from_env_var: K8S_NODE_NAME
+        extract:
+          # Extract pod labels
+          labels:
+            # Extract specific pod labels needed for subsequent relabeling
+            - key: "app.kubernetes.io/name"
+              tag_name: "k8s.pod.label.app_kubernetes_io_name"
+            - key: "app"
+              tag_name: "k8s.pod.label.app"
+            - key: "app.kubernetes.io/instance"
+              tag_name: "k8s.pod.label.app_kubernetes_io_instance"
+            - key: "instance"
+              tag_name: "k8s.pod.label.instance"
+            - key: "app.kubernetes.io/component"
+              tag_name: "k8s.pod.label.app_kubernetes_io_component"
+            - key: "component"
+              tag_name: "k8s.pod.label.component"
+
+          # Extract all pod annotations
+          # annotations:
+          #   - from: pod
+          #     key_regex: (.*)
+          #     tag_name: $$1
+          metadata:
+            - k8s.pod.name
+            - k8s.pod.uid
+            - k8s.pod.start_time
+            - k8s.container.name
+            - k8s.node.name
+            - k8s.namespace.name
+            - k8s.deployment.name
+            - k8s.statefulset.name
+            - k8s.daemonset.name
+            - k8s.cronjob.name
+            - k8s.job.name
+        pod_association:
+          - sources:
+              - from: resource_attribute
+                name: k8s.pod.ip
+          - sources:
+              - from: resource_attribute
+                name: k8s.pod.uid
+          - sources:
+              - from: resource_attribute
+                name: k8s.pod.name
+              - from: resource_attribute
+                name: k8s.namespace.name
+              - from: resource_attribute
+                name: k8s.node.name
+          - sources:
+              - from: connection
+
+      # https://opentelemetry.io/docs/collector/transforming-telemetry/
+      transform:
+        log_statements:
+          - context: resource # Modifying resource attributes
+            statements:
+              # app (coalescing)
+              - set(resource.attributes["app"],
+                resource.attributes["k8s.pod.label.app_kubernetes_io_name"]) where
+                resource.attributes["k8s.pod.label.app_kubernetes_io_name"]!= nil
+              - set(resource.attributes["app"],
+                resource.attributes["k8s.pod.label.app"]) where
+                resource.attributes["app"] == nil and
+                resource.attributes["k8s.pod.label.app"]!= nil
+              - set(resource.attributes["app"], resource.attributes["k8s.pod.name"])
+                where resource.attributes["app"] == nil and
+                resource.attributes["k8s.pod.name"]!= nil
+
+              # instance (coalescing)
+              - set(resource.attributes["instance"],
+                resource.attributes["k8s.pod.label.app_kubernetes_io_instance"]) where
+                resource.attributes["k8s.pod.label.app_kubernetes_io_instance"]!= nil
+              - set(resource.attributes["instance"],
+                resource.attributes["k8s.pod.label.instance"]) where
+                resource.attributes["instance"] == nil and
+                resource.attributes["k8s.pod.label.instance"]!= nil
+
+              # component (coalescing)
+              - set(resource.attributes["component"],
+                resource.attributes["k8s.pod.label.app_kubernetes_io_component"]) where
+                resource.attributes["k8s.pod.label.app_kubernetes_io_component"]!= nil
+              - set(resource.attributes["component"],
+                resource.attributes["k8s.pod.label.component"]) where
+                resource.attributes["component"] == nil and
+                resource.attributes["k8s.pod.label.component"]!= nil
+
+              # Rename and create other common labels.
+              # - node_name <- __meta_kubernetes_pod_node_name
+              # - namespace <- __meta_kubernetes_namespace
+              # - pod       <- __meta_kubernetes_pod_name
+              # - container <- __meta_kubernetes_pod_container_name
+              - set(resource.attributes["node_name"],
+                resource.attributes["k8s.node.name"]) where
+                resource.attributes["k8s.node.name"]!= nil
+              - set(resource.attributes["namespace"],
+                resource.attributes["k8s.namespace.name"]) where
+                resource.attributes["k8s.namespace.name"]!= nil
+              - set(resource.attributes["pod"], resource.attributes["k8s.pod.name"])
+                where resource.attributes["k8s.pod.name"]!= nil
+              - set(resource.attributes["container"],
+                resource.attributes["k8s.container.name"]) where
+                resource.attributes["k8s.container.name"]!= nil
+
+              # ----------------------------------------------------------------------
+              # **Cleanup**
+              # After all desired labels have been created, delete all temporary and original source attributes.
+              # This is a crucial step to avoid sending unnecessary data to the backend, saving bandwidth and storage costs.
+              # ----------------------------------------------------------------------
+              - delete_matching_keys(resource.attributes, "^k8s\\.pod\\.label\\..*")
+
+    service:
+      pipelines:
+        logs:
+          receivers: [otlp, filelog]
+          processors: [k8s_attributes, transform] # Order is crucial
+          exporters: [otlphttp]
+        # traces: null
+        # metrics: null # we use vmagent for metrics collecting.

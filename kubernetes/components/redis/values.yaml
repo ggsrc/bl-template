@@ -1,0 +1,37 @@
+# Bitnami Redis base values
+# 参考 alva-infra/gitops/alva-ai-infra/components-stg/2-redis/base/values.yaml
+# 环境差异通过 values-override.yaml.tmpl 覆盖
+redis:
+  architecture: standalone
+  auth:
+    enabled: true
+    sentinel: false
+    password: ""
+    existingSecret: ""
+    existingSecretPasswordKey: ""
+  commonConfiguration: |-
+    appendonly yes
+    save ""
+  master:
+    persistence:
+      enabled: false
+  replica:
+    persistence:
+      enabled: false
+  sentinel:
+    enabled: false
+  image:
+    registry: docker.io
+    repository: bitnami/redis
+    tag: 7.2.5-debian-12-r0
+    pullPolicy: IfNotPresent
+  metrics:
+    enabled: true
+    image:
+      registry: docker.io
+      repository: bitnami/redis-exporter
+      tag: 1.67.0-debian-12-r0
+      pullPolicy: IfNotPresent
+    podAnnotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "9121"

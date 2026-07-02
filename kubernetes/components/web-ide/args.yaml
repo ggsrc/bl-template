@@ -1,0 +1,113 @@
+version: 1.0.0
+
+# kubernetes/components/web-ide 组件的参数定义
+# 参考 alva-infra/k8s/common/web-ide/
+
+parameters:
+  components:
+    web-ide:
+      namespace:
+        type: string
+        description: "Namespace to install Web IDE"
+        required: false
+        default: "webide"
+      releaseName:
+        type: string
+        description: "Helm release name"
+        required: false
+        default: "web-ide"
+      valuesFiles:
+        type: string
+        description: "Space-separated values files. Use values.yaml values-override.yaml after rendering"
+        required: false
+        default: "values.yaml values-override.yaml"
+      webIdeHost:
+        type: string
+        description: "Web IDE hostname (for Istio VirtualService / ingress reference)"
+        required: false
+        default: "web-ide.example.com"
+      imageRepository:
+        type: string
+        description: "code-server image repository"
+        required: false
+        default: "codercom/code-server"
+      imageTag:
+        type: string
+        description: "code-server image tag"
+        required: false
+        default: "4.103.0"
+      oauth2ProxyEnabled:
+        type: boolean
+        description: "Enable oauth2-proxy sidecar for Google OAuth"
+        required: false
+        default: true
+      oauthClientID:
+        type: string
+        description: "Google OAuth client ID"
+        required: false
+        default: ""
+      oauthRedirectURL:
+        type: string
+        description: "OAuth redirect URL (e.g. https://web-ide.stg.example.com/oauth2/callback)"
+        required: false
+        default: "https://web-ide.example.com/oauth2/callback"
+      oauthSecretName:
+        type: string
+        description: "Secret name containing OAuth client secret"
+        required: false
+        default: "web-ide-secrets"
+      oauthClientSecretKey:
+        type: string
+        description: "Key in oauth secret for client secret"
+        required: false
+        default: "google-client-secret"
+      oauthCookieSecret:
+        type: string
+        description: "oauth2-proxy cookie secret (must be a 16, 24, or 32 byte base64-encoded string, e.g. openssl rand -base64 32)"
+        required: false
+        default: "CHANGE_ME_TO_A_RANDOM_SECRET"
+      oauthCookieDomains:
+        type: string
+        description: "oauth2-proxy cookie domains"
+        required: false
+        default: ".example.com"
+      hostedDomain:
+        type: string
+        description: "Allowed email domain for OAuth login"
+        required: false
+        default: "example.com"
+      persistenceSize:
+        type: string
+        description: "PVC size for user workspace"
+        required: false
+        default: "20Gi"
+      cpuLimit:
+        type: string
+        description: "code-server resources limits cpu"
+        required: false
+        default: "2000m"
+      memoryLimit:
+        type: string
+        description: "code-server resources limits memory"
+        required: false
+        default: "4Gi"
+      cpuRequest:
+        type: string
+        description: "code-server resources requests cpu"
+        required: false
+        default: "1000m"
+      memoryRequest:
+        type: string
+        description: "code-server resources requests memory"
+        required: false
+        default: "2Gi"
+      minHelmVersion:
+        type: string
+        description: "Minimum helm version required by install script"
+        required: false
+        default: ""
+      minKubectlVersion:
+        type: string
+        description: "Minimum kubectl version required by install script"
+        required: false
+        default: ""

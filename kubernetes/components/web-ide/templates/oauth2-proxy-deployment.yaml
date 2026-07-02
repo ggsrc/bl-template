@@ -1,0 +1,88 @@
+{{- if .Values.oauth2Proxy.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "code-server.fullname" . }}-oauth2-proxy
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: {{ include "code-server.name" . }}-oauth2-proxy
+    helm.sh/chart: {{ include "code-server.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.oauth2Proxy.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "code-server.name" . }}-oauth2-proxy
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "code-server.name" . }}-oauth2-proxy
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      containers:
+      - name: oauth2-proxy
+        image: "{{ .Values.oauth2Proxy.image.repository }}:{{ .Values.oauth2Proxy.image.tag }}"
+        imagePullPolicy: {{ .Values.oauth2Proxy.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.oauth2Proxy.port }}
+          name: http
+        - containerPort: {{ .Values.oauth2Proxy.metricsPort }}
+          name: metrics
+        args:
+        - --http-address=0.0.0.0:{{ .Values.oauth2Proxy.port }}
+        - --upstream=http://{{ include "code-server.fullname" . }}:{{ .Values.service.port }}
+        - --cookie-name={{ .Values.oauth2Proxy.cookieName }}
+        - --cookie-secret={{ .Values.oauth2Proxy.cookieSecret }}
+        - --cookie-domain={{ .Values.oauth2Proxy.cookieDomains }}
+        - --cookie-expire={{ .Values.oauth2Proxy.cookieExpire }}
+        - --cookie-refresh={{ .Values.oauth2Proxy.cookieRefresh }}
+        - --cookie-secure={{ .Values.oauth2Proxy.cookieSecure }}
+        - --cookie-httponly={{ .Values.oauth2Proxy.cookieHttpOnly }}
+        - --provider={{ .Values.oauth2Proxy.provider }}
+        - --client-id={{ .Values.oauth2Proxy.clientId }}
+
+        - --client-secret=$(OAUTH2_PROXY_CLIENT_SECRET)
+        - --redirect-url={{ .Values.oauth2Proxy.redirectUrl }}
+        - --session-store-type={{ .Values.oauth2Proxy.sessionStoreType }}
+        - --scope={{ .Values.oauth2Proxy.scope }}
+        {{- if .Values.oauth2Proxy.emailDomains }}
+        {{- range .Values.oauth2Proxy.emailDomains }}
+        - --email-domain={{ . | quote }}
+        {{- end }}
+        {{- end }}
+        - --pass-user-headers=true
+        - --pass-basic-auth=true
+        - --request-logging={{ .Values.oauth2Proxy.requestLogging }}
+        - --auth-logging={{ .Values.oauth2Proxy.authLogging }}
+        - --upstream-timeout={{ .Values.oauth2Proxy.upstreamTimeout }}
+        - --proxy-prefix={{ .Values.oauth2Proxy.proxyPrefix }}
+        - --ping-path={{ .Values.oauth2Proxy.healthCheckPath }}
+        - --metrics-address=0.0.0.0:{{ .Values.oauth2Proxy.metricsPort }}
+        {{- range .Values.oauth2Proxy.extraArgs }}
+        - {{ . | quote }}
+        {{- end }}
+        env:
+        - name: OAUTH2_PROXY_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.oauth2Proxy.secretName }}
+              key: {{ .Values.oauth2Proxy.clientSecretKey }}
+
+        resources:
+          {{- toYaml .Values.oauth2Proxy.resources | nindent 10 }}
+        livenessProbe:
+          httpGet:
+            path: {{ .Values.oauth2Proxy.healthCheckPath }}
+            port: {{ .Values.oauth2Proxy.port }}
+          initialDelaySeconds: {{ .Values.oauth2Proxy.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.oauth2Proxy.livenessProbe.periodSeconds }}
+        readinessProbe:
+          httpGet:
+            path: {{ .Values.oauth2Proxy.healthCheckPath }}
+            port: {{ .Values.oauth2Proxy.port }}
+          initialDelaySeconds: {{ .Values.oauth2Proxy.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.oauth2Proxy.readinessProbe.periodSeconds }}
+
+{{- end }}
