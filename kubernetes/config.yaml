@@ -101,3 +101,157 @@ components:
     installType: custom
     dependencies:
       - victoria-metrics-operator
+  - name: cnpg
+    path:
+    - kubernetes/components/cnpg/Chart.yaml
+    - kubernetes/components/cnpg/Chart.lock
+    - kubernetes/components/cnpg/values.yaml
+    - kubernetes/components/cnpg/values-override.yaml.tmpl
+    - kubernetes/components/cnpg/install.tmpl
+    args:
+    - kubernetes/components/cnpg/args.yaml
+    install: bash ./install
+    installType: custom
+  - name: redis
+    path:
+    - kubernetes/components/redis/Chart.yaml
+    - kubernetes/components/redis/values.yaml
+    - kubernetes/components/redis/values-override.yaml.tmpl
+    - kubernetes/components/redis/install.tmpl
+    args:
+    - kubernetes/components/redis/args.yaml
+    install: bash ./install
+    installType: custom
+    dependencies:
+      - external-secrets
+  - name: web-ide
+    path:
+    - kubernetes/components/web-ide/Chart.yaml
+    - kubernetes/components/web-ide/values.yaml
+    - kubernetes/components/web-ide/values-override.yaml.tmpl
+    - kubernetes/components/web-ide/templates/_helpers.tpl
+    - kubernetes/components/web-ide/templates/deployment.yaml
+    - kubernetes/components/web-ide/templates/ingress.yaml
+    - kubernetes/components/web-ide/templates/oauth2-proxy-deployment.yaml
+    - kubernetes/components/web-ide/templates/oauth2-proxy-service.yaml
+    - kubernetes/components/web-ide/templates/pvc.yaml
+    - kubernetes/components/web-ide/templates/secrets.yaml
+    - kubernetes/components/web-ide/templates/service.yaml
+    - kubernetes/components/web-ide/templates/serviceaccount.yaml
+    - kubernetes/components/web-ide/install.tmpl
+    args:
+    - kubernetes/components/web-ide/args.yaml
+    install: bash ./install
+    installType: custom
+    dependencies:
+      - external-secrets
+      - istio
+  - name: paradedb
+    path:
+    - kubernetes/components/paradedb/Chart.yaml
+    - kubernetes/components/paradedb/values.yaml
+    - kubernetes/components/paradedb/values-override.yaml.tmpl
+    - kubernetes/components/paradedb/install.tmpl
+    args:
+    - kubernetes/components/paradedb/args.yaml
+    install: bash ./install
+    installType: custom
+    dependencies:
+      - cnpg
+  - name: kafka
+    path:
+    - kubernetes/components/kafka/Chart.yaml
+    - kubernetes/components/kafka/values.yaml
+    - kubernetes/components/kafka/values-override.yaml.tmpl
+    - kubernetes/components/kafka/install.tmpl
+    args:
+    - kubernetes/components/kafka/args.yaml
+    install: bash ./install
+    installType: custom
+  - name: loki
+    path:
+    - kubernetes/components/loki/Chart.yaml
+    - kubernetes/components/loki/values.yaml
+    - kubernetes/components/loki/values-override.yaml.tmpl
+    - kubernetes/components/loki/install.tmpl
+    args:
+    - kubernetes/components/loki/args.yaml
+    install: bash ./install
+    installType: custom
+  - name: otel-collector
+    path:
+    - kubernetes/components/otel-collector/Chart.yaml
+    - kubernetes/components/otel-collector/values.yaml
+    - kubernetes/components/otel-collector/values-override.yaml.tmpl
+    - kubernetes/components/otel-collector/install.tmpl
+    args:
+    - kubernetes/components/otel-collector/args.yaml
+    install: bash ./install
+    installType: custom
+  - name: n9e
+    path:
+    - kubernetes/components/n9e/Chart.yaml
+    - kubernetes/components/n9e/values.yaml
+    - kubernetes/components/n9e/values-override.yaml.tmpl
+    - kubernetes/components/n9e/install.tmpl
+    args:
+    - kubernetes/components/n9e/args.yaml
+    install: bash ./install
+    installType: custom
+    dependencies:
+      - victoria-metrics-operator
+  - name: uptrace
+    path:
+    - kubernetes/components/uptrace/Chart.yaml
+    - kubernetes/components/uptrace/values.yaml
+    - kubernetes/components/uptrace/values-override.yaml.tmpl
+    - kubernetes/components/uptrace/install.tmpl
+    args:
+    - kubernetes/components/uptrace/args.yaml
+    install: bash ./install
+    installType: custom
+    dependencies:
+      - cnpg
+  - name: bytebase
+    path:
+    - kubernetes/components/bytebase/Chart.yaml
+    - kubernetes/components/bytebase/values.yaml
+    - kubernetes/components/bytebase/values-override.yaml.tmpl
+    - kubernetes/components/bytebase/templates/_helpers.tpl
+    - kubernetes/components/bytebase/templates/statefulset.yaml
+    - kubernetes/components/bytebase/templates/service.yaml
+    - kubernetes/components/bytebase/templates/secretproviderclass.yaml
+    - kubernetes/components/bytebase/install.tmpl
+    args:
+    - kubernetes/components/bytebase/args.yaml
+    install: bash ./install
+    installType: custom
+  - name: juicefs
+    path:
+    - kubernetes/components/juicefs/kustomization.yaml.tmpl
+    - kubernetes/components/juicefs/namespace.yaml.tmpl
+    - kubernetes/components/juicefs/serviceaccount.yaml.tmpl
+    - kubernetes/components/juicefs/secret.yaml.tmpl
+    - kubernetes/components/juicefs/storageclass.yaml.tmpl
+    - kubernetes/components/juicefs/job-format.yaml.tmpl
+    - kubernetes/components/juicefs/statefulset.yaml.tmpl
+    - kubernetes/components/juicefs/service.yaml.tmpl
+    - kubernetes/components/juicefs/install.tmpl
+    args:
+    - kubernetes/components/juicefs/args.yaml
+    install: bash ./install
+    installType: custom
+    dependencies:
+      - external-secrets
+  - name: navigation
+    path:
+    - kubernetes/components/navigation/kustomization.yaml.tmpl
+    - kubernetes/components/navigation/namespace.yaml.tmpl
+    - kubernetes/components/navigation/configmap.yaml.tmpl
+    - kubernetes/components/navigation/deployment.yaml.tmpl
+    - kubernetes/components/navigation/service.yaml.tmpl
+    - kubernetes/components/navigation/install.tmpl
+    args:
+    - kubernetes/components/navigation/args.yaml
+    install: bash ./install
+    installType: custom

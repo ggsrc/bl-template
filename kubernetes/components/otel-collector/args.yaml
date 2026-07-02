@@ -1,0 +1,43 @@
+version: 1.0.0
+
+parameters:
+  components:
+    otel-collector:
+      namespace:
+        type: string
+        required: false
+        default: "otel"
+      releaseName:
+        type: string
+        required: false
+        default: "otel-collector"
+      valuesFiles:
+        type: string
+        required: false
+        default: "values.yaml values-override.yaml"
+      minHelmVersion:
+        type: string
+        required: false
+        default: ""
+      minKubectlVersion:
+        type: string
+        required: false
+        default: ""
+      mode:
+        type: string
+        default: "daemonset"
+      imageRepository:
+        type: string
+        default: "ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-k8s"
+      imageTag:
+        type: string
+        default: ""
+      lokiEndpoint:
+        type: string
+        default: "http://loki-gateway.loki.svc.cluster.local/otlp"
+      uptraceEndpoint:
+        type: string
+        default: "http://uptrace.uptrace.svc.cluster.local:4317"
+      uptraceInsecure:
+        type: boolean
+        default: true

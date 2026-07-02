@@ -1,0 +1,12 @@
+kafka:
+  image:
+    registry: docker.io
+    repository: bitnami/kafka
+    tag: {{ default `4.0.0-debian-12-r0` .imageTag }}
+  controller:
+    replicaCount: {{ default 1 .controllerReplicas }}
+  broker:
+    replicaCount: {{ default 1 .brokerReplicas }}
+  persistence:
+    enabled: {{ default false .persistenceEnabled }}
+    size: {{ default `20Gi` .persistenceSize }}

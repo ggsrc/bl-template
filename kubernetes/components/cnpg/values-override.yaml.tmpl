@@ -1,0 +1,15 @@
+# 环境覆盖：由 blcli 渲染，参考 alva-infra/k8s/common/cloudnative-pg/stg-values.yaml corp-values.yaml
+# 与 values.yaml 一起使用：helm upgrade -i -f values.yaml -f values-override.yaml
+cloudnative-pg:
+  replicaCount: {{ default 1 .replicaCount }}
+  image:
+    repository: ghcr.io/cloudnative-pg/cloudnative-pg
+    pullPolicy: IfNotPresent
+    tag: "{{ default `1.29.1` .imageTag }}"
+  resources:
+    limits:
+      cpu: "{{ default `1` .cpuLimit }}"
+      memory: "{{ default `2Gi` .memoryLimit }}"
+    requests:
+      cpu: "{{ default `100m` .cpuRequest }}"
+      memory: "{{ default `200Mi` .memoryRequest }}"

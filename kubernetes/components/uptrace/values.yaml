@@ -1,0 +1,5 @@
+uptrace:
+  image:
+    repository: uptrace/uptrace
+    tag: "1.7.0"
+  replicaCount: 1

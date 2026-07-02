@@ -1,0 +1,23 @@
+{{- if .Values.oauth2Proxy.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "code-server.fullname" . }}-oauth2-proxy
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: {{ include "code-server.name" . }}-oauth2-proxy
+    helm.sh/chart: {{ include "code-server.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  ports:
+  - name: http
+    port: {{ .Values.oauth2Proxy.port }}
+    targetPort: {{ .Values.oauth2Proxy.port }}
+  - name: metrics
+    port: {{ .Values.oauth2Proxy.metricsPort }}
+    targetPort: {{ .Values.oauth2Proxy.metricsPort }}
+  selector:
+    app.kubernetes.io/name: {{ include "code-server.name" . }}-oauth2-proxy
+    app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}

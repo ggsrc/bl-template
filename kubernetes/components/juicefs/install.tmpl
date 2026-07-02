@@ -1,0 +1,9 @@
+#!/bin/bash
+set -e
+if ! command -v kubectl &> /dev/null; then
+  echo "Error: kubectl is not installed"
+  exit 1
+fi
+echo "Applying JuiceFS S3 Gateway manifests..."
+kubectl apply -k .
+echo "JuiceFS installed. Run job-format if this is a new volume."

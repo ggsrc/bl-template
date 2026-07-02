@@ -1,0 +1,7 @@
+apiVersion: v2
+name: paradedb
+version: "1.0.0"
+dependencies:
+  - name: paradedb
+    version: 0.9.56
+    repository: https://paradedb.github.io/charts/

@@ -1,0 +1,37 @@
+version: 1.0.0
+parameters:
+  components:
+    juicefs:
+      namespace:
+        type: string
+        default: "juicefs"
+      gatewayImageRepository:
+        type: string
+        default: "juicedata/mount"
+      gatewayImageTag:
+        type: string
+        default: "ce-v1.3.1"
+      formatImageRepository:
+        type: string
+        default: "juicedata/mount"
+      formatImageTag:
+        type: string
+        default: "ce-v1.3.1"
+      metaURL:
+        type: string
+        default: "postgres://user:pass@host:5432/juicefs?sslmode=disable"
+      bucket:
+        type: string
+        default: "s3://example-bucket"
+      storageType:
+        type: string
+        default: "s3"
+      volumeName:
+        type: string
+        default: "juicefs-vol"
+      gcpServiceAccountEmail:
+        type: string
+        default: ""
+      replicas:
+        type: integer
+        default: 1

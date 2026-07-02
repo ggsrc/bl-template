@@ -1,0 +1,15 @@
+nightingale:
+  n9e:
+    type: internal
+    internal:
+      image:
+        repository: flashcatcloud/nightingale
+        tag: 8.5.1
+  redis:
+    type: internal
+    internal:
+      image:
+        repository: redis
+        tag: 7-alpine
+  prometheus:
+    type: external

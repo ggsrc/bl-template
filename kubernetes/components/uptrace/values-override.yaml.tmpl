@@ -1,0 +1,5 @@
+uptrace:
+  image:
+    repository: {{ default `uptrace/uptrace` .imageRepository }}
+    tag: "{{ default `1.7.0` .imageTag }}"
+  replicaCount: {{ default 1 .replicaCount }}

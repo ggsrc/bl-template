@@ -1,0 +1,7 @@
+apiVersion: v2
+name: uptrace
+version: "1.0.0"
+dependencies:
+  - name: uptrace
+    version: 2.0.1
+    repository: https://charts.uptrace.dev

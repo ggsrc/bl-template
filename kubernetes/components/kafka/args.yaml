@@ -1,0 +1,40 @@
+version: 1.0.0
+
+parameters:
+  components:
+    kafka:
+      namespace:
+        type: string
+        required: false
+        default: "kafka"
+      releaseName:
+        type: string
+        required: false
+        default: "kafka-cluster"
+      valuesFiles:
+        type: string
+        required: false
+        default: "values.yaml values-override.yaml"
+      minHelmVersion:
+        type: string
+        required: false
+        default: ""
+      minKubectlVersion:
+        type: string
+        required: false
+        default: ""
+      imageTag:
+        type: string
+        default: "4.0.0-debian-12-r0"
+      controllerReplicas:
+        type: integer
+        default: 1
+      brokerReplicas:
+        type: integer
+        default: 1
+      persistenceEnabled:
+        type: boolean
+        default: false
+      persistenceSize:
+        type: string
+        default: "20Gi"

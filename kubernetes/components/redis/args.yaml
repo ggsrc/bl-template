@@ -1,0 +1,73 @@
+version: 1.0.0
+
+# kubernetes/components/redis 组件的参数定义
+# 参考 alva-infra/gitops/alva-ai-infra/components-stg/2-redis/
+
+parameters:
+  components:
+    redis:
+      namespace:
+        type: string
+        description: "Namespace to install Redis"
+        required: false
+        default: "redis"
+      releaseName:
+        type: string
+        description: "Helm release name"
+        required: false
+        default: "redis-shared"
+      valuesFiles:
+        type: string
+        description: "Space-separated values files. Use values.yaml values-override.yaml after rendering"
+        required: false
+        default: "values.yaml values-override.yaml"
+      existingSecret:
+        type: string
+        description: "Kubernetes secret name containing Redis password"
+        required: false
+        default: "redis-shared"
+      existingSecretPasswordKey:
+        type: string
+        description: "Key in existingSecret for Redis password"
+        required: false
+        default: "REDIS_PASSWORD"
+      enableInternalLB:
+        type: boolean
+        description: "Deploy internal LoadBalancer Service for Redis (GCP internal LB)"
+        required: false
+        default: true
+      internalLBServiceName:
+        type: string
+        description: "Name of internal LoadBalancer Service"
+        required: false
+        default: "redis-shared-lb"
+      cpuLimit:
+        type: string
+        description: "Redis sentinel resources limits cpu"
+        required: false
+        default: "1000m"
+      memoryLimit:
+        type: string
+        description: "Redis sentinel resources limits memory"
+        required: false
+        default: "500M"
+      cpuRequest:
+        type: string
+        description: "Redis sentinel resources requests cpu"
+        required: false
+        default: "150m"
+      memoryRequest:
+        type: string
+        description: "Redis sentinel resources requests memory"
+        required: false
+        default: "100M"
+      minHelmVersion:
+        type: string
+        description: "Minimum helm version required by install script"
+        required: false
+        default: ""
+      minKubectlVersion:
+        type: string
+        description: "Minimum kubectl version required by install script"
+        required: false
+        default: ""

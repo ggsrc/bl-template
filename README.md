@@ -112,9 +112,10 @@ bl-template/
 │   ├── project/        # Project-level Terraform configurations
 │   └── projects/       # Project deployment configurations
 ├── kubernetes/         # Kubernetes configurations
-│   ├── config.yaml     # Kubernetes component configuration definitions
-│   ├── base/           # Base components (required)
-│   └── optional/        # Optional components
+│   ├── config.yaml     # All registered components (core + optional)
+│   ├── default.yaml    # Default components for init-args (core stack only)
+│   ├── OPTIONAL_COMPONENTS.md  # Opt-in components reference
+│   └── components/     # Component templates (Helm / Kustomize)
 ├── gitops/             # GitOps configurations
 │   ├── config.yaml     # app-templates (deployment/statefulset) and argocd definitions
 │   ├── args.yaml       # parameter definitions (including ArgoCD Application fields)
@@ -160,18 +161,26 @@ Defines three main sections:
 
 #### kubernetes/config.yaml
 
-Defines Kubernetes cluster initialization components:
+Defines all Kubernetes platform components. **Core stack** entries come from `default.yaml` (multi-env prd/stg/corp). **Optional** components are registered here but not enabled by default — see [kubernetes/OPTIONAL_COMPONENTS.md](kubernetes/OPTIONAL_COMPONENTS.md).
 
-- **init**: Initialization components (required)
-  - `namespace`: Namespace
-  - `istio`: Service mesh
-  - `victoria-metrics`: Monitoring system
+**Core (typical default.yaml):** external-secrets-operator, external-secrets, sealed-secret, istio, argocd, victoria-metrics-operator, victoria-metrics, grafana (corp)
 
-- **optional**: Optional components
-  - `cnpg`: CloudNativePG database operator
-  - `web-ide`: Web IDE
-  - `redis`: Redis
-  - `kiali`: Service mesh visualization
+**Optional (opt-in via args.yaml):**
+
+| Component | Official image / chart | Notes |
+|-----------|------------------------|--------|
+| cnpg | CloudNativePG Operator | PostgreSQL operator |
+| redis | Bitnami Redis | Shared cache |
+| paradedb | ParadeDB | Requires cnpg |
+| kafka | Bitnami Kafka | Message queue |
+| juicefs | juicedata/mount | S3 gateway (Kustomize) |
+| loki | Grafana Loki chart | Log aggregation |
+| otel-collector | OpenTelemetry Collector | Observability pipeline |
+| uptrace | uptrace/uptrace | APM |
+| n9e | flashcatcloud/nightingale | Monitoring / alerting |
+| bytebase | bytebase/bytebase | DB schema management |
+| web-ide | codercom/code-server | Browser IDE (bl-template only) |
+| navigation | b4bz/homer | Internal links dashboard (bl-template only) |
 
 #### gitops/config.yaml
 

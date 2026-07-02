@@ -1,0 +1,37 @@
+version: 1.0.0
+
+parameters:
+  components:
+    loki:
+      namespace:
+        type: string
+        required: false
+        default: "loki"
+      releaseName:
+        type: string
+        required: false
+        default: "loki"
+      valuesFiles:
+        type: string
+        required: false
+        default: "values.yaml values-override.yaml"
+      minHelmVersion:
+        type: string
+        required: false
+        default: ""
+      minKubectlVersion:
+        type: string
+        required: false
+        default: ""
+      deploymentMode:
+        type: string
+        default: "SingleBinary"
+      replicas:
+        type: integer
+        default: 1
+      authEnabled:
+        type: boolean
+        default: false
+      retentionPeriod:
+        type: string
+        default: "168h"

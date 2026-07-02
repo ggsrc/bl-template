@@ -1,0 +1,12 @@
+nightingale:
+  externalURL: {{ default `https://n9e.example.com` .externalURL }}
+  n9e:
+    internal:
+      image:
+        repository: {{ default `flashcatcloud/nightingale` .imageRepository }}
+        tag: "{{ default `8.5.1` .imageTag }}"
+  prometheus:
+    type: external
+    external:
+      host: {{ default `vmagent-victoriametrics-vmks.monitoring-vm.svc.cluster.local` .prometheusHost }}
+      port: "{{ default `8429` .prometheusPort }}"

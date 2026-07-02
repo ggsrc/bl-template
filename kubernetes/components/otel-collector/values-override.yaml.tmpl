@@ -1,0 +1,13 @@
+opentelemetry-collector:
+  mode: {{ default `daemonset` .mode }}
+  image:
+    repository: {{ default `ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-k8s` .imageRepository }}
+    tag: {{ default `` .imageTag }}
+  config:
+    exporters:
+      otlphttp/loki:
+        endpoint: {{ default `http://loki-gateway.loki.svc.cluster.local/otlp` .lokiEndpoint }}
+      otlp/uptrace:
+        endpoint: {{ default `http://uptrace.uptrace.svc.cluster.local:4317` .uptraceEndpoint }}
+        tls:
+          insecure: {{ default true .uptraceInsecure }}

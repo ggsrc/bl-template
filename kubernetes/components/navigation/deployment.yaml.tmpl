@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: navigation
+  namespace: {{ default "navigation" .namespace }}
+spec:
+  replicas: {{ default 1 .replicas }}
+  selector:
+    matchLabels:
+      app: navigation
+  template:
+    metadata:
+      labels:
+        app: navigation
+    spec:
+      containers:
+        - name: homer
+          image: {{ default `b4bz/homer` .imageRepository }}:{{ default `v25.11.1` .imageTag }}
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: config
+              mountPath: /www/assets/config.yml
+              subPath: config.yml
+      volumes:
+        - name: config
+          configMap:
+            name: homer-config

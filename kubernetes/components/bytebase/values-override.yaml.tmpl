@@ -1,0 +1,14 @@
+bytebase:
+  version: {{ default `3.1.0` .version }}
+  option:
+    external-url: {{ default `https://bytebase.example.com` .externalURL }}
+    externalPg:
+      enable: {{ default false .externalPgEnable }}
+      pgHost: {{ default `` .pgHost }}
+      pgPort: {{ default `` .pgPort }}
+      pgUsername: {{ default `` .pgUsername }}
+      pgDatabase: {{ default `bytebase` .pgDatabase }}
+      existingPgPasswordSecret: {{ default `` .existingPgPasswordSecret }}
+      existingPgPasswordSecretKey: {{ default `` .existingPgPasswordSecretKey }}
+  persistence:
+    storage: {{ default `20Gi` .persistenceSize }}

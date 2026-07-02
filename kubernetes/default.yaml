@@ -1,3 +1,7 @@
+# Optional components (cnpg, redis, paradedb, kafka, loki, otel-collector, n9e, uptrace, bytebase, juicefs, web-ide, navigation)
+# are registered in kubernetes/config.yaml but NOT enabled here.
+# Add them under projects[].components in your args file when needed.
+
 version: 1.0.0
 global: {}
 projects:

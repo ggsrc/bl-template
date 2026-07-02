@@ -1,0 +1,28 @@
+version: 1.0.0
+parameters:
+  components:
+    navigation:
+      namespace:
+        type: string
+        default: "navigation"
+      imageRepository:
+        type: string
+        default: "b4bz/homer"
+      imageTag:
+        type: string
+        default: "v25.11.1"
+      title:
+        type: string
+        default: "Infra Navigation"
+      subtitle:
+        type: string
+        default: "Internal links"
+      grafanaURL:
+        type: string
+        default: "https://grafana.example.com"
+      argocdURL:
+        type: string
+        default: "https://argocd.example.com"
+      replicas:
+        type: integer
+        default: 1

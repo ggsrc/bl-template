@@ -1,0 +1,32 @@
+name: blcli validate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout blcli
+        uses: actions/checkout@v4
+        with:
+          repository: ggsrc/blcli
+          path: blcli
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Install blcli
+        working-directory: blcli
+        run: go install ./cmd/blcli
+
+      - name: Preview and validate template defaults
+        run: |
+          blcli init-args . --profile minimal -o /tmp/args.yaml --preview
+          blcli check args --args /tmp/args.yaml -r .

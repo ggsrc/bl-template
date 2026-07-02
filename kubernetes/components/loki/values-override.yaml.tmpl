@@ -1,0 +1,8 @@
+loki:
+  deploymentMode: {{ default `SingleBinary` .deploymentMode }}
+  singleBinary:
+    replicas: {{ default 1 .replicas }}
+  loki:
+    auth_enabled: {{ default false .authEnabled }}
+    limits_config:
+      retention_period: {{ default `168h` .retentionPeriod }}

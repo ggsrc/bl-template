@@ -1,0 +1,7 @@
+apiVersion: v2
+name: n9e
+version: "1.0.0"
+dependencies:
+  - name: nightingale
+    version: 0.3.1
+    repository: https://logic3579.github.io/helm-charts
