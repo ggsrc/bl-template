@@ -96,9 +96,9 @@ parameters:
         required: false
         default: []
         example:
-          - group: "SiriusPlatform:Infra"
+          - group: "example-org:Infra"
             role: "role:org-admin"
-          - group: "SiriusPlatform:backend"
+          - group: "example-org:backend"
             role: "role:org-backend"
       
       # Namespace labels
@@ -141,7 +141,7 @@ parameters:
         description: "Git repository URL (used when GitRepositories is not provided, for backward compatibility)"
         required: false
         default: "git@github.com:your-org/your-repo.git"
-        example: "git@github.com:sirius-platform/infra-gitops.git"
+        example: "git@github.com:example-org/infra-gitops.git"
       
       GitSSHSecretName:
         type: string

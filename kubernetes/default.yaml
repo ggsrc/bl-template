@@ -57,9 +57,9 @@ projects:
             - policy: "p, role:org-admin, repositories, delete, *, allow"
             - policy: "p, role:org-backend, applications, *, default/*, allow"
           RBACRoleBindings:
-            - group: "SiriusPlatform:Infra"
+            - group: "example-org:Infra"
               role: "role:org-admin"
-            - group: "SiriusPlatform:backend"
+            - group: "example-org:backend"
               role: "role:org-backend"
       - name: 3-victoria-metrics-operator
         parameters:
@@ -128,9 +128,9 @@ projects:
             - policy: "p, role:org-admin, repositories, delete, *, allow"
             - policy: "p, role:org-backend, applications, *, default/*, allow"
           RBACRoleBindings:
-            - group: "SiriusPlatform:Infra"
+            - group: "example-org:Infra"
               role: "role:org-admin"
-            - group: "SiriusPlatform:backend"
+            - group: "example-org:backend"
               role: "role:org-backend"
       - name: 3-victoria-metrics-operator
         parameters:
