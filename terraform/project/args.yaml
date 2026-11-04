@@ -1,11 +1,11 @@
 version: 1.0.0
 
-# terraform/project 目录的项目级别全局参数定义
-# 这些参数适用于 project 目录下的所有组件
-# project_name 为逻辑名（如 prd、stg），用于资源命名、locals；GCP project ID 由 project_id 提供
+# Project-level global parameter definitions for the terraform/project directory
+# These parameters apply to every component under the project directory
+# project_name is the logical name (e.g. prd, stg) used for resource naming and locals; the GCP project ID comes from project_id
 
 parameters:
-  # 项目级别的全局参数
+  # Project-level global parameters
   global:
     project_name:
       type: string
@@ -16,10 +16,10 @@ parameters:
         - kind: stringLength
           min: 2
           max: 30
-          message: "project_name 长度为 2-30 个字符"
+          message: "project_name must be 2-30 characters long"
         - kind: pattern
           value: "^[a-z0-9][a-z0-9-]*[a-z0-9]$"
-          message: "project_name：仅小写字母/数字/连字符，以字母或数字开头、以字母或数字结尾"
+          message: "project_name: lowercase letters, digits and hyphens only, starting and ending with a letter or digit"
       example: "prd"
 
     project_id:
@@ -30,10 +30,10 @@ parameters:
         - kind: stringLength
           min: 6
           max: 30
-          message: "GCP Project ID 长度为 6-30 个字符"
+          message: "GCP Project ID must be 6-30 characters long"
         - kind: pattern
           value: "^[a-z][a-z0-9-]{4,28}[a-z0-9]$"
-          message: "GCP Project ID：仅小写字母/数字/连字符，以字母开头、以字母或数字结尾"
+          message: "GCP Project ID: lowercase letters, digits and hyphens only, starting with a letter and ending with a letter or digit"
       example: "my-org-prd-abc123"
 
     region:

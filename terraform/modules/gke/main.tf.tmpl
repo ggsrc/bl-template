@@ -135,13 +135,13 @@ resource "google_container_node_pool" "main" {
     }
   }
 
-  # 自动升级与修复
+  # Auto-upgrade and auto-repair
   management {
     auto_repair  = true
     auto_upgrade = true
   }
 
-  # 只允许通过扩容节点来完成升级，每次只允许扩容 1 个节点
+  # Upgrade only by surging new nodes, one extra node at a time
   upgrade_settings {
     max_unavailable = 0
     max_surge       = 1

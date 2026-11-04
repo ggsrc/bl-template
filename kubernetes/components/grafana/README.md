@@ -7,13 +7,13 @@
 
 ## Install
 
-渲染后执行（需先 `blcli init` 生成 values-corp.yaml）：
+After rendering (run `blcli init` first to generate values-corp.yaml), run:
 
 ```bash
 bash install
 ```
 
-安装时使用 `values.yaml values-corp.yaml`；`values-corp.yaml.tmpl` 由 blcli 渲染，参数见 args.yaml（imageTag、rootUrl、vmDatasourceUrl、lokiDatasourceUrl、hostedDomain 等）。
+The install uses `values.yaml values-corp.yaml`; `values-corp.yaml.tmpl` is rendered by blcli, with parameters in args.yaml (imageTag, rootUrl, vmDatasourceUrl, lokiDatasourceUrl, hostedDomain, etc.).
 
 Or manually:
 
@@ -23,4 +23,4 @@ helm install grafana -n grafana . --values ./values.yaml --values ./values-corp.
 helm upgrade grafana -n grafana . --values ./values.yaml --values ./values-corp.yaml
 ```
 
-若未使用 blcli 渲染，需自行从 values-corp.yaml.tmpl 复制并修改生成 values-corp.yaml。
+If you do not render with blcli, create values-corp.yaml yourself by copying and editing values-corp.yaml.tmpl.

@@ -183,7 +183,7 @@ projects:
           namespace: grafana
           release-name: grafana
           image-tag: "12.3.1"
-          root-url: "https://grafana.corp.alva.xyz"
+          root-url: "https://grafana.example.com"
           vm-datasource-url: "http://vmselect-victoriametrics-vmks.monitoring-vm.svc.cluster.local:8481/select/0/prometheus"
           loki-datasource-url: "http://loki-gateway.loki.svc.cluster.local"
-          hosted-domain: "alva.xyz"
+          hosted-domain: "example.com"

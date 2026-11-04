@@ -27,6 +27,7 @@ jobs:
           UPDATED=$(date -u +"%Y-%m-%d")
 
           export EN_LINE="**Adoption snapshot (${UPDATED}):** ${STARS} GitHub stars · ${FORKS} forks · powered by [blcli](https://github.com/ggsrc/blcli)"
+          # ZH_LINE is the Chinese translation of EN_LINE; it is written to README_zh.md.
           export ZH_LINE="**采用情况（${UPDATED}）：** ${STARS} GitHub Stars · ${FORKS} Forks · 配合 [blcli](https://github.com/ggsrc/blcli) 使用"
 
           python3 <<'PY'

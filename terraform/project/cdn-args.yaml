@@ -1,10 +1,10 @@
 version: 1.0.0
 
-# terraform/project/cdn 组件的参数定义
-# 这些参数用于创建完整的 CDN 配置（Storage Bucket、Backend Bucket、URL Map、SSL Certificate、Forwarding Rule 等）
+# Parameter definitions for the terraform/project/cdn component
+# These parameters create a complete CDN setup (Storage Bucket, Backend Bucket, URL Map, SSL Certificate, Forwarding Rule, etc.)
 
 parameters:
-  # 组件级参数（对应 config.yaml projects 中的 cdn 组件）
+  # Component-level parameters (the cdn component under projects in config.yaml)
   components:
     cdn:
       cdn_configs:

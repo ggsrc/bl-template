@@ -1,5 +1,5 @@
 # VPC Network Configuration for {{ .project_name }}
-# vpc_name 仅在此处用作 resource 的 name；locals.vpc_name 由 main.tf 统一提供
+# vpc_name is used only here, as the resource name; locals.vpc_name is provided by main.tf
 
 resource "google_compute_network" "main" {
   name                    = {{ if .vpc_name }}"{{ .vpc_name }}"{{ else }}"main"{{ end }}

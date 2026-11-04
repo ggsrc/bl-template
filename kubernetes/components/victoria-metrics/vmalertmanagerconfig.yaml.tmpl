@@ -22,25 +22,25 @@ spec:
     - name: slack
       slack_configs:
         - api_url:
-            name: {{ default "slack-webhook-url-alva-infra-alert" .slackSecretName }}
+            name: {{ default "slack-webhook-url-infra-alert" .slackSecretName }}
             key: {{ default "url" .slackSecretKey }}
-          channel: "{{ default "#alva-infra-alert" .slackChannel }}"
+          channel: "{{ default "#infra-alert" .slackChannel }}"
           send_resolved: false
           mrkdwn_in: ["text", "title"]
           title: |-
             {{`{{ if eq .Status "firing" }}`}}
-            :large_yellow_circle: **告警触发** - {{`{{ .CommonLabels.alertname }}`}} [{{`{{ index .CommonLabels "severity" | title }}`}}]
+            :large_yellow_circle: **Alert firing** - {{`{{ .CommonLabels.alertname }}`}} [{{`{{ index .CommonLabels "severity" | title }}`}}]
             {{`{{ else }}`}}
-            :large_green_circle: **告警恢复** - {{`{{ .CommonLabels.alertname }}`}} [{{`{{ index .CommonLabels "severity" | title }}`}}]
+            :large_green_circle: **Alert resolved** - {{`{{ .CommonLabels.alertname }}`}} [{{`{{ index .CommonLabels "severity" | title }}`}}]
             {{`{{ end }}`}}
           text: |-
             {{`{{ range .Alerts }}`}}
-            :bar_chart: **详情:**
-            • 规则: {{`{{ .Labels.alertname }}`}}
-            • 等级: {{`{{ if eq .Labels.severity "critical" }}`}}:large_red_circle:{{`{{ else }}`}}:large_yellow_circle:{{`{{ end }}`}} {{`{{ .Labels.severity | title }}`}}
-            • 查询: <{{`{{ .GeneratorURL }}`}}|Grafana Explore>
-            • 触发值: {{`{{ with .Annotations.value }}{{ . }}{{ else }}N/A{{ end }}`}}
-            • 集群: {{`{{ with .Labels.cluster }}{{ . }}{{ else }}N/A{{ end }}`}}
-            • 标签: {{`{{ range .Labels.SortedPairs }}{{ .Name }}={{ .Value }},{{ end }}`}}
-            • 触发时间: {{`{{ .StartsAt.Format "2006-01-02 15:04:05" }}`}}
+            :bar_chart: **Details:**
+            • Rule: {{`{{ .Labels.alertname }}`}}
+            • Severity: {{`{{ if eq .Labels.severity "critical" }}`}}:large_red_circle:{{`{{ else }}`}}:large_yellow_circle:{{`{{ end }}`}} {{`{{ .Labels.severity | title }}`}}
+            • Query: <{{`{{ .GeneratorURL }}`}}|Grafana Explore>
+            • Value: {{`{{ with .Annotations.value }}{{ . }}{{ else }}N/A{{ end }}`}}
+            • Cluster: {{`{{ with .Labels.cluster }}{{ . }}{{ else }}N/A{{ end }}`}}
+            • Labels: {{`{{ range .Labels.SortedPairs }}{{ .Name }}={{ .Value }},{{ end }}`}}
+            • Started at: {{`{{ .StartsAt.Format "2006-01-02 15:04:05" }}`}}
             {{`{{ end }}`}}

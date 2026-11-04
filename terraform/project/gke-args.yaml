@@ -1,10 +1,10 @@
 version: 1.0.0
 
-# terraform/project/gke 组件的参数定义
-# 这些参数用于创建 GKE 集群
+# Parameter definitions for the terraform/project/gke component
+# These parameters create a GKE cluster
 
 parameters:
-  # 组件级参数（对应 config.yaml projects 中的 gke 组件）
+  # Component-level parameters (the gke component under projects in config.yaml)
   components:
     gke:
       project_id:

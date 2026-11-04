@@ -1,10 +1,10 @@
 version: 1.0.0
 
-# terraform/project/loki-logs 组件的参数定义
-# 这些参数用于创建 Loki Logs GCS Bucket、Service Account、Workload Identity 配置
+# Parameter definitions for the terraform/project/loki-logs component
+# These parameters create the Loki logs GCS bucket, service account and Workload Identity configuration
 
 parameters:
-  # 组件级参数（对应 config.yaml projects 中的 loki-logs 组件）
+  # Component-level parameters (the loki-logs component under projects in config.yaml)
   components:
     loki-logs:
       enable_loki_logs:

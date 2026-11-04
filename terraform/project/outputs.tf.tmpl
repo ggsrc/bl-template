@@ -1,5 +1,5 @@
 # Outputs for {{ .project_name }}
-# Certificate map、GKE、外部 DNS CNAME 等输出；Gateway IP 请使用 ip 组件的 output_addresses，不在此重复
+# Outputs for certificate maps, GKE, external DNS CNAMEs, etc.; for Gateway IPs use output_addresses of the ip component (not repeated here)
 
 {{ if .external_dns_records }}
 {{ range .external_dns_records }}

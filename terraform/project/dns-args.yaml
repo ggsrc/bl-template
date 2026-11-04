@@ -1,10 +1,10 @@
 version: 1.0.0
 
-# terraform/project/dns 组件的参数定义
-# 这些参数用于创建 DNS Zone 和 DNS Record
+# Parameter definitions for the terraform/project/dns component
+# These parameters create DNS zones and DNS records
 
 parameters:
-  # 组件级参数（对应 config.yaml projects 中的 dns 组件）
+  # Component-level parameters (the dns component under projects in config.yaml)
   components:
     dns:
       zones:

@@ -1,12 +1,12 @@
 version: 1.0.0
 
-# terraform/project/ip 组件的参数定义
-# 用于声明保留的全局 IP 与内部 IP，供 DNS/Cert/CDN/LB 等引用
+# Parameter definitions for the terraform/project/ip component
+# Declares reserved global and internal IP addresses for use by DNS, cert, CDN, load balancers, etc.
 
 parameters:
   components:
     ip:
-      # 全局外部 IP 列表（LB、Gateway、CDN 等）
+      # Global external IP addresses (LB, Gateway, CDN, etc.)
       global_addresses:
         type: array
         description: "List of global external IP addresses to reserve"
@@ -28,7 +28,7 @@ parameters:
               description: "EXTERNAL or INTERNAL"
               required: false
               default: "EXTERNAL"
-      # 内部 IP 列表（需指定子网）
+      # Internal IP addresses (a subnetwork is required)
       internal_addresses:
         type: array
         description: "List of internal IP addresses (require subnetwork reference)"
@@ -49,7 +49,7 @@ parameters:
               type: string
               description: "Region for the address (optional if subnetwork is region-scoped)"
               required: false
-      # 需要输出的 address 列表，供 DNS/cert 引用（output 名需为合法标识符，建议用下划线）
+      # Addresses to output for use by DNS/cert (output names must be valid identifiers; underscores are recommended)
       output_addresses:
         type: array
         description: "List of { resource_name, output_name } to expose as outputs"

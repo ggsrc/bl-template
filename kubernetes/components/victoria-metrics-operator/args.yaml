@@ -1,8 +1,8 @@
 version: 1.0.0
 
-# kubernetes/components/victoria-metrics-operator 组件的参数定义
-# 环境变量参考：example/alva/k8s/common/victoria-metrics/values-stg.yaml, values-prd.yaml
-# 典型差异：cluster/env (externalLabels)、remoteWrite URL、vmagent resources
+# Parameter definitions for the kubernetes/components/victoria-metrics-operator component
+# Per-environment values are rendered into values-override.yaml.tmpl.
+# Typical differences: cluster/env (externalLabels), remoteWrite URL, vmagent resources
 
 parameters:
   components:
@@ -22,7 +22,7 @@ parameters:
         description: "Space-separated values files. Use values.yaml values-override.yaml when using rendered override"
         required: false
         default: "values.yaml values-override.yaml"
-      # values-override.yaml.tmpl 渲染参数
+      # Parameters for rendering values-override.yaml.tmpl
       cluster:
         type: string
         description: "Cluster label for vmagent externalLabels (e.g. stg, prd)"
@@ -63,7 +63,7 @@ parameters:
         description: "VMAgent resources requests memory"
         required: false
         default: "500Mi"
-      # 安装脚本会检查 helm/kubectl 是否存在；若设置则同时校验最低版本
+      # The install script checks that helm/kubectl are installed; if set, it also enforces these minimum versions
       minHelmVersion:
         type: string
         description: "Minimum helm version required by install script (e.g. 3.0). Empty = only check presence"

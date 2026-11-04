@@ -1,12 +1,12 @@
 version: 1.0.0
 
-# terraform/project/outputs 组件的参数定义
-# 控制要输出的证书 map、Gateway IP、GKE 等信息，供 K8s Gateway / 外部 DNS 使用
+# Parameter definitions for the terraform/project/outputs component
+# Controls which certificate maps, Gateway IPs, GKE details, etc. are output for the Kubernetes Gateway and external DNS
 
 parameters:
   components:
     outputs:
-      # 要输出的 Certificate Map（id/name），供 Gateway/LB 引用
+      # Certificate Maps (id/name) to output for use by the Gateway/LB
       certificate_maps:
         type: array
         description: "List of certificate maps to output (id and name)"
@@ -23,7 +23,7 @@ parameters:
               type: string
               description: "Prefix for output names (e.g. app -> app_certificate_map_id)"
               example: "app"
-      # 外部 DNS 的 CNAME 记录信息（来自 cert 的 dns_authorization），供用户在外网 DNS 添加
+      # CNAME records for external DNS (from cert dns_authorization), to add in your public DNS
       external_dns_records:
         type: array
         description: "Output dns_resource_record for dns_authorization certs (add CNAME in external DNS)"
@@ -35,16 +35,16 @@ parameters:
             dns_authorization_name:
               type: string
               description: "Terraform resource name of google_certificate_manager_dns_authorization"
-              example: "alva_xyz"
+              example: "example_com"
             output_name:
               type: string
-              description: "Output variable name (e.g. alva_xyz_dns_record)"
-              example: "alva_xyz_dns_record"
+              description: "Output variable name (e.g. example_com_dns_record)"
+              example: "example_com_dns_record"
             cert_id_output_name:
               type: string
-              description: "Optional output name for certificate ID (e.g. alva_xyz_cert_id)"
+              description: "Optional output name for certificate ID (e.g. example_com_cert_id)"
               required: false
-      # 是否输出 GKE 集群 endpoint 与 cluster_name
+      # Whether to output the GKE cluster endpoint and cluster_name
       gke:
         type: object
         description: "Output GKE cluster info (endpoint, cluster_name)"

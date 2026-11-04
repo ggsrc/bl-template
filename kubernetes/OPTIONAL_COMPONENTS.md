@@ -1,10 +1,10 @@
-# Kubernetes 可选组件
+# Optional Kubernetes Components
 
-以下组件已在 `kubernetes/config.yaml` 注册，**默认不在** `kubernetes/default.yaml` 中启用。需要在生成的 `args.yaml` 里向 `kubernetes.projects[].components[]` 手动添加对应条目后，`blcli init` 才会渲染。
+The components below are registered in `kubernetes/config.yaml` but are **not enabled** in `kubernetes/default.yaml` by default. `blcli init` renders them only after you add matching entries to `kubernetes.projects[].components[]` in the generated `args.yaml`.
 
-所有镜像均使用**上游官方镜像**（非 Alva 私有 registry）。
+All images are **official upstream images** (no private registry).
 
-## 启用方式
+## How to enable
 
 ```yaml
 kubernetes:
@@ -21,40 +21,40 @@ kubernetes:
             existing-secret: redis-shared
 ```
 
-安装：在渲染输出目录执行 `bash ./install`（Helm 组件）或 `kubectl apply -k .`（Kustomize 组件）。
+Install: in the rendered output directory, run `bash ./install` (Helm components) or `kubectl apply -k .` (Kustomize components).
 
-## 组件列表
+## Components
 
-| 组件 | 官方镜像 / Chart | 依赖 | 说明 |
+| Component | Official image / chart | Depends on | Description |
 |------|------------------|------|------|
 | cnpg | `ghcr.io/cloudnative-pg/cloudnative-pg` | — | CloudNativePG Operator |
-| redis | Bitnami Chart → `bitnami/redis` | external-secrets | 共享 Redis |
-| paradedb | ParadeDB 官方 Chart | cnpg | PostgreSQL + 搜索扩展 |
-| kafka | Bitnami Chart → `bitnami/kafka` | — | KRaft 模式 Kafka |
-| juicefs | `juicedata/mount` | external-secrets | JuiceFS S3 Gateway（Kustomize） |
-| loki | Grafana Community Chart | — | 日志聚合 |
-| grafana | `grafana/grafana` | victoria-metrics-operator | **默认栈 corp 已含**；也可单独 opt-in |
-| otel-collector | OpenTelemetry 官方 Chart | — | 日志/指标/链路采集 |
-| uptrace | `uptrace/uptrace` | cnpg | APM（官方 Helm） |
-| n9e | `flashcatcloud/nightingale` | victoria-metrics-operator | 夜莺监控 |
-| bytebase | `bytebase/bytebase` | — | 数据库变更管理 |
-| web-ide | `codercom/code-server` | external-secrets, istio | 浏览器 IDE（**仅 bl-template**） |
-| navigation | `b4bz/homer` | — | 内部导航页（Homer，**仅 bl-template**） |
+| redis | Bitnami Chart → `bitnami/redis` | external-secrets | Shared Redis |
+| paradedb | Official ParadeDB chart | cnpg | PostgreSQL + search extensions |
+| kafka | Bitnami Chart → `bitnami/kafka` | — | Kafka in KRaft mode |
+| juicefs | `juicedata/mount` | external-secrets | JuiceFS S3 Gateway (Kustomize) |
+| loki | Grafana Community Chart | — | Log aggregation |
+| grafana | `grafana/grafana` | victoria-metrics-operator | **Already in the default corp stack**; can also be opted in on its own |
+| otel-collector | Official OpenTelemetry chart | — | Log / metric / trace collection |
+| uptrace | `uptrace/uptrace` | cnpg | APM (official Helm chart) |
+| n9e | `flashcatcloud/nightingale` | victoria-metrics-operator | Nightingale monitoring |
+| bytebase | `bytebase/bytebase` | — | Database change management |
+| web-ide | `codercom/code-server` | external-secrets, istio | Browser IDE (**bl-template only**) |
+| navigation | `b4bz/homer` | — | Internal navigation page (Homer, **bl-template only**) |
 
-## 依赖顺序
+## Dependency order
 
-blcli 会按 `config.yaml` 中的 `dependencies` 自动排序，例如：
+blcli orders components automatically using `dependencies` in `config.yaml`, for example:
 
-- `cnpg` ← paradedb、uptrace
-- `external-secrets` ← redis、juicefs、web-ide
-- `victoria-metrics-operator` ← grafana、n9e
+- `cnpg` ← paradedb, uptrace
+- `external-secrets` ← redis, juicefs, web-ide
+- `victoria-metrics-operator` ← grafana, n9e
 
-## 与 default.yaml 的关系
+## Relationship to default.yaml
 
-| 来源 | 含义 |
+| Source | Meaning |
 |------|------|
-| `config.yaml` | 模板仓库**能**提供的全部组件 |
-| `default.yaml` | `init-args` 默认写入 args 的核心栈（ESO、Istio、ArgoCD、VM 等） |
-| 本文件所列组件 | 需用户在 args 中 **opt-in** |
+| `config.yaml` | Every component the template repository **can** provide |
+| `default.yaml` | The core stack that `init-args` writes to args by default (ESO, Istio, ArgoCD, VM, etc.) |
+| Components listed in this file | You must **opt in** to them in args |
 
-各组件参数见 `kubernetes/components/<name>/args.yaml`，或运行 `blcli explain -r <repo> -m kubernetes -c <name>`。
+For each component's parameters, see `kubernetes/components/<name>/args.yaml` or run `blcli explain -r <repo> -m kubernetes -c <name>`.

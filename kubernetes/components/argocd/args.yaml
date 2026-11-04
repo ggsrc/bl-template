@@ -1,14 +1,14 @@
 version: 1.0.0
 
-# kubernetes/components/argocd 组件的参数定义
+# Parameter definitions for the kubernetes/components/argocd component
 
 parameters:
-  # 组件级参数
+  # Component-level parameters
   components:
     argocd:
       description: "ArgoCD GitOps configuration parameters"
       
-      # 基础配置
+      # Basic configuration
       Namespace:
         type: string
         description: "ArgoCD namespace"
@@ -30,7 +30,7 @@ parameters:
         default: "v2.11.7"
         example: "v2.11.7"
       
-      # Server 配置
+      # Server configuration
       ServerInsecure:
         type: boolean
         description: "Enable insecure mode for ArgoCD server (for development/testing)"
@@ -52,7 +52,7 @@ parameters:
         default: "/argocd"
         example: "/argocd"
       
-      # RBAC 配置
+      # RBAC configuration
       PolicyDefault:
         type: string
         description: "Default RBAC role for users without explicit role assignment"
@@ -67,15 +67,15 @@ parameters:
         default: "[groups]"
         example: "[groups]"
       
-      # 组织配置
+      # Organization configuration
       OrganizationName:
         type: string
-        description: "Organization name used in RBAC policies (e.g., alva-ai)"
+        description: "Organization name used in RBAC policies (e.g., example-org)"
         required: false
         default: ""
-        example: "alva-ai"
+        example: "example-org"
       
-      # RBAC 角色和策略配置
+      # RBAC roles and policies
       RBACPolicies:
         type: list[object]
         description: "Custom RBAC policies in CSV format. If not provided, default policies will be used."
@@ -101,7 +101,7 @@ parameters:
           - group: "SiriusPlatform:backend"
             role: "role:org-backend"
       
-      # Namespace 标签配置
+      # Namespace labels
       NamespaceLabels:
         type: map[string]string
         description: "Labels to add to ArgoCD namespace"
@@ -114,7 +114,7 @@ parameters:
           prometheus.io/port: "8080"
           istio-injection: "enabled"
       
-      # GitHub SSH 配置
+      # GitHub SSH configuration
       GitHubSSHSecretName:
         type: string
         description: "Name of the sealed secret for GitHub SSH key"
@@ -122,7 +122,7 @@ parameters:
         default: "github-ssh-sealed-secret"
         example: "github-ssh-sealed-secret"
       
-      # Git Repository 配置
+      # Git repository configuration
       GitRepositories:
         type: list[object]
         description: "List of Git repositories for ArgoCD (supports multiple repositories)"
@@ -157,7 +157,7 @@ parameters:
         default: "sshPrivateKey"
         example: "sshPrivateKey"
       
-      # ArgoCD URL 配置
+      # ArgoCD URL configuration
       ArgoCDURL:
         type: string
         description: "External URL for ArgoCD server"
@@ -165,7 +165,7 @@ parameters:
         default: ""
         example: "https://corp.your-domain.com/argocd"
       
-      # Dex OIDC 配置
+      # Dex OIDC configuration
       DexConfig:
         type: object
         description: "Complete Dex configuration with connectors"
@@ -211,7 +211,7 @@ parameters:
         example:
           - "your-org"
       
-      # Kustomization 配置
+      # Kustomization configuration
       ArgoCDManifestURL:
         type: string
         description: "URL to ArgoCD installation manifest"
@@ -219,7 +219,7 @@ parameters:
         default: "https://raw.githubusercontent.com/argoproj/argo-cd/v2.11.7/manifests/install.yaml"
         example: "https://raw.githubusercontent.com/argoproj/argo-cd/v2.11.7/manifests/install.yaml"
       
-      # 补丁配置
+      # Patch configuration
       Patches:
         type: list[string]
         description: "List of patch files to apply to ArgoCD resources"

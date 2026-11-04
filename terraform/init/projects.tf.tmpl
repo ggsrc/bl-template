@@ -13,7 +13,7 @@ locals {
 resource "google_project" "projects" {
   for_each = local.project_services
 
-  # each.key 已经是在配置阶段生成好的全局唯一 project_id（如 org-prd-xxxx）
+  # each.key is already the globally unique project_id generated at config time (e.g. org-prd-xxxx)
   name            = each.key
   project_id      = each.key
 {{- $org := printf "%v" .OrganizationID -}}
@@ -21,7 +21,7 @@ resource "google_project" "projects" {
   org_id          = var.gcp_common.org_id
 {{- end }}
   billing_account = var.gcp_common.billing_account
-  deletion_policy = "ABANDON" # PREVENT=禁止删除 | ABANDON=仅从 state 移除不删 GCP | DELETE=真正删除 GCP 项目
+  deletion_policy = "ABANDON" # PREVENT=block deletion | ABANDON=remove from state only, keep the GCP project | DELETE=delete the GCP project
   labels = {
     "terraform" : "true"
   }
@@ -49,7 +49,7 @@ resource "google_project_service" "project_services" {
   depends_on = [google_project.projects]
 }
 
-# 逻辑名（ProjectServices/ProjectIDs 的 key） -> 实际 project_id
+# Logical name (key of ProjectServices/ProjectIDs) -> actual project_id
 output "project_ids" {
   value       = { for k, p in google_project.projects : k => p.project_id }
   description = "Map of project logical name to GCP project_id"

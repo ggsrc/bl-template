@@ -1,5 +1,5 @@
-# 环境覆盖：由 blcli 渲染，参考 example/alva/k8s/common/victoria-metrics/values-stg.yaml values-prd.yaml
-# 与 values.yaml 一起使用：helm upgrade -i -f values.yaml -f values-override.yaml
+# Per-environment overrides, rendered by blcli.
+# Use together with values.yaml: helm upgrade -i -f values.yaml -f values-override.yaml
 victoria-metrics-k8s-stack:
   vmsingle:
     enabled: false

@@ -1,7 +1,7 @@
 version: 1.0.0
 
-# kubernetes/components/web-ide 组件的参数定义
-# 参考 alva-infra/k8s/common/web-ide/
+# Parameter definitions for the kubernetes/components/web-ide component
+# code-server (Web IDE) behind oauth2-proxy, deployed from the local Helm chart.
 
 parameters:
   components:

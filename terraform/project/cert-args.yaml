@@ -1,10 +1,10 @@
 version: 1.0.0
 
-# terraform/project/cert 组件的参数定义
-# 这些参数用于创建 SSL Certificate、Certificate Map 和 Certificate Map Entry
+# Parameter definitions for the terraform/project/cert component
+# These parameters create SSL certificates, a Certificate Map and Certificate Map Entries
 
 parameters:
-  # 组件级参数（对应 config.yaml projects 中的 cert 组件）
+  # Component-level parameters (the cert component under projects in config.yaml)
   components:
     cert:
       certificates:
@@ -45,7 +45,7 @@ parameters:
               required: false
               example: "my-project-123"
       
-      # 仅 DNS 授权 + 证书（不创建 DNS 记录，需用户在外部 DNS 添加 CNAME）
+      # DNS authorization + certificate only (no DNS records are created; add the CNAME in your external DNS)
       dns_authorization_certificates:
         type: array
         description: "Certificates using DNS authorization only (external DNS); no google_dns_record_set created"
@@ -56,23 +56,23 @@ parameters:
           properties:
             name:
               type: string
-              description: "Terraform resource name (e.g. alva_xyz); used in certificate_map_entries"
+              description: "Terraform resource name (e.g. example_com); used in certificate_map_entries"
               pattern: "^[a-z0-9_]+$"
-              example: "alva_xyz"
+              example: "example_com"
             dns_authorization_name:
               type: string
               description: "GCP resource name for the DNS authorization"
-              example: "app-alva-xyz"
+              example: "app-example-com"
             domain:
               type: string
               description: "Domain for DNS authorization"
-              example: "alva.xyz"
+              example: "example.com"
             managed_domains:
               type: array
-              description: "Domains for the managed certificate (e.g. [alva.xyz, *.alva.xyz])"
+              description: "Domains for the managed certificate (e.g. [example.com, *.example.com])"
               items:
                 type: string
-              example: ["alva.xyz", "*.alva.xyz"]
+              example: ["example.com", "*.example.com"]
             description:
               type: string
               required: false

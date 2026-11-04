@@ -1,11 +1,11 @@
 version: 1.0.0
 
-# terraform/init 目录的参数定义
-# 这些参数用于初始化 GCP org 级别的资源
-# 校验规则与 terraform/args.yaml 对齐，并满足 GCP 命名约束
+# Parameter definitions for the terraform/init directory
+# These parameters initialize GCP organization-level resources
+# Validation rules match terraform/args.yaml and follow GCP naming constraints
 
 parameters:
-  # 全局参数（适用于 init 目录下的所有模板）
+  # Global parameters (apply to every template under the init directory)
   global:
     GlobalName:
       type: string
@@ -57,9 +57,9 @@ parameters:
           value: "^[0-9A-Z]{6}-[0-9A-Z]{6}-[0-9A-Z]{6}$"
       example: "01ABCD-2EFGH3-4IJKL5"
 
-  # 组件级参数（对应 config.yaml 中的组件名称）
+  # Component-level parameters (keyed by the component names in config.yaml)
   components:
-    projects:  # 对应 init.projects；default 中 ProjectServices 的 key 使用占位符 ${project.<name>.id}，由 init-args 解析
+    projects:  # Maps to init.projects; ProjectServices keys in default use the ${project.<name>.id} placeholder, resolved by init-args
       ProjectServices:
         type: map[list[string]]
         description: "Map of project IDs to list of enabled GCP services. In default.yaml keys use ${project.<name>.id} placeholders, resolved at init-args."
@@ -84,7 +84,7 @@ parameters:
             - "compute.googleapis.com"
             - "container.googleapis.com"
 
-    atlantis:  # 对应 init.atlantis；default 中 ProjectID、ProjectIAMMembers 等可使用占位符 ${project.<name>.id}
+    atlantis:  # Maps to init.atlantis; ProjectID, ProjectIAMMembers, etc. in default may use the ${project.<name>.id} placeholder
       ProjectID:
         type: string
         description: "GCP Project ID where Atlantis service account will be created. In default.yaml can be ${project.<name>.id}, resolved at init-args."

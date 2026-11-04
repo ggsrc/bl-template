@@ -1,6 +1,6 @@
 # Bitnami Redis base values
-# 参考 alva-infra/gitops/alva-ai-infra/components-stg/2-redis/base/values.yaml
-# 环境差异通过 values-override.yaml.tmpl 覆盖
+# Based on the upstream Bitnami Redis chart values.
+# Per-environment differences are overridden in values-override.yaml.tmpl
 redis:
   architecture: standalone
   auth:

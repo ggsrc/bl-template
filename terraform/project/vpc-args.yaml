@@ -1,10 +1,10 @@
 version: 1.0.0
 
-# terraform/project/vpc 组件的参数定义
-# 这些参数用于创建 VPC 网络、子网、NAT、Router、VPC Peering 等配置
+# Parameter definitions for the terraform/project/vpc component
+# These parameters create the VPC network, subnetworks, NAT, router, VPC peering, etc.
 
 parameters:
-  # 组件级参数（对应 config.yaml projects 中的 vpc 组件）
+  # Component-level parameters (the vpc component under projects in config.yaml)
   components:
     vpc:
       vpc_name:

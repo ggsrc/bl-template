@@ -1,16 +1,16 @@
 version: 1.0.0
 
-# bl-template 仓库级别的全局参数定义
-# 这些参数适用于整个模板仓库的所有模块（terraform, kubernetes, gitops）
+# Repository-level global parameter definitions for bl-template
+# These parameters apply to every module in the template repository (terraform, kubernetes, gitops)
 
-# 顶层校验：指定路径下的取值集合必须唯一
+# Top-level validation: the set of values at each path must be unique
 validation:
   unique:
     - path: "terraform.projects[].name"
-      message: "项目名称必须唯一"
+      message: "Project names must be unique"
 
 parameters:
-  # 仓库级别的全局参数
+  # Repository-level global parameters
   global:
     GlobalName:
       type: string

@@ -1,18 +1,18 @@
 # CloudNativePG Operator
 
-CloudNativePG 是用于在 Kubernetes 上运行 PostgreSQL 集群的 Operator。
+CloudNativePG is an operator for running PostgreSQL clusters on Kubernetes.
 
-参考：`alva-infra/k8s/common/cloudnative-pg/`
+Based on the upstream CloudNativePG Helm chart (`https://cloudnative-pg.github.io/charts`).
 
-## 安装
+## Install
 
-由 blcli 渲染后，在组件目录执行：
+After rendering with blcli, run in the component directory:
 
 ```bash
 bash ./install
 ```
 
-或手动：
+Or manually:
 
 ```bash
 helm dependency update
@@ -20,6 +20,6 @@ helm upgrade --install cloudnative-pg . -n cnpg --create-namespace \
   -f values.yaml -f values-override.yaml --wait
 ```
 
-## 创建 PostgreSQL 集群
+## Create a PostgreSQL cluster
 
-安装 Operator 后，通过 `postgresql.cnpg.io/v1` `Cluster` CR 创建数据库集群。集群定义通常放在 GitOps 仓库中（参考 `alva-infra/gitops/alva-ai-infra/components-*/1-db/`）。
+After installing the operator, create database clusters with the `postgresql.cnpg.io/v1` `Cluster` CR. Cluster definitions usually live in your GitOps repository.

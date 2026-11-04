@@ -4,8 +4,6 @@
 
 **One config. Full cloud platform lifecycle.**
 
-*一份配置，走完云平台全链路。*
-
 Enterprise **GCP-first** platform template for [blcli](https://github.com/ggsrc/blcli) — Terraform, Kubernetes, and ArgoCD GitOps from one self-describing repository.
 
 [![GitHub stars](https://img.shields.io/github/stars/ggsrc/bl-template?style=flat-square)](https://github.com/ggsrc/bl-template/stargazers)
@@ -13,7 +11,7 @@ Enterprise **GCP-first** platform template for [blcli](https://github.com/ggsrc/
 [![blcli](https://img.shields.io/badge/powered%20by-blcli-blue?style=flat-square)](https://github.com/ggsrc/blcli)
 [![Personal template](https://img.shields.io/badge/personal-bl--template--personal-green?style=flat-square)](https://github.com/ggsrc/bl-template-personal)
 
-[Quick Start](#blcli-usage) · [中文说明](README_zh.md) · [ARGS_DESIGN](ARGS_DESIGN.md)
+[Quick Start](#blcli-usage) · [Chinese](README_zh.md) · [ARGS_DESIGN](ARGS_DESIGN.md)
 
 </div>
 

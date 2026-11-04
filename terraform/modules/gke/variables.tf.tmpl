@@ -60,7 +60,7 @@ variable "logging_config_enable_components" {
 ## 20250520 added by sirius
 variable "monitoring_config_enable_components" {
   type    = list(string)
-  default = ["SYSTEM_COMPONENTS"] # 如果你默认想关掉，改成 []
+  default = ["SYSTEM_COMPONENTS"] # Change to [] to disable by default
 }
 
 

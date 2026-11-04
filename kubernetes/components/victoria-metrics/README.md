@@ -9,13 +9,13 @@ Alert rules, VMAgent config, and related resources for Victoria Metrics (applied
 
 ## Install
 
-渲染后执行（需先 `blcli init` 生成 vmalertmanagerconfig.yaml 等）：
+After rendering (run `blcli init` first to generate vmalertmanagerconfig.yaml and related files), run:
 
 ```bash
 bash install
 ```
 
-`vmalertmanagerconfig.yaml.tmpl` 由 blcli 渲染，参数见 args.yaml（namespace、alertCluster、slackChannel 等）。
+`vmalertmanagerconfig.yaml.tmpl` is rendered by blcli, with parameters in args.yaml (namespace, alertCluster, slackChannel, etc.).
 
 Or manually:
 

@@ -1,10 +1,10 @@
 version: 1.0.0
 
-# terraform 目录的全局参数定义
-# 这些参数适用于 terraform 目录下的所有组件（如果没有被组件级参数覆盖）
+# Global parameter definitions for the terraform directory
+# These parameters apply to every component under the terraform directory (unless overridden by component-level parameters)
 
 parameters:
-  # 全局参数
+  # Global parameters
   global:
     OrganizationID:
       type: string
