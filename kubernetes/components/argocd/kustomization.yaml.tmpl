@@ -8,7 +8,7 @@ resources:
 - {{ if .ArgoCDManifestURL }}{{ .ArgoCDManifestURL }}{{ else }}https://raw.githubusercontent.com/argoproj/argo-cd/v2.11.7/manifests/install.yaml{{ end }}
 
 patchesStrategicMerge:
-  # Configure rbac policy - Give galaxy org users admin access
+  # Configure rbac policy - Give GitHub org users admin access
   - argocd-rbac-cm.yaml
 
   # Configure argocd server

@@ -1,7 +1,7 @@
 version: 1.0.0
 
-# kubernetes/components/grafana 组件的参数定义
-# 典型变量：image.tag、grafana.ini.server.root_url、datasources、plugins、auth.google
+# Parameter definitions for the kubernetes/components/grafana component
+# Typical variables: image.tag, grafana.ini.server.root_url, datasources, plugins, auth.google
 
 parameters:
   components:
@@ -21,7 +21,7 @@ parameters:
         description: "Space-separated values files. Use values.yaml values-corp.yaml after rendering values-corp.yaml.tmpl"
         required: false
         default: "values.yaml values-corp.yaml"
-      # values-corp.yaml.tmpl 渲染参数
+      # Parameters for rendering values-corp.yaml.tmpl
       imageTag:
         type: string
         description: "Grafana image tag"
@@ -57,7 +57,7 @@ parameters:
         description: "Google auth hosted_domain"
         required: false
         default: "example.com"
-      # 安装脚本会检查 helm/kubectl 是否存在；若设置则同时校验最低版本
+      # The install script checks that helm/kubectl are installed; if set, it also enforces these minimum versions
       minHelmVersion:
         type: string
         description: "Minimum helm version required by install script (e.g. 3.0). Empty = only check presence"

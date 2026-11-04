@@ -1,13 +1,13 @@
 version: 1.0.0
 
-# terraform/project/backend 组件的参数定义
-# 注意：GlobalName 和 project_name 从 global 参数中继承，不需要在此配置
+# Parameter definitions for the terraform/project/backend component
+# Note: GlobalName and project_name are inherited from global parameters and do not need to be set here
 
 parameters:
-  # 组件级参数（对应 config.yaml projects 中的 backend 组件）
+  # Component-level parameters (the backend component under projects in config.yaml)
   components:
     backend:
       description: "Terraform backend configuration"
-      # GlobalName 和 project_name 从以下位置继承：
-      # - GlobalName: 从 global 或 terraform.global 继承
-      # - project_name: 从 terraform.projects[].global 继承
+      # GlobalName and project_name are inherited from:
+      # - GlobalName: from global or terraform.global
+      # - project_name: from terraform.projects[].global

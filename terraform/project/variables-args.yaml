@@ -1,9 +1,9 @@
 version: 1.0.0
 
-# terraform/project/variables 组件的参数定义
+# Parameter definitions for the terraform/project/variables component
 
 parameters:
-  # 组件级参数（对应 config.yaml projects 中的 variables 组件）
+  # Component-level parameters (the variables component under projects in config.yaml)
   components:
     variables:
       description: "Terraform project variables configuration"

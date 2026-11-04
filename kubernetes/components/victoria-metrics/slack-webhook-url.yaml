@@ -1,7 +1,7 @@
 apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
-  name: slack-webhook-url-alva-infra-alert
+  name: slack-webhook-url-infra-alert
   namespace: monitoring-vm
 spec:
   refreshInterval: 24h # rate SecretManager pulls GCPSM
@@ -9,9 +9,9 @@ spec:
     kind: ClusterSecretStore
     name: gcp-secret-store
   target:
-    name: slack-webhook-url-alva-infra-alert
+    name: slack-webhook-url-infra-alert
     creationPolicy: Owner
   data:
   - secretKey: url
     remoteRef:
-      key: slack-webhook-url-alva-infra-alert
+      key: slack-webhook-url-infra-alert

@@ -1,7 +1,7 @@
 version: 1.0.0
 
-# terraform/project/firewall 组件的参数定义
-# 用于创建 VPC 防火墙规则（如允许 VPC peering 来源访问某端口）
+# Parameter definitions for the terraform/project/firewall component
+# Creates VPC firewall rules (e.g. allow traffic from a VPC peering range to a port)
 
 parameters:
   components:

@@ -131,17 +131,17 @@ persistence:
   # existingClaim: ""
   # hostPath: /data
 
-# 用户工作目录配置
+# User workspace directory configuration
 userWorkspace:
   enabled: false
   basePath: "/workspaces"
-  # 用户标识符类型：email, username, userid
+  # User identifier type: email, username, userid
   identifierType: "username"
-  # 是否使用用户邮箱作为子目录（不推荐，因为 @ 字符问题）
+  # Whether to use the user's email as the subdirectory name (not recommended because of the @ character)
   useEmailAsSubdir: false
-  # 邮箱域名替换字符（当 useEmailAsSubdir=true 时使用）
+  # Replacement string for the @ in email addresses (used when useEmailAsSubdir=true)
   emailDomainReplacement: "_at_"
-  # 默认工作目录
+  # Default working directory
   defaultWorkspace: "default"
 
 lifecycle:
@@ -196,7 +196,7 @@ extraPorts: []
   #   port: 25565
   #   protocol: tcp
 
-# oauth2-proxy 默认配置
+# oauth2-proxy defaults
 oauth2Proxy:
   enabled: false
   replicaCount: 1
@@ -209,7 +209,7 @@ oauth2Proxy:
   port: 4180
   metricsPort: 9090
   
-  # OAuth 配置
+  # OAuth configuration
   provider: google
   clientId: ""
   secretName: "web-ide-secrets"
@@ -217,15 +217,15 @@ oauth2Proxy:
   redirectUrl: ""
   scope: "openid email profile"
   
-  # Google 特定配置
+  # Google-specific configuration
   google:
     adminEmail: ""
     groups: []
   
-  # 自定义命令行参数
+  # Extra command-line arguments
   extraArgs: []
   
-  # Cookie 配置
+  # Cookie configuration
   cookieName: "_oauth2_proxy"
   cookieSecret: "CHANGE_ME_TO_A_RANDOM_SECRET"
   cookieDomains: ""
@@ -234,13 +234,13 @@ oauth2Proxy:
   cookieSecure: true
   cookieHttpOnly: true
   
-  # 会话配置
+  # Session configuration
   sessionStoreType: "cookie"
   
-  # 日志配置
+  # Logging configuration
   logLevel: "info"
   
-  # 功能配置
+  # Feature configuration
   requestLogging: true
   authLogging: true
   upstreamTimeout: "30s"
@@ -248,7 +248,7 @@ oauth2Proxy:
   healthCheckPath: "/ping"
   metrics: true
   
-  # 健康检查配置
+  # Health check configuration
   livenessProbe:
     initialDelaySeconds: 30
     periodSeconds: 10
@@ -256,7 +256,7 @@ oauth2Proxy:
     initialDelaySeconds: 5
     periodSeconds: 5
   
-  # 资源配置
+  # Resource configuration
   resources:
     limits:
       cpu: 500m

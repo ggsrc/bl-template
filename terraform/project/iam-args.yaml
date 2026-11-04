@@ -1,10 +1,10 @@
 version: 1.0.0
 
-# terraform/project/iam 组件的参数定义
-# 这些参数用于创建 Service Account、IAM Binding、Workload Identity 配置
+# Parameter definitions for the terraform/project/iam component
+# These parameters create service accounts, IAM bindings and Workload Identity configuration
 
 parameters:
-  # 组件级参数（对应 config.yaml projects 中的 iam 组件）
+  # Component-level parameters (the iam component under projects in config.yaml)
   components:
     iam:
       service_accounts:

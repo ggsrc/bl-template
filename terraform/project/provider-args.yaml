@@ -1,9 +1,9 @@
 version: 1.0.0
 
-# terraform/project/provider 组件的参数定义
+# Parameter definitions for the terraform/project/provider component
 
 parameters:
-  # 组件级参数（对应 config.yaml projects 中的 provider 组件）
+  # Component-level parameters (the provider component under projects in config.yaml)
   components:
     provider:
       description: "Terraform provider configuration"

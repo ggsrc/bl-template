@@ -54,8 +54,8 @@ init:
                     - cloudresourcemanager.googleapis.com
                     - artifactregistry.googleapis.com
 projects:
-    # prd: 生产环境，配置 k8s 集群以及生产用业务服务
-    # 必须: main(提供 locals), provider, variables, vpc; 业务需要: gke, dns, cert, ip, firewall, outputs
+    # prd: production environment, with the Kubernetes cluster and production workloads
+    # Required: main (provides locals), provider, variables, vpc; for workloads: gke, dns, cert, ip, firewall, outputs
     - name: prd
       global:
         project_name: prd
@@ -244,8 +244,8 @@ projects:
                   namespace: loki
                   kubernetes_service_account: loki
 
-    # stg: stage 环境，用于测试开发
-    # 必须: main, provider, variables, vpc; 业务需要: gke, dns, cert
+    # stg: staging environment for testing and development
+    # Required: main, provider, variables, vpc; for workloads: gke, dns, cert
     - name: stg
       global:
         project_name: stg
@@ -381,8 +381,8 @@ projects:
                   certificates: [app]
                   description: ""
 
-    # corp: 配置一些跨环境使用的内部服务，如 grafana、bytebase、victory metrics 等
-    # 必须: main, provider, variables, vpc; 业务需要: gke, dns, cert, loki-logs
+    # corp: internal services shared across environments, such as grafana, bytebase and victoria metrics
+    # Required: main, provider, variables, vpc; for workloads: gke, dns, cert, loki-logs
     - name: corp
       global:
         project_name: corp
@@ -554,7 +554,7 @@ projects:
             use_secret_manager_accessor: false
             workload_identity_bindings: []
 
-    # static-res、atfs 已合并到 corp（registry + CDN + GitOps SA）
+    # Static resources (Artifact Registry + CDN + GitOps SA) live in corp, not in separate projects
     - name: tfstore
       marshalled: false
       

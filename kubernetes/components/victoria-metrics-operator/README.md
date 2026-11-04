@@ -7,13 +7,13 @@
 
 ## Install
 
-渲染后执行（需先 `blcli init` 生成 values-override.yaml）：
+After rendering (run `blcli init` first to generate values-override.yaml), run:
 
 ```bash
 bash install
 ```
 
-安装时使用 `values.yaml values-override.yaml`；`values-override.yaml.tmpl` 由 blcli 渲染，参数见 args.yaml（cluster、env、remoteWriteUrl、vmagent 资源等）。
+The install uses `values.yaml values-override.yaml`; `values-override.yaml.tmpl` is rendered by blcli, with parameters in args.yaml (cluster, env, remoteWriteUrl, vmagent resources, etc.).
 
 Install dependencies:
 ```
@@ -21,7 +21,7 @@ Install dependencies:
 helm install prometheus-operator-crds oci://ghcr.io/prometheus-community/charts/prometheus-operator-crds
 ```
 
-## Alva
+## Manual install per environment
 
 ```
 # corp env

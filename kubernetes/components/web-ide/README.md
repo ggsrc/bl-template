@@ -1,151 +1,151 @@
 # Web-IDE Helm Chart
 
-这是一个基于 [coder/code-server](https://github.com/coder/code-server) 的 Helm chart，支持通过 oauth2-proxy 实现 OAuth 认证。
+A Helm chart based on [coder/code-server](https://github.com/coder/code-server), with OAuth authentication through oauth2-proxy.
 
-## 功能特性
+## Features
 
-- 支持 OAuth 认证（Google OAuth 2.0）
-- 持久化存储
-- Istio 集成
-- 资源限制和请求配置
-- 可扩展的配置选项
+- OAuth authentication (Google OAuth 2.0)
+- Persistent storage
+- Istio integration
+- Configurable resource limits and requests
+- Extensible configuration options
 
-## 前置要求
+## Requirements
 
 1. Kubernetes 1.19+
 2. Helm 3.0+
-3. Istio（如果使用 Istio ingress）
-4. Google OAuth 应用配置（Client ID 和 Client Secret）
+3. Istio (if you use the Istio ingress)
+4. A Google OAuth application (Client ID and Client Secret)
 
-## 前置准备
+## Preparation
 
-### 1. 配置 Google OAuth
+### 1. Configure Google OAuth
 
-在部署之前，需要配置 Google OAuth 应用：
+Before deploying, configure a Google OAuth application:
 
-1. 访问 [Google Cloud Console](https://console.cloud.google.com/)
-2. 创建 OAuth 2.0 客户端 ID
-3. 设置授权重定向 URI: `https://web-ide.stg.alva.xyz/oauth2/callback`
-4. 获取 Client ID 和 Client Secret
+1. Open the [Google Cloud Console](https://console.cloud.google.com/)
+2. Create an OAuth 2.0 client ID
+3. Set the authorized redirect URI: `https://web-ide.stg.example.com/oauth2/callback`
+4. Copy the Client ID and Client Secret
 
-### 2. 创建 OAuth Secret
+### 2. Create the OAuth secret
 
-1. 在 gcp console 上的 secret manager 存储对应的 oauth client secret，格式如下
+1. Store the OAuth client secret in Secret Manager in the GCP console, in this format:
 ```json
 {
   "google-client-secret": "{secret}"
 }
 ```
-2. 通过 externalSecret 创建对应的 secret
+2. Create the matching Kubernetes secret with an ExternalSecret
 
-## 安装
+## Install
 
-### 使用 Helm 安装
+### Install with Helm
 
 ```bash
-# 安装 chart（使用默认配置）
+# Install the chart (default configuration)
 helm install web-ide . --namespace=webide
 
-# 使用自定义 values 文件
+# Use custom values files
 helm install web-ide . \
   --namespace=webide \
   --values values.yaml \
   --values values-stg.yaml
 
-# 生产环境部署
+# Production deployment
 helm install web-ide . \
   --namespace=webide \
   --values values.yaml \
   --values values-prd.yaml
 ```
 
-## 配置说明
+## Configuration
 
-### 主要配置选项
+### Main options
 
-- `oauth2Proxy.enabled`: 启用 OAuth2 代理
-- `oauth2Proxy.provider`: OAuth 提供商（google）
-- `oauth2Proxy.secretName`: OAuth 凭据 secret 名称
-- `oauth2Proxy.clientSecretKey`: secret 中的客户端密钥键名
+- `oauth2Proxy.enabled`: enable the OAuth2 proxy
+- `oauth2Proxy.provider`: OAuth provider (google)
+- `oauth2Proxy.secretName`: name of the secret holding the OAuth credentials
+- `oauth2Proxy.clientSecretKey`: key of the client secret inside that secret
 
-### 资源配置
+### Resources
 
-- `resources.limits`: 资源限制
-- `resources.requests`: 资源请求
-- `persistence.size`: 持久化存储大小
+- `resources.limits`: resource limits
+- `resources.requests`: resource requests
+- `persistence.size`: persistent volume size
 
-### Ingress 配置
+### Ingress
 
-- `ingress.enabled`: 启用 Ingress
-- `ingress.annotations`: Ingress 注解（支持 Istio）
-- `ingress.hosts`: 域名配置
+- `ingress.enabled`: enable Ingress
+- `ingress.annotations`: Ingress annotations (Istio supported)
+- `ingress.hosts`: host names
 
-## 升级
+## Upgrade
 
 ```bash
-# 升级到新版本
+# Upgrade to a new version
 helm upgrade web-ide . \
   --namespace=webide \
   --values values.yaml \
   --values values-stg.yaml
 
-# 生产环境升级
+# Production upgrade
 helm upgrade web-ide . \
   --namespace=webide \
   --values values.yaml \
   --values values-prd.yaml
 ```
 
-## 卸载
+## Uninstall
 
 ```bash
-# 卸载 chart
+# Uninstall the chart
 helm uninstall web-ide -n webide
 
-# 清理相关资源（可选）
+# Clean up related resources (optional)
 kubectl delete secret web-ide-secrets -n webide
 ```
 
-## 故障排除
+## Troubleshooting
 
-### 常见问题
+### Common issues
 
-1. **OAuth 认证失败**
-   - 检查 `web-ide-secrets` secret 是否存在
-   - 确认 secret 中包含 `google-client-secret` 键
-   - 检查 Client Secret 是否正确
-   - 确认回调 URL 配置正确
+1. **OAuth authentication fails**
+   - Check that the `web-ide-secrets` secret exists
+   - Confirm that the secret contains the `google-client-secret` key
+   - Check that the Client Secret is correct
+   - Confirm that the callback URL is configured correctly
 
-2. **Pod 启动失败**
-   - 检查资源配额
-   - 查看 Pod 日志：`kubectl logs -n webide deployment/web-ide`
+2. **Pod fails to start**
+   - Check resource quotas
+   - Check the Pod logs: `kubectl logs -n webide deployment/web-ide`
 
-3. **存储问题**
-   - 检查 StorageClass 是否可用
-   - 确认有足够的存储空间
+3. **Storage issues**
+   - Check that the StorageClass is available
+   - Confirm there is enough storage space
 
-### 查看状态
+### Check status
 
 ```bash
-# 查看 Pod 状态
+# Pod status
 kubectl get pods -n webide -l app=web-ide
 
-# 查看服务状态
+# Service status
 kubectl get svc -n webide -l app=web-ide
 
-# 查看 Ingress 状态
+# Ingress status
 kubectl get ingress -n webide -l app=web-ide
 
-# 查看日志
+# Logs
 kubectl logs -n webide deployment/web-ide
 
-# 检查 secret
+# Inspect the secret
 kubectl describe secret web-ide-secrets -n webide
 ```
 
-## 参考
+## References
 
-- [Code-Server 官方文档](https://coder.com/docs/code-server)
+- [Code-Server documentation](https://coder.com/docs/code-server)
 - [Code-Server GitHub](https://github.com/coder/coder/code-server)
-- [Helm 官方文档](https://helm.sh/docs/)
-- [OAuth2 Proxy 文档](https://oauth2-proxy.github.io/oauth2-proxy/)
+- [Helm documentation](https://helm.sh/docs/)
+- [OAuth2 Proxy documentation](https://oauth2-proxy.github.io/oauth2-proxy/)

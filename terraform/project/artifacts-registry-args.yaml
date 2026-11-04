@@ -1,10 +1,10 @@
 version: 1.0.0
 
-# terraform/project/artifacts-registry 组件的参数定义
-# 这些参数用于创建 Artifact Registry Repository 和 IAM 配置
+# Parameter definitions for the terraform/project/artifacts-registry component
+# These parameters create an Artifact Registry repository and its IAM configuration
 
 parameters:
-  # 组件级参数（对应 config.yaml projects 中的 artifacts-registry 组件）
+  # Component-level parameters (the artifacts-registry component under projects in config.yaml)
   components:
     artifacts-registry:
       repositories:

@@ -1,7 +1,7 @@
 version: 1.0.0
 
-# terraform/project/vpc-peering 组件参数
-# 用于声明 VPC Peering；有跨项目依赖时由 blcli 写入子目录，apply 后移回项目根
+# Parameters for the terraform/project/vpc-peering component
+# Declares VPC peering; with cross-project dependencies blcli writes it to a subdirectory, which is moved back to the project root after apply
 
 parameters:
   components:

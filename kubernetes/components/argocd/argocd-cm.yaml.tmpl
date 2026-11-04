@@ -23,7 +23,7 @@ data:
       {{- end }}
     {{- end }}
     {{- else }}
-    - url: {{ if .GitRepositoryURL }}{{ .GitRepositoryURL }}{{ else }}git@github.com:alva-ai/infra-gitops.git{{ end }}
+    - url: {{ if .GitRepositoryURL }}{{ .GitRepositoryURL }}{{ else }}git@github.com:example-org/gitops.git{{ end }}
       sshPrivateKeySecret:
         name: {{ if .GitSSHSecretName }}{{ .GitSSHSecretName }}{{ else }}argocd-github-ssh-secret{{ end }}
         key: {{ if .GitSSHSecretKey }}{{ .GitSSHSecretKey }}{{ else }}sshPrivateKey{{ end }}

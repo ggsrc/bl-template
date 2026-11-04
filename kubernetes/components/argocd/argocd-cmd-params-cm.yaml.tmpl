@@ -8,6 +8,6 @@ metadata:
 data:
   server.insecure: "{{ if eq .ServerInsecure false }}false{{ else }}true{{ end }}"
   
-  # ArgoCD server is served at admin.galxe.com/argocd
+  # ArgoCD server is served at admin.example.com/argocd
   server.basehref: "{{ if .ServerBaseHref }}{{ .ServerBaseHref }}{{ else }}/argocd{{ end }}"
   server.rootpath: "{{ if .ServerRootPath }}{{ .ServerRootPath }}{{ else }}/argocd{{ end }}"

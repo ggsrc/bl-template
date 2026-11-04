@@ -1,14 +1,14 @@
 version: 1.0.0
 
-# kubernetes/components/istio 组件的参数定义
+# Parameter definitions for the kubernetes/components/istio component
 
 parameters:
-  # 组件级参数
+  # Component-level parameters
   components:
     istio:
       description: "Istio Operator configuration parameters"
       
-      # 基础配置
+      # Basic configuration
       IstioOperatorYaml:
         type: string
         description: "Path to IstioOperator YAML file (default: operator.yaml)"
@@ -45,7 +45,7 @@ parameters:
         default: "1.27.0"
         example: "1.27.0"
       
-      # 安装脚本会检查 istioctl 是否存在；若设置 minIstioctlVersion 则同时校验最低版本
+      # The install script checks that istioctl is installed; if minIstioctlVersion is set, it also enforces that minimum version
       minIstioctlVersion:
         type: string
         description: "Minimum istioctl version required by install script (e.g. 1.20.0). Empty = only check presence"
@@ -60,7 +60,7 @@ parameters:
         default: "docker.io/istio"
         example: "docker.io/istio"
       
-      # 访问日志配置
+      # Access log configuration
       AccessLogFile:
         type: string
         description: "Access log file path"
@@ -76,7 +76,7 @@ parameters:
         enum: ["JSON", "TEXT"]
         example: "JSON"
       
-      # 追踪配置
+      # Tracing configuration
       TracingEnabled:
         type: boolean
         description: "Enable distributed tracing"
@@ -99,7 +99,7 @@ parameters:
         default: "jaeger-collector.istio-system:9411"
         example: "jaeger-collector.istio-system:9411"
       
-      # 代理统计配置
+      # Proxy stats configuration
       ProxyStatsEnabled:
         type: boolean
         description: "Enable Envoy proxy statistics"
@@ -114,7 +114,7 @@ parameters:
         default: [".*"]
         example: [".*"]
       
-      # 网络配置
+      # Network configuration
       EnableAutoMtls:
         type: boolean
         description: "Enable automatic mTLS"
@@ -151,7 +151,7 @@ parameters:
         default: ["*"]
         example: ["*"]
       
-      # Pilot 配置
+      # Pilot configuration
       PilotEnabled:
         type: boolean
         description: "Enable Pilot (istiod) component"
@@ -210,7 +210,7 @@ parameters:
         default: false
         example: false
       
-      # Ingress Gateway 配置
+      # Ingress Gateway configuration
       IngressGatewayEnabled:
         type: boolean
         description: "Enable Ingress Gateway"
@@ -298,7 +298,7 @@ parameters:
         default: false
         example: false
       
-      # Egress Gateway 配置
+      # Egress Gateway configuration
       EgressGatewayEnabled:
         type: boolean
         description: "Enable Egress Gateway"
@@ -356,7 +356,7 @@ parameters:
         default: "1Gi"
         example: "1Gi"
       
-      # 全局代理配置
+      # Global proxy configuration
       ProxyCpuRequest:
         type: string
         description: "Proxy CPU request"
@@ -400,7 +400,7 @@ parameters:
         default: "misc:error"
         example: "misc:error"
       
-      # 全局配置
+      # Global configuration
       GlobalLogLevel:
         type: string
         description: "Global logging level"
@@ -422,7 +422,7 @@ parameters:
         default: ""
         example: ""
       
-      # Telemetry 配置
+      # Telemetry configuration
       TelemetryEnabled:
         type: boolean
         description: "Enable telemetry"

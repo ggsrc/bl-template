@@ -1,7 +1,7 @@
 version: 1.0.0
 
-# kubernetes/components/redis 组件的参数定义
-# 参考 alva-infra/gitops/alva-ai-infra/components-stg/2-redis/
+# Parameter definitions for the kubernetes/components/redis component
+# Shared Redis based on the Bitnami Redis Helm chart.
 
 parameters:
   components:

@@ -4,26 +4,26 @@ metadata:
   name: {{ .IstioOperatorName | default "istio-default" }}
   namespace: {{ .IstioSystemNamespace | default "istio-system" }}
 spec:
-  # 使用配置档案
+  # Configuration profile to use
   profile: {{ .IstioProfile | default "default" }}
   
-  # Istio 版本
+  # Istio version
   tag: {{ .IstioVersion | default "1.27.0" }}
   
-  # Hub 配置 - 镜像仓库
+  # Image registry (hub)
   hub: {{ .IstioHub | default "docker.io/istio" }}
   
-  # 全局配置
+  # Global configuration
   meshConfig:
-    # 启用访问日志（输出到 stdout）
+    # Enable access logs (written to stdout)
     accessLogFile: {{ .AccessLogFile | default "/dev/stdout" }}
     accessLogEncoding: {{ .AccessLogEncoding | default "JSON" }}
     
-    # 默认配置
+    # Default configuration
     defaultConfig:
-      # 避免 istio-ingress chart 渲染时 nil pointer (proxyMetadata)
+      # Avoids a nil pointer (proxyMetadata) when the istio-ingress chart is rendered
       proxyMetadata: {}
-      # 分布式追踪配置
+      # Distributed tracing configuration
       {{- if .TracingEnabled }}
       tracing:
         {{- if eq .TracingProvider "zipkin" }}
@@ -35,7 +35,7 @@ spec:
         {{- end }}
       {{- end }}
       
-      # Envoy 统计配置
+      # Envoy stats configuration
       {{- if .ProxyStatsEnabled }}
       proxyStatsMatcher:
         inclusionRegexps:
@@ -48,14 +48,14 @@ spec:
           {{- end }}
       {{- end }}
     
-    # 自动 mTLS 配置
+    # Automatic mTLS
     enableAutoMtls: {{ .EnableAutoMtls | default false }}
     
-    # 出站流量策略 (ALLOW_ANY 或 REGISTRY_ONLY)
+    # Outbound traffic policy (ALLOW_ANY or REGISTRY_ONLY)
     outboundTrafficPolicy:
       mode: {{ .OutboundTrafficPolicy | default "ALLOW_ANY" }}
     
-    # 默认服务发现模式
+    # Default service discovery mode
     defaultServiceExportTo:
       {{- if .DefaultServiceExportTo }}
       {{- range .DefaultServiceExportTo }}
@@ -81,17 +81,17 @@ spec:
       - "*"
       {{- end }}
   
-  # 组件配置
+  # Component configuration
   components:
-    # Pilot (istiod) 配置
+    # Pilot (istiod) configuration
     pilot:
       enabled: {{ .PilotEnabled | default true }}
       {{- if not (eq .PilotEnabled false) }}
       k8s:
-        # 副本数配置
+        # Replica count
         replicaCount: {{ .PilotReplicaCount | default 1 }}
         
-        # 资源配置
+        # Resource configuration
         resources:
           requests:
             cpu: {{ .PilotCpuRequest | default "100m" }}
@@ -100,7 +100,7 @@ spec:
             cpu: {{ .PilotCpuLimit | default "1000m" }}
             memory: {{ .PilotMemoryLimit | default "1Gi" }}
         
-        # 节点污点容忍（GKE nodepool 等）
+        # Node taint tolerations (e.g. GKE node pools)
         tolerations:
           - key: nodepool
             operator: Equal
@@ -111,7 +111,7 @@ spec:
             value: spotvm
             effect: NoSchedule
         
-        # 环境变量
+        # Environment variables
         env:
           {{- if .PilotEnv }}
           {{- range $key, $value := .PilotEnv }}
@@ -128,17 +128,17 @@ spec:
           {{- end }}
       {{- end }}
     
-    # Ingress Gateway 配置
+    # Ingress Gateway configuration
     ingressGateways:
       - name: {{ .IngressGatewayName | default "istio-ingressgateway" }}
         enabled: {{ .IngressGatewayEnabled | default true }}
         {{- if not (eq .IngressGatewayEnabled false) }}
         namespace: {{ .IngressGatewayNamespace | default "istio-ingress" }}
         k8s:
-          # 副本数配置
+          # Replica count
           replicaCount: {{ .IngressGatewayReplicaCount | default 1 }}
           
-          # 资源配置
+          # Resource configuration
           resources:
             requests:
               cpu: {{ .IngressGatewayCpuRequest | default "50m" }}
@@ -147,7 +147,7 @@ spec:
               cpu: {{ .IngressGatewayCpuLimit | default "1000m" }}
               memory: {{ .IngressGatewayMemoryLimit | default "512Mi" }}
           
-          # 节点污点容忍（GKE nodepool 等）
+          # Node taint tolerations (e.g. GKE node pools)
           tolerations:
             - key: nodepool
               operator: Equal
@@ -158,7 +158,7 @@ spec:
               value: spotvm
               effect: NoSchedule
           
-          # Service 配置
+          # Service configuration
           service:
             type: {{ .IngressGatewayServiceType | default "LoadBalancer" }}
             {{- if .IngressGatewayPorts }}
@@ -182,7 +182,7 @@ spec:
             {{- end }}
         {{- end }}
     
-    # Egress Gateway 配置
+    # Egress Gateway configuration
     egressGateways:
       - name: {{ .EgressGatewayName | default "istio-egressgateway" }}
         enabled: {{ .EgressGatewayEnabled | default false }}
@@ -208,16 +208,16 @@ spec:
               effect: NoSchedule
         {{- end }}
   
-  # 值覆盖配置
+  # Value overrides
   values:
     global:
-      # 日志级别
+      # Log level
       logging:
         level: {{ .GlobalLogLevel | default "default:info" | quote }}
       
-      # 代理配置
+      # Proxy configuration
       proxy:
-        # 资源配置
+        # Resource configuration
         resources:
           requests:
             cpu: {{ .ProxyCpuRequest | default "100m" }}
@@ -226,31 +226,31 @@ spec:
             cpu: {{ .ProxyCpuLimit | default "2000m" }}
             memory: {{ .ProxyMemoryLimit | default "1024Mi" }}
         
-        # 日志级别
+        # Log level
         logLevel: {{ .ProxyLogLevel | default "warning" | quote }}
         
-        # 组件日志级别
+        # Per-component log levels
         componentLogLevel: {{ .ProxyComponentLogLevel | default "misc:error" | quote }}
       
-      # 多集群配置
+      # Multi-cluster configuration
       multiCluster:
         enabled: {{ .MultiClusterEnabled | default false }}
       
-      # 网络配置
+      # Network configuration
       network: {{ .NetworkName | default "" | quote }}
     
-    # Pilot 配置
+    # Pilot configuration
     pilot:
-      # 自动扩缩容配置
+      # Autoscaling configuration
       autoscaleEnabled: {{ .PilotAutoscaleEnabled | default false }}
     
-    # Gateway 配置
+    # Gateway configuration
     gateways:
       istio-ingressgateway:
-        # 自动扩缩容配置
+        # Autoscaling configuration
         autoscaleEnabled: {{ .IngressGatewayAutoscaleEnabled | default false }}
     
-    # Telemetry 配置
+    # Telemetry configuration
     telemetry:
       enabled: {{ .TelemetryEnabled | default true }}
       {{- if .TelemetryEnabled }}

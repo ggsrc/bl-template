@@ -1,11 +1,11 @@
 version: 1.0.0
 
-# terraform 模块级别的全局参数定义
-# 这些参数适用于 terraform 模块下的所有组件
-# 字段校验规则参考 GCP 官方文档
+# Global parameter definitions for the terraform module
+# These parameters apply to every component under the terraform module
+# Validation rules follow the official GCP documentation
 
 parameters:
-  # Terraform 级别的全局参数
+  # Terraform-level global parameters
   global:
     TerraformBackendBucket:
       type: string
@@ -16,10 +16,10 @@ parameters:
         - kind: stringLength
           min: 3
           max: 63
-          message: "GCS 桶名长度为 3-63 个字符"
+          message: "GCS bucket name must be 3-63 characters long"
         - kind: pattern
           value: "^[a-z0-9][a-z0-9._-]{1,61}[a-z0-9]$"
-          message: "GCS 桶名：小写字母/数字/._-，3-63 字符且首尾为字母或数字"
+          message: "GCS bucket name: lowercase letters, digits and ._- only, 3-63 characters, starting and ending with a letter or digit"
       example: "terraform-statestore"
 
     TerraformVersion:
@@ -37,7 +37,7 @@ parameters:
       validation:
         - kind: format
           value: numeric
-          message: "Organization ID 必须为数字"
+          message: "Organization ID must be numeric"
         - kind: pattern
           value: "^[0-9]+$"
       example: "123456789012"
@@ -50,7 +50,7 @@ parameters:
         - kind: required
         - kind: pattern
           value: "^[0-9A-Z]{6}-[0-9A-Z]{6}-[0-9A-Z]{6}$"
-          message: "Billing Account ID 格式为 6-6-6 位数字与大写字母，如 01ABCD-2EFGH3-4IJKL5"
+          message: "Billing Account ID must be three groups of 6 digits or uppercase letters, e.g. 01ABCD-2EFGH3-4IJKL5"
       example: "01ABCD-2EFGH3-4IJKL5"
 
     GlobalName:
@@ -62,9 +62,9 @@ parameters:
         - kind: stringLength
           min: 1
           max: 63
-          message: "资源名称长度为 1-63 个字符"
+          message: "Resource name must be 1-63 characters long"
         - kind: pattern
           value: "^[a-z]([-a-z0-9]*[a-z0-9])?$"
-          message: "小写字母开头，仅小写字母/数字/连字符"
+          message: "Must start with a lowercase letter and contain only lowercase letters, digits and hyphens"
       example: "my-org"
 
