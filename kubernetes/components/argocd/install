@@ -132,12 +132,21 @@ fi
 
 # Dex GitHub client secret: argocd-cm only references it, the value comes from a sealed Secret.
 # Set DEX_GITHUB_CLIENT_SECRET for non-interactive runs.
-if grep -qF -- "${DEX_SECRET_FILE}" kustomization.yaml 2>/dev/null \
-    && { [ ! -f "${DEX_SECRET_FILE}" ] || grep -qF "dex-github-placeholder" "${DEX_SECRET_FILE}"; }; then
-    if [ -f "${GEN_DEX_SCRIPT}" ] && { [ -n "${DEX_GITHUB_CLIENT_SECRET:-}" ] || [ -t 0 ]; }; then
+dex_secret_missing() {
+    [ ! -f "${DEX_SECRET_FILE}" ] || grep -qF "dex-github-placeholder" "${DEX_SECRET_FILE}"
+}
+if grep -qF -- "${DEX_SECRET_FILE}" kustomization.yaml 2>/dev/null && dex_secret_missing; then
+    if [ -f "${GEN_DEX_SCRIPT}" ] && [ -n "${DEX_GITHUB_CLIENT_SECRET:-}" ]; then
         info "Sealing the Dex GitHub client secret via ${GEN_DEX_SCRIPT}"
         bash "./${GEN_DEX_SCRIPT}"
-    else
+    elif [ -f "${GEN_DEX_SCRIPT}" ] && [ -t 0 ]; then
+        read -p "Seal the Dex GitHub client secret now? (Y/n): " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            bash "./${GEN_DEX_SCRIPT}"
+        fi
+    fi
+    if dex_secret_missing; then
         warn "Dex client secret not sealed: GitHub SSO will not work until you run ./${GEN_DEX_SCRIPT} and re-run this script"
         info "Creating placeholder ${DEX_SECRET_FILE} for kustomize build"
         cat > "${DEX_SECRET_FILE}" << 'PLACEHOLDER'
