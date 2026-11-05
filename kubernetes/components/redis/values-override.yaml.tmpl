@@ -7,6 +7,52 @@ redis:
   auth:
     existingSecret: {{ default `redis-shared` .existingSecret }}
     existingSecretPasswordKey: {{ default `REDIS_PASSWORD` .existingSecretPasswordKey }}
+  # Commands renamed to "" (disabled). The chart default is FLUSHDB and FLUSHALL only.
+  # CONFIG, DEBUG, MODULE and SLAVEOF/REPLICAOF let any client that knows the
+  # password reconfigure the server, write files or load native code.
+  # Sentinel mode needs CONFIG and REPLICAOF; remove them if you enable Sentinel.
+  master:
+    disableCommands:
+      - FLUSHDB
+      - FLUSHALL
+      - CONFIG
+      - DEBUG
+      - MODULE
+      - SLAVEOF
+      - REPLICAOF
+{{- if not (or .allowLuaScripting .AllowLuaScripting) }}
+      # Lua scripting and functions (CVE-2025-49844 and other Lua engine bugs).
+      # Set allowLuaScripting: true to keep them for clients that need Lua.
+      - EVAL
+      - EVALSHA
+      - EVAL_RO
+      - EVALSHA_RO
+      - FUNCTION
+      - FCALL
+      - FCALL_RO
+      - SCRIPT
+{{- end }}
+  replica:
+    disableCommands:
+      - FLUSHDB
+      - FLUSHALL
+      - CONFIG
+      - DEBUG
+      - MODULE
+      - SLAVEOF
+      - REPLICAOF
+{{- if not (or .allowLuaScripting .AllowLuaScripting) }}
+      # Lua scripting and functions (CVE-2025-49844 and other Lua engine bugs).
+      # Set allowLuaScripting: true to keep them for clients that need Lua.
+      - EVAL
+      - EVALSHA
+      - EVAL_RO
+      - EVALSHA_RO
+      - FUNCTION
+      - FCALL
+      - FCALL_RO
+      - SCRIPT
+{{- end }}
   sentinel:
     resources:
       requests:
