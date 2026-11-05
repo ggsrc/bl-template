@@ -16,21 +16,15 @@ parameters:
         default: "kube-system"
         example: "kube-system"
       
-      # Version configuration
+      # Version configuration (informational)
+      # The controller manifest is vendored as controller.yaml in this component;
+      # the version is changed by replacing that file, not by an argument.
       SealedSecretsVersion:
         type: string
-        description: "Sealed Secrets controller version"
+        description: "Version of the vendored Sealed Secrets controller manifest (informational; replace controller.yaml to upgrade)"
         required: false
-        default: "v0.32.2"
-        example: "v0.32.2"
-      
-      # Manifest configuration
-      ControllerManifestURL:
-        type: string
-        description: "URL to Sealed Secrets controller manifest"
-        required: false
-        default: "https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.32.2/controller.yaml"
-        example: "https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.32.2/controller.yaml"
+        default: "v0.40.0"
+        example: "v0.40.0"
       
       # Controller configuration
       ControllerName:

@@ -14,6 +14,7 @@ components:
   - name: sealed-secret
     path:
     - kubernetes/components/sealed-secret/kustomization.yaml.tmpl
+    - kubernetes/components/sealed-secret/controller.yaml
     args:
     - kubernetes/components/sealed-secret/args.yaml
     installType: kubectl

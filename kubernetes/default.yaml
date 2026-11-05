@@ -23,7 +23,6 @@ projects:
       - name: 0-sealed-secret
         parameters:
           namespace: sealed-secret
-          controller-manifest-url: https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.32.2/controller.yaml
       - name: 1-istio
         parameters:
           namespace: istio
@@ -93,7 +92,6 @@ projects:
       - name: 0-sealed-secret
         parameters:
           namespace: sealed-secret
-          controller-manifest-url: https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.32.2/controller.yaml
       - name: 1-istio
         parameters:
           namespace: istio
@@ -156,7 +154,6 @@ projects:
       - name: 0-sealed-secret
         parameters:
           namespace: sealed-secret
-          controller-manifest-url: https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.32.2/controller.yaml
       - name: 1-istio
         parameters:
           namespace: istio
