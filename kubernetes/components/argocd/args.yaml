@@ -25,10 +25,17 @@ parameters:
       
       ArgoCDVersion:
         type: string
-        description: "ArgoCD version (used in manifest URL)"
+        description: "ArgoCD release whose manifests/install.yaml is installed. The install script only applies a manifest whose sha256 matches: the template carries the digest for the default version; for any other version set ArgoCDManifestSHA256"
         required: false
-        default: "v2.11.7"
-        example: "v2.11.7"
+        default: "v3.5.6"
+        example: "v3.5.6"
+
+      ArgoCDManifestSHA256:
+        type: string
+        description: "sha256 of the install manifest. Leave empty to use the digest pinned for the default ArgoCDVersion; required when ArgoCDVersion or ArgoCDManifestURL is changed (the install script prints the digest it downloaded)"
+        required: false
+        default: ""
+        example: "846c644bc81ce5557dd9048757a9c7353378f25c5eb811c77d32a9e907823599"
       
       # Server configuration
       ServerInsecure:
@@ -55,10 +62,48 @@ parameters:
       # RBAC configuration
       PolicyDefault:
         type: string
-        description: "Default RBAC role for users without explicit role assignment"
+        description: "Default RBAC role for users who match no RBACRoleBindings group. Empty (default) = no access; role:readonly lets every user who can log in read every application, including its manifests"
         required: false
-        default: "role:readonly"
+        default: ""
         example: "role:readonly"
+
+      AdminEnabled:
+        type: boolean
+        description: "Enable the local admin account. Off by default: sign in through Dex SSO; for break-glass access use kubectl (argocd admin, port-forward) or enable it temporarily"
+        required: false
+        default: false
+        example: false
+
+      # AppProject configuration
+      AppProjectName:
+        type: string
+        description: "AppProject for the GitOps applications: sources limited to the GitOps repositories, destinations to the application namespace, no cluster-scoped resources. Must match the gitops Project/ApplicationProject"
+        required: false
+        default: "apps"
+        example: "apps"
+
+      AppProjectSourceRepos:
+        type: list[string]
+        description: "Repository URLs the AppProject may deploy from. Empty = the configured GitRepositories (or GitRepositoryURL)"
+        required: false
+        default: []
+        example:
+          - "git@github.com:example-org/gitops.git"
+
+      AppProjectNamespaces:
+        type: list[string]
+        description: "Namespaces on the local cluster the AppProject may deploy to. Empty = AppNamespace"
+        required: false
+        default: []
+        example:
+          - "app"
+
+      RestrictDefaultProject:
+        type: boolean
+        description: "Empty the built-in default AppProject (no sources, destinations or resources), so applications must use AppProjectName. Set false while existing applications still use the default project"
+        required: false
+        default: true
+        example: true
       
       RBACScopes:
         type: string
@@ -78,17 +123,19 @@ parameters:
       # RBAC roles and policies
       RBACPolicies:
         type: list[object]
-        description: "Custom RBAC policies in CSV format. If not provided, default policies will be used."
+        description: "Custom RBAC policies in CSV format. If not provided, the defaults are used: role:org-admin manages applications in AppProjectName and reads clusters and repositories; role:org-backend can view, sync and run actions on them"
         required: false
         default: []
         example:
-          - policy: "p, role:org-admin, applications, *, default/*, allow"
+          - policy: "p, role:org-admin, applications, *, apps/*, allow"
+          - policy: "p, role:org-admin, logs, get, apps/*, allow"
+          - policy: "p, role:org-admin, projects, get, apps, allow"
           - policy: "p, role:org-admin, clusters, get, *, allow"
           - policy: "p, role:org-admin, repositories, get, *, allow"
-          - policy: "p, role:org-admin, repositories, create, *, allow"
-          - policy: "p, role:org-admin, repositories, update, *, allow"
-          - policy: "p, role:org-admin, repositories, delete, *, allow"
-          - policy: "p, role:org-backend, applications, *, default/*, allow"
+          - policy: "p, role:org-backend, applications, get, apps/*, allow"
+          - policy: "p, role:org-backend, applications, sync, apps/*, allow"
+          - policy: "p, role:org-backend, applications, action/*, apps/*, allow"
+          - policy: "p, role:org-backend, logs, get, apps/*, allow"
       
       RBACRoleBindings:
         type: list[object]
@@ -114,48 +161,32 @@ parameters:
           prometheus.io/port: "8080"
           istio-injection: "enabled"
       
-      # GitHub SSH configuration
-      GitHubSSHSecretName:
-        type: string
-        description: "Name of the sealed secret for GitHub SSH key"
-        required: false
-        default: "github-ssh-sealed-secret"
-        example: "github-ssh-sealed-secret"
-      
       # Git repository configuration
       GitRepositories:
         type: list[object]
-        description: "List of Git repositories for ArgoCD (supports multiple repositories)"
+        description: "Git repositories for ArgoCD. gen_ssh_sealed_secrets.sh seals one repository Secret per entry (url, type, name and the SSH key, label argocd.argoproj.io/secret-type=repository); sshPrivateKeySecret.name names that Secret (default GitSSHSecretName-<index>)"
         required: false
         default: []
         example:
-          - url: "git@github.com:your-org/your-repo.git"
+          - url: "git@github.com:example-org/gitops.git"
             sshPrivateKeySecret:
               name: "argocd-github-ssh-secret"
-              key: "sshPrivateKey"
-            name: "infra-gitops"
+            name: "gitops"
             type: "git"
       
       GitRepositoryURL:
         type: string
         description: "Git repository URL (used when GitRepositories is not provided, for backward compatibility)"
         required: false
-        default: "git@github.com:your-org/your-repo.git"
-        example: "git@github.com:example-org/infra-gitops.git"
+        default: "git@github.com:example-org/gitops.git"
+        example: "git@github.com:example-org/gitops.git"
       
       GitSSHSecretName:
         type: string
-        description: "Name of the SSH secret for Git repository (used when GitRepositories is not provided)"
+        description: "Name of the repository Secret (URL + SSH key) that gen_ssh_sealed_secrets.sh seals for GitRepositoryURL"
         required: false
         default: "argocd-github-ssh-secret"
         example: "argocd-github-ssh-secret"
-      
-      GitSSHSecretKey:
-        type: string
-        description: "Key name in SSH secret (used when GitRepositories is not provided)"
-        required: false
-        default: "sshPrivateKey"
-        example: "sshPrivateKey"
       
       # ArgoCD URL configuration
       ArgoCDURL:
@@ -163,12 +194,12 @@ parameters:
         description: "External URL for ArgoCD server"
         required: false
         default: ""
-        example: "https://corp.your-domain.com/argocd"
+        example: "https://internal.example.com/argocd"
       
       # Dex OIDC configuration
       DexConfig:
         type: object
-        description: "Complete Dex configuration with connectors. Do not put the client secret here: argocd-cm references it as $<DexClientSecretName>:<DexClientSecretKey> (or the connector's clientSecretRef), and gen_dex_sealed_secret.sh seals it"
+        description: "Complete Dex configuration with connectors. Do not put the client secret here: argocd-cm references it as $<DexClientSecretName>:<DexClientSecretKey> (or the connector's clientSecretRef), and gen_dex_sealed_secret.sh seals it. Every github connector must list config.orgs, or the install script refuses to apply"
         required: false
         default: {}
         example:
@@ -211,7 +242,7 @@ parameters:
       
       DexGitHubOrgs:
         type: list[string]
-        description: "List of GitHub organizations for Dex authentication"
+        description: "GitHub organizations allowed to log in through Dex. Required when the GitHub connector is enabled: without it any GitHub account can log in, so the install script refuses to apply"
         required: false
         default: []
         example:
@@ -220,10 +251,10 @@ parameters:
       # Kustomization configuration
       ArgoCDManifestURL:
         type: string
-        description: "URL to ArgoCD installation manifest"
+        description: "Override the install manifest URL (default: manifests/install.yaml of ArgoCDVersion on raw.githubusercontent.com). Requires ArgoCDManifestSHA256"
         required: false
-        default: "https://raw.githubusercontent.com/argoproj/argo-cd/v2.11.7/manifests/install.yaml"
-        example: "https://raw.githubusercontent.com/argoproj/argo-cd/v2.11.7/manifests/install.yaml"
+        default: ""
+        example: "https://raw.githubusercontent.com/argoproj/argo-cd/v3.5.6/manifests/install.yaml"
       
       # Patch configuration
       Patches:

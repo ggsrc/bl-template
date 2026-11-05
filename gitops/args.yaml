@@ -577,10 +577,10 @@ parameters:
       # Project configuration
       Project:
         type: string
-        description: "ArgoCD project name"
+        description: "ArgoCD project name. Must be the AppProject created by the argocd component (AppProjectName); its sourceRepos must include SourceRepoURL and its destinations DestinationNamespace"
         required: false
-        default: "default"
-        example: "default"
+        default: "apps"
+        example: "apps"
       
       # Source configuration
       SourcePath:

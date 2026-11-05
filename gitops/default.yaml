@@ -11,7 +11,7 @@ apps:
     project: 
     - name: stg
       parameters:
-        SourceRepoURL: https://github.com/your-org/gitops.git
+        SourceRepoURL: git@github.com:example-org/gitops.git
         SourcePath: stg/hello-world
         ContainerArgs:
           - "-listen=:8080"
@@ -108,23 +108,23 @@ apps:
               interval: 30s
         ApplicationName: hello-world
         ApplicationNamespace: app
-        ApplicationProject: default
-        ApplicationRepo: https://github.com/your-org/gitops.git
+        ApplicationProject: apps
+        ApplicationRepo: git@github.com:example-org/gitops.git
         ApplicationPath: stg/hello-world
         ApplicationRevision: 1.0.0
         ApplicationSyncPolicy: Automatic
         ApplicationSyncOptions: Create,Delete,Prune,Rollback,Suspend,Resume,Restart 
     - name: prd
       parameters:
-        SourceRepoURL: https://github.com/your-org/gitops.git
+        SourceRepoURL: git@github.com:example-org/gitops.git
         SourcePath: prd/hello-world
         ContainerArgs:
           - "-listen=:8080"
           - "-text=Hello from hello-world"
         ApplicationName: hello-world
         ApplicationNamespace: app
-        ApplicationProject: default
-        ApplicationRepo: https://github.com/your-org/gitops.git
+        ApplicationProject: apps
+        ApplicationRepo: git@github.com:example-org/gitops.git
         ApplicationPath: prd/hello-world
         ApplicationRevision: 1.0.0
         ApplicationSyncPolicy: Automatic
@@ -223,12 +223,12 @@ apps:
     project: 
     - name: stg
       parameters:
-        SourceRepoURL: https://github.com/your-org/gitops.git
+        SourceRepoURL: git@github.com:example-org/gitops.git
         SourcePath: stg/hello-world-2
         ApplicationName: hello-world-2
         ApplicationNamespace: app
-        ApplicationProject: default
-        ApplicationRepo: https://github.com/your-org/gitops.git
+        ApplicationProject: apps
+        ApplicationRepo: git@github.com:example-org/gitops.git
         ApplicationPath: stg/hello-world-2
         ApplicationRevision: 1.0.0
         ApplicationSyncPolicy: Automatic

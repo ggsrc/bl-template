@@ -6,7 +6,7 @@ metadata:
     app.kubernetes.io/name: argocd-rbac-cm
     app.kubernetes.io/part-of: argocd
 data:
-  # policy.csv is an file containing user-defined RBAC policies and role definitions (optional).
+  # policy.csv contains user-defined RBAC policies and role definitions (optional).
   # Policy rules are in the form:
   #   p, subject, resource, action, object, effect
   # Role definitions and bindings are in the form:
@@ -18,13 +18,16 @@ data:
     {{ .policy }}
     {{- end }}
     {{- else }}
-    p, role:org-admin, applications, *, default/*, allow
+    {{- $project := "apps" }}{{ if .AppProjectName }}{{ $project = .AppProjectName }}{{ end }}
+    p, role:org-admin, applications, *, {{ $project }}/*, allow
+    p, role:org-admin, logs, get, {{ $project }}/*, allow
+    p, role:org-admin, projects, get, {{ $project }}, allow
     p, role:org-admin, clusters, get, *, allow
     p, role:org-admin, repositories, get, *, allow
-    p, role:org-admin, repositories, create, *, allow
-    p, role:org-admin, repositories, update, *, allow
-    p, role:org-admin, repositories, delete, *, allow
-    p, role:org-backend, applications, *, default/*, allow
+    p, role:org-backend, applications, get, {{ $project }}/*, allow
+    p, role:org-backend, applications, sync, {{ $project }}/*, allow
+    p, role:org-backend, applications, action/*, {{ $project }}/*, allow
+    p, role:org-backend, logs, get, {{ $project }}/*, allow
     {{- end }}
     {{- if .RBACRoleBindings }}
     {{- range .RBACRoleBindings }}
@@ -32,10 +35,9 @@ data:
     {{- end }}
     {{- end }}
 
-  # policy.default is the name of the default role which Argo CD will falls back to, when
-  # authorizing API requests (optional). If omitted or empty, users may be still be able to login,
-  # but will see no apps, projects, etc...
-  policy.default: {{ if .PolicyDefault }}{{ .PolicyDefault }}{{ else }}role:readonly{{ end }}
+  # policy.default is the role for users who match no binding above. Empty: they can log in
+  # but see no applications, projects or repositories.
+  policy.default: "{{ if .PolicyDefault }}{{ .PolicyDefault }}{{ end }}"
 
   # scopes controls which OIDC scopes to examine during rbac enforcement (in addition to `sub` scope).
   # If omitted, defaults to: '[groups]'. Must be a string in ConfigMap (e.g. "[groups]").

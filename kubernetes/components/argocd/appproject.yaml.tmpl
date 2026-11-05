@@ -1,0 +1,51 @@
+# AppProjects, applied by the install script once the AppProject CRD is established.
+#
+# {{ if .AppProjectName }}{{ .AppProjectName }}{{ else }}apps{{ end }}: the project for the GitOps applications. It may only deploy from the GitOps
+# repositories, only into the application namespace(s) of this cluster, and never cluster-scoped
+# resources (Namespaces, ClusterRoles, CRDs, webhooks...).
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: {{ if .AppProjectName }}{{ .AppProjectName }}{{ else }}apps{{ end }}
+  namespace: {{ if .Namespace }}{{ .Namespace }}{{ else }}argocd{{ end }}
+spec:
+  description: GitOps applications, limited to the GitOps repositories and the application namespace
+  sourceRepos:
+  {{- if .AppProjectSourceRepos }}
+  {{- range .AppProjectSourceRepos }}
+  - {{ . }}
+  {{- end }}
+  {{- else if .GitRepositories }}
+  {{- range .GitRepositories }}
+  - {{ .url }}
+  {{- end }}
+  {{- else }}
+  - {{ if .GitRepositoryURL }}{{ .GitRepositoryURL }}{{ else }}git@github.com:example-org/gitops.git{{ end }}
+  {{- end }}
+  destinations:
+  {{- if .AppProjectNamespaces }}
+  {{- range .AppProjectNamespaces }}
+  - server: https://kubernetes.default.svc
+    namespace: {{ . }}
+  {{- end }}
+  {{- else }}
+  - server: https://kubernetes.default.svc
+    namespace: {{ if .AppNamespace }}{{ .AppNamespace }}{{ else }}app{{ end }}
+  {{- end }}
+  clusterResourceWhitelist: []
+{{- if ne .RestrictDefaultProject false }}
+---
+# default: ArgoCD creates this project with every source, destination and resource allowed.
+# Emptied so that an application cannot escape the restrictions above by naming it.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: default
+  namespace: {{ if .Namespace }}{{ .Namespace }}{{ else }}argocd{{ end }}
+spec:
+  description: Disabled. Use the {{ if .AppProjectName }}{{ .AppProjectName }}{{ else }}apps{{ end }} project
+  sourceRepos: []
+  destinations: []
+  clusterResourceWhitelist: []
+  namespaceResourceWhitelist: []
+{{- end }}

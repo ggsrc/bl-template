@@ -8,10 +8,12 @@ resources:
 {{- if or .DexConfig .DexGitHubEnabled }}
 - dex-github-sealed-secret.yaml
 {{- end }}
-- {{ if .ArgoCDManifestURL }}{{ .ArgoCDManifestURL }}{{ else }}https://raw.githubusercontent.com/argoproj/argo-cd/v2.11.7/manifests/install.yaml{{ end }}
+# ArgoCD {{ if .ArgoCDVersion }}{{ .ArgoCDVersion }}{{ else }}v3.5.6{{ end }} manifests/install.yaml. The install script downloads it, checks its sha256 and
+# deletes it after the build, so kustomize never fetches an unverified remote manifest.
+- argocd-install.yaml
 
 patchesStrategicMerge:
-  # Configure rbac policy - Give GitHub org users admin access
+  # RBAC: roles for the GitHub org groups, no access for anyone else
   - argocd-rbac-cm.yaml
 
   # Configure argocd server
