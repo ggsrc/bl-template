@@ -234,7 +234,7 @@ components:
     - kubernetes/components/juicefs/kustomization.yaml.tmpl
     - kubernetes/components/juicefs/namespace.yaml.tmpl
     - kubernetes/components/juicefs/serviceaccount.yaml.tmpl
-    - kubernetes/components/juicefs/secret.yaml.tmpl
+    - kubernetes/components/juicefs/external-secret.yaml.tmpl
     - kubernetes/components/juicefs/storageclass.yaml.tmpl
     - kubernetes/components/juicefs/job-format.yaml.tmpl
     - kubernetes/components/juicefs/statefulset.yaml.tmpl
