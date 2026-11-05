@@ -33,6 +33,8 @@ components:
     - kubernetes/components/external-secrets/namespace.yaml.tmpl
     - kubernetes/components/external-secrets/cluster-secret-store.yaml.tmpl
     - kubernetes/components/external-secrets/kustomization.yaml.tmpl
+    args:
+    - kubernetes/components/external-secrets/args.yaml
     installType: kubectl
     dependencies:
       - external-secrets-operator

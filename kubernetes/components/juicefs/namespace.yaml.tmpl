@@ -2,3 +2,6 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: {{ default "juicefs" .namespace }}
+  labels:
+    # Lets ExternalSecrets in this namespace use the gcp-secret-store ClusterSecretStore.
+    gcp-secret-store-access: "allowed"
