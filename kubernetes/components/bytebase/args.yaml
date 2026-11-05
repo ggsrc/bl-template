@@ -25,7 +25,7 @@ parameters:
         default: ""
       version:
         type: string
-        default: "3.1.0"
+        default: "3.24.0"
       externalURL:
         type: string
         default: "https://bytebase.example.com"
@@ -53,3 +53,12 @@ parameters:
       persistenceSize:
         type: string
         default: "20Gi"
+      metadataDatabaseEnabled:
+        type: boolean
+        default: true
+      existingPgURLSecret:
+        type: string
+        default: ""
+      existingPgURLSecretKey:
+        type: string
+        default: "uri"

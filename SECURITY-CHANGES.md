@@ -3,6 +3,43 @@
 Default changes that affect existing installations, why they were made, and what an existing install must do.
 Re-render with `blcli init` and review the diff before applying anything.
 
+## n9e, Uptrace and Bytebase (maintenance window required)
+
+- **No public entry by default.** n9e uses ClusterIP, Uptrace Ingress is off,
+  and Bytebase remains ClusterIP. All three add restrictive NetworkPolicy; allow
+  trusted gateways/collectors and required egress explicitly, and verify CNI
+  enforcement. Default Uptrace/Bytebase ingress is empty; bootstrap by authorized
+  port-forward. Re-render into a fresh directory: blcli may preserve existing files.
+- **n9e official sources, patched locally.** The third-party chart dependency is
+  replaced by readable official chart 9.1.1 sources with scoped MySQL credentials,
+  Redis authentication, random retained bootstrap credentials and Secret config/SQL.
+  Built-in node collector/Prometheus and notification script mounts are removed;
+  the application runs non-root with a read-only root filesystem. MySQL changes
+  from 5.7 to 8.4.13 and Redis to 7.4.12; **never reuse a 5.7 data directory on 8.4**.
+  Script notification remains a privileged application capability; see the residual
+  risk and migration procedure in `kubernetes/components/n9e/SECURITY.md`.
+- **Uptrace overrides now take effect.** Application image/replica settings have
+  the required second `uptrace` level. Default image is 2.0.1, matching the old actual
+  chart output instead of downgrading it to the previously ignored 1.7.0. Patched
+  official chart sources replace known seeds and ClickHouse's hardcoded password
+  with retained random credentials, use Secret config, and remove bundled collectors.
+  Install the Altinity operator separately. See `kubernetes/components/uptrace/SECURITY.md`.
+- **Bytebase 3.24.0 uses external metadata PostgreSQL.** The default creates a
+  CNPG cluster with a non-superuser app role; an existing DB can be provided as a
+  URI Secret. Embedded metadata PostgreSQL and inline passwords are rejected.
+  Bytebase runs as UID/GID 113 with dropped capabilities, no Kubernetes token and
+  read-only root filesystem. Removed upstream CLI flags are no longer passed.
+  External metadata DB prevents new embedded sample creation; remove existing
+  samples separately. Signup restriction needs licensed application configuration
+  or a restricted identity gateway; **it is not automatically disabled by Helm**.
+  See `kubernetes/components/bytebase/SECURITY.md` before upgrading old data.
+- **Existing releases are gated.** Installer upgrades require
+  `BLCLI_SECURITY_MIGRATION_APPROVED=1` after backup/restore and migration rehearsal.
+  n9e/Uptrace also refuse upgrades without a migrated `<release>-bootstrap` Secret.
+  Editing seeds or that Secret does not rotate passwords already stored in a DB.
+  Back up the bootstrap Secret with the data; do not apply offline rendered random
+  previews to existing installations. No live environment is changed by this PR.
+
 ## Ingress, ArgoCD and monitoring
 
 - **web-ide removed.** The optional `web-ide` component (code-server behind oauth2-proxy) is gone: code-server ran with `--auth none` and any pod in the cluster could reach it without passing the proxy. Existing installs keep running until you remove them: `helm uninstall web-ide -n webide`, back up and delete its PVC, then rotate every credential that was stored in the IDE home volume and the oauth2-proxy client and cookie secrets.

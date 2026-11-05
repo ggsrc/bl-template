@@ -1,0 +1,17 @@
+{{- if .Values.metadataDatabase.enabled }}
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ printf "%s-postgresql" .Release.Name }}
+  namespace: {{ include "bytebase.namespace" . }}
+spec:
+  imageName: {{ .Values.metadataDatabase.imageName | quote }}
+  instances: {{ .Values.metadataDatabase.instances }}
+  enableSuperuserAccess: false
+  bootstrap:
+    initdb:
+      database: bytebase
+      owner: bytebase
+  storage:
+    size: {{ .Values.metadataDatabase.storage }}
+{{- end }}

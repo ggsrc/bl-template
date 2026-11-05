@@ -28,7 +28,8 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
         with:
-          go-version: "1.22"
+          go-version-file: blcli/go.mod
+          cache-dependency-path: blcli/go.sum
 
       - name: Install blcli
         working-directory: blcli
@@ -36,6 +37,20 @@ jobs:
 
       - name: Preview and validate template defaults
         run: |
-          blcli init-args "$GITHUB_WORKSPACE" -o /tmp/args.yaml --preview
-          blcli init-args "$GITHUB_WORKSPACE" -o /tmp/args.yaml
-          blcli check args --args /tmp/args.yaml -r "$GITHUB_WORKSPACE"
+          mkdir -p workspace/config
+          blcli init-args "$GITHUB_WORKSPACE" -o workspace/config/args.yaml --preview
+          blcli init-args "$GITHUB_WORKSPACE" -o workspace/config/args.yaml
+          blcli check args --args workspace/config/args.yaml -r "$GITHUB_WORKSPACE"
+
+      - name: Install pinned Helm for offline security checks
+        run: |
+          curl -fsSL https://get.helm.sh/helm-v3.18.4-linux-amd64.tar.gz -o workspace/helm.tar.gz
+          printf '%s  %s\n' f8180838c23d7c7d797b208861fecb591d9ce1690d8704ed1e4cb8e2add966c1 workspace/helm.tar.gz | sha256sum -c -
+          tar -xzf workspace/helm.tar.gz -C workspace
+          echo "$GITHUB_WORKSPACE/workspace/linux-amd64" >> "$GITHUB_PATH"
+
+      - name: Security regressions with fake Kubernetes API
+        run: |
+          python3 -m venv workspace/test-venv
+          workspace/test-venv/bin/pip install PyYAML==6.0.3
+          workspace/test-venv/bin/python scripts/test-security.py

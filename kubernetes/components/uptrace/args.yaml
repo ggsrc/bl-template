@@ -28,7 +28,10 @@ parameters:
         default: "uptrace/uptrace"
       imageTag:
         type: string
-        default: "1.7.0"
+        default: "2.0.1"
       replicaCount:
         type: integer
         default: 1
+      clickhouseAllowedCIDR:
+        type: string
+        default: "10.0.0.0/8"

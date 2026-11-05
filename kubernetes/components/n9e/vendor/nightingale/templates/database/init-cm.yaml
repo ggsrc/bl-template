@@ -1,0 +1,9 @@
+{{- $data := include "n9e.bootstrap" . | fromJson -}}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: database-initdb-config
+type: Opaque
+stringData:
+  a-n9e.sql: |-
+{{ .Files.Get "scripts/a-n9e.sql" | replace "__BLCLI_ADMIN_PASSWORD__" (index $data "admin-password") | indent 4 }}

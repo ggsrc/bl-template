@@ -31,7 +31,7 @@ parameters:
         default: "flashcatcloud/nightingale"
       imageTag:
         type: string
-        default: "8.5.1"
+        default: "9.1.1"
       prometheusHost:
         type: string
         default: "vmagent-victoriametrics-vmks.monitoring-vm.svc.cluster.local"
