@@ -15,7 +15,7 @@ parameters:
         type: string
         description: "Helm release name"
         required: false
-        default: "redis-shared"
+        default: "redis"
       valuesFiles:
         type: string
         description: "Space-separated values files. Use values.yaml values-override.yaml after rendering"

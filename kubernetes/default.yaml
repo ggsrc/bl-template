@@ -9,8 +9,8 @@ projects:
     components:
       - name: 0-external-secrets-operator
         parameters:
-          namespace: external-secrets-operator
-          release-name: external-secrets-operator
+          namespace: external-secrets
+          release-name: external-secrets
           replica-count: 1
           min-helm-version: "v3.18.4"
           min-kubectl-version: "1.24"
@@ -74,8 +74,8 @@ projects:
     components:
       - name: 0-external-secrets-operator
         parameters:
-          namespace: external-secrets-operator
-          release-name: external-secrets-operator
+          namespace: external-secrets
+          release-name: external-secrets
           replica-count: 1
           min-helm-version: "v3.18.4"
           min-kubectl-version: "1.24"
