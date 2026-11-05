@@ -50,10 +50,10 @@ parameters:
       # Namespaces listed here may use it as well, without the label.
       AllowedNamespaces:
         type: array
-        description: "Namespaces allowed to use the ClusterSecretStore by name, in addition to namespaces labelled gcp-secret-store-access=allowed. The defaults are the namespaces of the grafana, victoria-metrics and web-ide components."
+        description: "Namespaces allowed to use the ClusterSecretStore by name, in addition to namespaces labelled gcp-secret-store-access=allowed. The defaults are the namespaces where the grafana and victoria-metrics components create ExternalSecrets."
         required: false
-        default: ["grafana", "monitoring-vm", "webide"]
-        example: ["grafana", "monitoring-vm", "webide"]
+        default: ["grafana", "monitoring-vm"]
+        example: ["grafana", "monitoring-vm"]
 
       # GKE Workload Identity configuration
       ClusterLocation:
