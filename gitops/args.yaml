@@ -26,6 +26,27 @@ parameters:
             value: "spotvm"
             effect: "NoSchedule"
       
+      # Pod security
+      AutomountServiceAccountToken:
+        type: boolean
+        description: "Mount a Kubernetes API token into the pods (pod spec and ServiceAccount). Enable only for apps that call the Kubernetes API"
+        required: false
+        default: false
+        example: true
+      
+      RunAsNonRoot:
+        type: boolean
+        description: "Require the main container to run as a non-root user. The image must declare a numeric non-root USER, or set RunAsUser"
+        required: false
+        default: false
+        example: true
+      
+      RunAsUser:
+        type: integer
+        description: "UID for the main container. Unset = the image's USER"
+        required: false
+        example: 65532
+      
       # Shared container configuration
       ContainerPorts:
         type: list[object]
@@ -269,6 +290,27 @@ parameters:
         required: false
         default: "APP_NAME"
         example: "my-app"
+      
+      # Pod security
+      AutomountServiceAccountToken:
+        type: boolean
+        description: "Mount a Kubernetes API token into the pods (pod spec and ServiceAccount). Enable only for apps that call the Kubernetes API"
+        required: false
+        default: false
+        example: true
+      
+      RunAsNonRoot:
+        type: boolean
+        description: "Require the main container to run as a non-root user. The image must declare a numeric non-root USER, or set RunAsUser"
+        required: false
+        default: false
+        example: true
+      
+      RunAsUser:
+        type: integer
+        description: "UID for the main container. Unset = the image's USER"
+        required: false
+        example: 65532
       
       # Shared container configuration
       ContainerPorts:
