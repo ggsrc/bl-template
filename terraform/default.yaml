@@ -150,6 +150,10 @@ projects:
               locationPolicy: BALANCED
               releaseChannel: EXTENDED
               deletionProtection: true
+              datapathProvider: ADVANCED_DATAPATH
+              networkPolicyEnabled: false
+              masterAuthorizedNetworks: []
+              enableSecureBoot: true
               nodePools:
                   - name: on-demand
                     machineType: e2-standard-8
@@ -317,6 +321,10 @@ projects:
               locationPolicy: BALANCED
               releaseChannel: EXTENDED
               deletionProtection: true
+              datapathProvider: ADVANCED_DATAPATH
+              networkPolicyEnabled: false
+              masterAuthorizedNetworks: []
+              enableSecureBoot: true
               nodePools:
                   - name: on-demand
                     machineType: e2-standard-8
@@ -460,6 +468,10 @@ projects:
               locationPolicy: BALANCED
               releaseChannel: EXTENDED
               deletionProtection: true
+              datapathProvider: ADVANCED_DATAPATH
+              networkPolicyEnabled: false
+              masterAuthorizedNetworks: []
+              enableSecureBoot: true
         - name: dns
           parameters:
             records: []

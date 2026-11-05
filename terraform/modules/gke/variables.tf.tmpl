@@ -102,3 +102,35 @@ variable "disk_size_gb" {
   default     = 20
 }
 
+variable "datapath_provider" {
+  description = "GKE datapath provider. ADVANCED_DATAPATH is Dataplane V2, which enforces NetworkPolicy natively; LEGACY_DATAPATH keeps the legacy datapath, where NetworkPolicy needs Calico (network_policy_enabled). Changing this replaces the cluster."
+  type        = string
+  default     = "ADVANCED_DATAPATH"
+
+  validation {
+    condition     = contains(["ADVANCED_DATAPATH", "LEGACY_DATAPATH"], var.datapath_provider)
+    error_message = "datapath_provider must be ADVANCED_DATAPATH or LEGACY_DATAPATH."
+  }
+}
+
+variable "network_policy_enabled" {
+  description = "Enable Calico NetworkPolicy enforcement. Only used with the legacy datapath; Dataplane V2 (ADVANCED_DATAPATH) enforces NetworkPolicy itself and rejects this block."
+  type        = bool
+  default     = false
+}
+
+variable "master_authorized_networks" {
+  description = "CIDRs allowed to reach the public control-plane endpoint. Empty (default) keeps the control plane reachable from any IP; when set, the module also disables Google public CIDR access."
+  type = list(object({
+    cidr_block   = string
+    display_name = string
+  }))
+  default = []
+}
+
+variable "enable_secure_boot" {
+  description = "Enable Secure Boot on the node VMs. Changing this replaces the node pools."
+  type        = bool
+  default     = true
+}
+
