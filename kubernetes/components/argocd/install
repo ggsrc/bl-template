@@ -15,7 +15,18 @@ NAMESPACE="${ARGOCD_NAMESPACE:-argocd}"
 SSH_SECRET_FILE="github-ssh-sealed-secret.yaml"
 GEN_SSH_SCRIPT="${ARGOCD_GEN_SEALED_SECRET_SCRIPT:-gen_ssh_sealed_secrets.sh}"
 KUBERNETES_INIT_SCRIPT="${ARGOCD_KUBERNETES_INIT_SCRIPT:-../../init.sh}"
-SSH_KEYS_DIR="${ARGOCD_KEYS_DIR:-../../keys}"
+# The deploy key lives outside the kubernetes repository: <workspace>/keys by default
+# (this directory is <workspace>/kubernetes/<project>/argocd). Earlier versions used
+# <workspace>/kubernetes/keys; that location is still read if it holds a key.
+if [ -n "${ARGOCD_KEYS_DIR:-}" ]; then
+    SSH_KEYS_DIR="${ARGOCD_KEYS_DIR}"
+elif [ -n "${BLCLI_KEYS_DIR:-}" ]; then
+    SSH_KEYS_DIR="${BLCLI_KEYS_DIR}"
+elif [ ! -f "../../../keys/argocd_github" ] && [ -f "../../keys/argocd_github" ]; then
+    SSH_KEYS_DIR="../../keys"
+else
+    SSH_KEYS_DIR="../../../keys"
+fi
 SSH_PRIVATE_KEY_PATH="${ARGOCD_SSH_PRIVATE_KEY_PATH:-${SSH_KEYS_DIR}/argocd_github}"
 
 # Function to print colored messages
@@ -54,13 +65,18 @@ CURRENT_CONTEXT=$(kubectl config current-context)
 info "Current Kubernetes context: ${CURRENT_CONTEXT}"
 warn "Please ensure you are connected to the correct cluster"
 
+if [ "${SSH_KEYS_DIR}" = "../../keys" ]; then
+    warn "Using the deploy key in ${SSH_KEYS_DIR}, which is inside the kubernetes repository."
+    warn "Move it to ../../../keys (or set BLCLI_KEYS_DIR). If it was ever committed, rotate the deploy key."
+fi
+
 # Ensure SSH key material exists before generating sealed secret
 if [ ! -f "${SSH_PRIVATE_KEY_PATH}" ] && [ -f "${KUBERNETES_INIT_SCRIPT}" ]; then
     if [ ! -x "${KUBERNETES_INIT_SCRIPT}" ]; then
         chmod +x "${KUBERNETES_INIT_SCRIPT}"
     fi
     info "Generating ArgoCD SSH keys via ${KUBERNETES_INIT_SCRIPT}"
-    "./${KUBERNETES_INIT_SCRIPT}"
+    BLCLI_KEYS_DIR="${SSH_KEYS_DIR}" "./${KUBERNETES_INIT_SCRIPT}"
 fi
 
 # Generate SSH sealed secret before kustomize build
@@ -112,23 +128,19 @@ type: Opaque
 PLACEHOLDER
 fi
 
-# Build kustomization
+# Build kustomization (kept in memory, no temporary file)
 info "Building kustomization..."
-if ! kustomize build . > /tmp/argocd-manifests.yaml; then
+if ! MANIFESTS=$(kustomize build .); then
     error "Failed to build kustomization"
     exit 1
 fi
 
 # Apply manifests
 info "Applying ArgoCD manifests..."
-if ! kubectl apply -f /tmp/argocd-manifests.yaml; then
+if ! printf '%s\n' "${MANIFESTS}" | kubectl apply -f -; then
     error "Failed to apply ArgoCD manifests"
-    rm -f /tmp/argocd-manifests.yaml
     exit 1
 fi
-
-# Clean up temporary file
-rm -f /tmp/argocd-manifests.yaml
 
 # Wait for ArgoCD to be ready
 info "Waiting for ArgoCD to be ready..."
