@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import tempfile
 import threading
+import tomllib
 import unittest
 
 import yaml
@@ -144,6 +145,14 @@ class SecurityTemplates(unittest.TestCase):
         sts = self.find(docs, "StatefulSet")
         env = sts["spec"]["template"]["spec"]["containers"][0]["env"]
         self.assertEqual(next(x for x in env if x["name"] == "CH_PASSWORD")["valueFrom"]["secretKeyRef"]["key"], "clickhouse-password")
+
+    def test_n9e_heartbeat_uses_pod_ip_without_public_probe(self):
+        docs = self.docs["n9e"]
+        config = self.find(docs, "Secret", "n9e-config")["stringData"]["config.toml"]
+        self.assertNotIn("IP", tomllib.loads(config)["Alert"]["Heartbeat"])
+        deployment = next(d for d in docs if d["kind"] == "Deployment" and d["spec"]["template"]["spec"]["containers"][0]["name"] == "center")
+        env = deployment["spec"]["template"]["spec"]["containers"][0]["env"]
+        self.assertEqual(next(x for x in env if x["name"] == "CONFIGTYPE_ALERT_HEARTBEAT_IP")["valueFrom"]["fieldRef"]["fieldPath"], "status.podIP")
 
     def test_bytebase_external_db_and_nonroot(self):
         docs = self.docs["bytebase"]

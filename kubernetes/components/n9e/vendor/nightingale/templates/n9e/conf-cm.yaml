@@ -97,8 +97,8 @@ stringData:
 
     [Alert]
     [Alert.Heartbeat]
-    # auto detect if blank
-    IP = ""
+    # Set by CONFIGTYPE_ALERT_HEARTBEAT_IP via Downward API. Omit this key:
+    # the TOML loader runs after EnvironmentLoader and would override the Pod IP.
     # unit ms
     Interval = 1000
     EngineName = "default"

@@ -72,12 +72,15 @@ try:
     redis_sts=next(d for d in docs if d['kind']=='StatefulSet' and d['spec']['template']['spec']['containers'][0]['name']=='redis')
     redis=start('redis','redis:7.4.12-alpine',['redis-server','/etc/redis.conf'],['--network-alias',redis_sts['metadata']['name'],'--user','999:999','--cap-drop','ALL','--security-opt','no-new-privileges','--read-only','--tmpfs','/data:rw,uid=999,gid=999','--mount',f'type=bind,src={redisfile},dst=/etc/redis.conf,readonly'])
     # HTTP probes run inside the same isolated network via the image's curl.
-    n9e=start('n9e','flashcatcloud/nightingale:9.1.1',['-configs','/app/etc'],['--entrypoint','/app/n9e','--user','1000:1000','--cap-drop','ALL','--security-opt','no-new-privileges','--read-only','--tmpfs','/tmp:rw,mode=1777','--mount',f'type=bind,src={config},dst=/app/etc,readonly'])
+    n9e=start('n9e','flashcatcloud/nightingale:9.1.1',['-configs','/app/etc'],['--env','CONFIGTYPE_ALERT_HEARTBEAT_IP=127.0.0.1','--entrypoint','/app/n9e','--user','1000:1000','--cap-drop','ALL','--security-opt','no-new-privileges','--read-only','--tmpfs','/tmp:rw,mode=1777','--mount',f'type=bind,src={config},dst=/app/etc,readonly'])
     probe = "import urllib.request,urllib.error;\ntry: urllib.request.urlopen('http://127.0.0.1:17000/',timeout=2)\nexcept urllib.error.HTTPError: pass"
     wait_for(lambda:run(['exec',n9e,'python3','-c',probe],check=False).returncode==0,60)
     login = "import json,urllib.request,sys; body=open(sys.argv[1],'rb').read(); r=urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:17000/api/n9e/auth/login',data=body,headers={'Content-Type':'application/json'})); d=json.load(r); ok=bool(d.get('dat')) and not d.get('err'); sys.exit(0 if ok else 1)"
     assert run(['exec',n9e,'python3','-c',login,'/app/etc/login-new.json'],check=False).returncode==0, 'random admin login failed'
     assert run(['exec',n9e,'python3','-c',login,'/app/etc/login-old.json'],check=False).returncode!=0, 'old admin password accepted'
+    n9e_logs=run(['logs',n9e]).stdout
+    assert 'auto get outbound ip fail' not in n9e_logs, 'n9e still probes public network for heartbeat'
+    assert '127.0.0.1:17000' in n9e_logs, 'heartbeat did not use the supplied Pod IP'
     print('PASS n9e: MySQL initialized, Redis auth, non-root/read-only HTTP, random admin login, old password rejected',flush=True)
     # Bytebase uses a dedicated non-superuser role in an isolated PostgreSQL DB.
     pgpass=secrets.token_hex(24); apppass=secrets.token_hex(24)

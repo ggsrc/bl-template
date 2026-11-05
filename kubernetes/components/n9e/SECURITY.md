@@ -5,6 +5,8 @@ node collector, no agent API, and a non-root application with a read-only root
 filesystem. NetworkPolicy allows only the release's internal traffic, DNS and
 the default VictoriaMetrics writer. Allow trusted gateways, agents and notification
 destinations explicitly in `networkPolicy.ingress` / `networkPolicy.egress`.
+The alert engine heartbeat uses `status.podIP` through Downward API instead of
+probing a public IP to discover its local address.
 Adjust the VictoriaMetrics namespace/port if you change its endpoint. NodeLocal
 DNS needs an additional DNS egress rule. Verify that your CNI enforces policies.
 

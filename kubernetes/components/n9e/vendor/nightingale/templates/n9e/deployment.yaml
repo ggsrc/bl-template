@@ -56,6 +56,10 @@ spec:
             - -configs
             - /app/etc
           env:
+            - name: CONFIGTYPE_ALERT_HEARTBEAT_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
             - name: GIN_MODE
               value: release
             - name: TZ
