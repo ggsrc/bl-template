@@ -26,7 +26,7 @@ parameters:
         type: string
         description: "Grafana image tag"
         required: false
-        default: "12.3.1"
+        default: "12.4.13"
       replicas:
         type: integer
         description: "Grafana replica count"
@@ -54,9 +54,15 @@ parameters:
         default: "https://example.com/grafana"
       hostedDomain:
         type: string
-        description: "Google auth hosted_domain"
+        description: "Google Workspace (or Cloud Identity) domain allowed to sign in. Rendered as auth.google hosted_domain and allowed_domains: only accounts whose e-mail is in this domain can log in"
         required: false
         default: "example.com"
+      allowedGroups:
+        type: string
+        description: "Optional space-separated Google group e-mails; when set, users must belong to one of them (auth.google allowed_groups, read with the cloud-identity groups scope)"
+        required: false
+        default: ""
+        example: "grafana-users@example.com"
       # The install script checks that helm/kubectl are installed; if set, it also enforces these minimum versions
       minHelmVersion:
         type: string

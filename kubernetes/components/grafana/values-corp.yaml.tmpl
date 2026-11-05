@@ -4,7 +4,7 @@ grafana:
   image:
     registry: docker.io
     repository: grafana/grafana
-    tag: "{{ default `12.3.1` .imageTag }}"
+    tag: "{{ default `12.4.13` .imageTag }}"
     pullPolicy: IfNotPresent
 
   rbac:
@@ -67,15 +67,16 @@ grafana:
   initChownData:
     enabled: true
 
+  # Pinned as <id>@<version>; unpinned plugins are fetched at their latest version on every pod start.
   plugins:
-    - victoriametrics-metrics-datasource
-    - redis-app
-    - redis-datasource
-    - redis-explorer-app
-    - grafana-googlesheets-datasource
-    - grafana-github-datasource
-    - grafana-clickhouse-datasource
-    - yesoreyeram-infinity-datasource
+    - victoriametrics-metrics-datasource@0.26.1
+    - redis-app@2.3.2
+    - redis-datasource@2.2.0
+    - redis-explorer-app@2.1.1
+    - grafana-googlesheets-datasource@2.7.2
+    - grafana-github-datasource@2.9.4
+    - grafana-clickhouse-datasource@4.23.0
+    - yesoreyeram-infinity-datasource@4.1.3
 
   datasources:
     datasources.yaml:
@@ -132,6 +133,9 @@ grafana:
       mode: console
     server:
       root_url: {{ default `https://example.com/grafana` .rootUrl }}
+    security:
+      # Session cookies are only sent over HTTPS (root_url is https)
+      cookie_secure: true
     auth:
       disable_login_form: true
     auth.basic:
@@ -146,7 +150,15 @@ grafana:
       auth_url: https://accounts.google.com/o/oauth2/v2/auth
       token_url: https://oauth2.googleapis.com/token
       api_url: https://openidconnect.googleapis.com/v1/userinfo
-      hosted_domain: {{ default `example.com` .hostedDomain }}
+      # hosted_domain is only a hint to Google's account chooser; allowed_domains is what Grafana enforces
+      # (the e-mail domain of every new login). Accounts outside it are refused.
+      hosted_domain: {{ if .hostedDomain }}{{ .hostedDomain }}{{ else if .HostedDomain }}{{ .HostedDomain }}{{ else }}example.com{{ end }}
+      allowed_domains: {{ if .hostedDomain }}{{ .hostedDomain }}{{ else if .HostedDomain }}{{ .HostedDomain }}{{ else }}example.com{{ end }}
+      {{- if .allowedGroups }}
+      allowed_groups: {{ .allowedGroups | quote }}
+      {{- else if .AllowedGroups }}
+      allowed_groups: {{ .AllowedGroups | quote }}
+      {{- end }}
       use_pkce: true
     feature_toggles:
       provisioning: true
