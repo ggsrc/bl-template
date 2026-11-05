@@ -28,11 +28,8 @@ projects:
       - name: 1-istio
         parameters:
           namespace: istio
-          istio-operator-version: 1.20.0
-          istio-version: 1.20.0
+          istio-version: 1.31.3
           istio-namespace: istio
-          istio-operator-namespace: istio-operator
-          istio-operator-service-account: istio-operator
       - name: 2-argocd
         parameters:
           namespace: argocd
@@ -98,11 +95,8 @@ projects:
       - name: 1-istio
         parameters:
           namespace: istio
-          istio-operator-version: 1.20.0
-          istio-version: 1.20.0
+          istio-version: 1.31.3
           istio-namespace: istio
-          istio-operator-namespace: istio-operator
-          istio-operator-service-account: istio-operator
       - name: 2-argocd
         parameters:
           namespace: argocd
@@ -160,11 +154,8 @@ projects:
       - name: 1-istio
         parameters:
           namespace: istio
-          istio-operator-version: 1.20.0
-          istio-version: 1.20.0
+          istio-version: 1.31.3
           istio-namespace: istio
-          istio-operator-namespace: istio-operator
-          istio-operator-service-account: istio-operator
       - name: 2-argocd
         parameters:
           namespace: argocd

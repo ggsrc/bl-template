@@ -11,33 +11,58 @@ if ! command -v istioctl &> /dev/null; then
   exit 1
 fi
 
-MIN_ISTIOCTL_VERSION="{{ if .minIstioctlVersion }}{{ .minIstioctlVersion }}{{ end }}"
-if [ -n "${MIN_ISTIOCTL_VERSION}" ]; then
-  ACTUAL=$(istioctl version --short 2>/dev/null | sed -n 's/.*client version: *\([0-9.]*\).*/\1/p' | head -n1)
-  if [ -z "${ACTUAL}" ]; then
-    ACTUAL=$(istioctl version --short 2>/dev/null | head -n1 | sed 's/^v//' | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+' || true)
-  fi
-  if [ -z "${ACTUAL}" ]; then
-    echo "Error: could not get istioctl version (istioctl version --short)"
-    exit 1
-  fi
-  # Normalize: strip leading 'v'
-  MIN_NORM=$(echo "${MIN_ISTIOCTL_VERSION}" | tr -d 'v')
-  if [ "$(printf '%s\n' "${MIN_NORM}" "${ACTUAL}" | sort -V | head -n1)" != "${MIN_NORM}" ]; then
-    echo "Error: istioctl version ${ACTUAL} is older than required ${MIN_ISTIOCTL_VERSION}"
-    exit 1
-  fi
-  echo "istioctl version ${ACTUAL} meets requirement >= ${MIN_ISTIOCTL_VERSION}"
-fi
-
-kubectl apply -f "{{ if .IstioNamespaceYaml }}{{ .IstioNamespaceYaml }}{{ else }}namespace.yaml{{ end }}"
-
 ISTIO_OPERATOR_YAML="{{ if .IstioOperatorYaml }}{{ .IstioOperatorYaml }}{{ else }}operator.yaml{{ end }}"
+ISTIO_SYSTEM_NAMESPACE="{{ if .IstioSystemNamespace }}{{ .IstioSystemNamespace }}{{ else }}istio-system{{ end }}"
 
 if [ ! -f "${ISTIO_OPERATOR_YAML}" ]; then
   echo "Error: IstioOperator file ${ISTIO_OPERATOR_YAML} not found"
   exit 1
 fi
+
+# Version being installed: the tag in the IstioOperator file (so manual edits are honoured)
+ISTIO_VERSION=$(sed -n 's/^  tag: *"\{0,1\}v\{0,1\}\([0-9][0-9.]*\).*/\1/p' "${ISTIO_OPERATOR_YAML}" | head -n1)
+if [ -z "${ISTIO_VERSION}" ]; then
+  echo "Error: could not read spec.tag from ${ISTIO_OPERATOR_YAML}"
+  exit 1
+fi
+
+# istioctl install renders the charts bundled with istioctl itself, so istioctl must not be older than the images
+MIN_ISTIOCTL_VERSION="{{ if .minIstioctlVersion }}{{ .minIstioctlVersion }}{{ end }}"
+if [ -z "${MIN_ISTIOCTL_VERSION}" ]; then
+  MIN_ISTIOCTL_VERSION="${ISTIO_VERSION}"
+fi
+ACTUAL=$(istioctl version --remote=false --short 2>/dev/null | sed -n 's/.*client version: *\([0-9.]*\).*/\1/p' | head -n1)
+if [ -z "${ACTUAL}" ]; then
+  ACTUAL=$(istioctl version --remote=false --short 2>/dev/null | head -n1 | sed 's/^v//' | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+' || true)
+fi
+if [ -z "${ACTUAL}" ]; then
+  echo "Error: could not get istioctl version (istioctl version --remote=false --short)"
+  exit 1
+fi
+# Normalize: strip leading 'v'
+MIN_NORM=$(echo "${MIN_ISTIOCTL_VERSION}" | tr -d 'v')
+if [ "$(printf '%s\n' "${MIN_NORM}" "${ACTUAL}" | sort -V | head -n1)" != "${MIN_NORM}" ]; then
+  echo "Error: istioctl version ${ACTUAL} is older than required ${MIN_ISTIOCTL_VERSION}"
+  exit 1
+fi
+echo "istioctl version ${ACTUAL} meets requirement >= ${MIN_ISTIOCTL_VERSION}"
+if [ "${ACTUAL%.*}" != "${ISTIO_VERSION%.*}" ]; then
+  echo "Warning: istioctl ${ACTUAL} would install its own ${ACTUAL%.*} charts with ${ISTIO_VERSION} images; use istioctl ${ISTIO_VERSION}"
+fi
+
+# In-place upgrades may skip at most one minor version
+CURRENT=$(kubectl get deployment istiod -n "${ISTIO_SYSTEM_NAMESPACE}" -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null | sed -n 's/.*:\([0-9][0-9]*\.[0-9][0-9]*\)\..*/\1/p' || true)
+if [ -n "${CURRENT}" ] && [ -z "${ISTIO_ALLOW_MINOR_SKIP:-}" ]; then
+  TARGET="${ISTIO_VERSION%.*}"
+  if [ "${CURRENT%%.*}" = "${TARGET%%.*}" ] && [ $(( ${TARGET#*.} - ${CURRENT#*.} )) -gt 1 ]; then
+    echo "Error: istiod runs ${CURRENT}; an in-place upgrade to ${ISTIO_VERSION} skips more than one minor version."
+    echo "Upgrade one minor version at a time (set spec.tag in ${ISTIO_OPERATOR_YAML} and use the matching istioctl),"
+    echo "or set ISTIO_ALLOW_MINOR_SKIP=1 to continue anyway."
+    exit 1
+  fi
+fi
+
+kubectl apply -f "{{ if .IstioNamespaceYaml }}{{ .IstioNamespaceYaml }}{{ else }}namespace.yaml{{ end }}"
 
 echo "Installing Istio using operator file: ${ISTIO_OPERATOR_YAML}"
 istioctl install --set values.defaultRevision=default \

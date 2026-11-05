@@ -8,7 +8,7 @@ spec:
   profile: {{ .IstioProfile | default "default" }}
   
   # Istio version
-  tag: {{ .IstioVersion | default "1.27.0" }}
+  tag: {{ .IstioVersion | default "1.31.3" }}
   
   # Image registry (hub)
   hub: {{ .IstioHub | default "docker.io/istio" }}
@@ -48,8 +48,9 @@ spec:
           {{- end }}
       {{- end }}
     
-    # Automatic mTLS
-    enableAutoMtls: {{ .EnableAutoMtls | default false }}
+    # Automatic mTLS: sidecars send mTLS to workloads that have a sidecar and plaintext to the rest.
+    # Servers stay PERMISSIVE (accept both) unless a PeerAuthentication says otherwise.
+    enableAutoMtls: {{ if eq .EnableAutoMtls false }}false{{ else }}true{{ end }}
     
     # Outbound traffic policy (ALLOW_ANY or REGISTRY_ONLY)
     outboundTrafficPolicy:
@@ -161,6 +162,16 @@ spec:
           # Service configuration
           service:
             type: {{ .IngressGatewayServiceType | default "LoadBalancer" }}
+            {{- if .IngressGatewayExternalTrafficPolicy }}
+            externalTrafficPolicy: {{ .IngressGatewayExternalTrafficPolicy }}
+            {{- end }}
+            {{- if .IngressGatewayLoadBalancerSourceRanges }}
+            # Client CIDRs allowed to reach the load balancer (GKE turns these into the firewall source ranges)
+            loadBalancerSourceRanges:
+              {{- range .IngressGatewayLoadBalancerSourceRanges }}
+              - {{ . | quote }}
+              {{- end }}
+            {{- end }}
             {{- if .IngressGatewayPorts }}
             ports:
               {{- range .IngressGatewayPorts }}

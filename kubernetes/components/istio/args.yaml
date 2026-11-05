@@ -40,18 +40,25 @@ parameters:
       
       IstioVersion:
         type: string
-        description: "Istio version tag"
+        description: "Istio version tag. istioctl install renders its own bundled charts, so use the istioctl release of the same version. Upgrade at most two minor versions at a time"
         required: false
-        default: "1.27.0"
-        example: "1.27.0"
+        default: "1.31.3"
+        example: "1.31.3"
       
-      # The install script checks that istioctl is installed; if minIstioctlVersion is set, it also enforces that minimum version
+      # The install script checks that istioctl is installed and at least minIstioctlVersion (default: IstioVersion)
       minIstioctlVersion:
         type: string
-        description: "Minimum istioctl version required by install script (e.g. 1.20.0). Empty = only check presence"
+        description: "Minimum istioctl version required by install script. Empty = IstioVersion"
         required: false
         default: ""
-        example: "1.20.0"
+        example: "1.31.3"
+      
+      IstioNamespaceYaml:
+        type: string
+        description: "Namespace manifest applied before istioctl install"
+        required: false
+        default: "namespace.yaml"
+        example: "namespace.yaml"
       
       IstioHub:
         type: string
@@ -102,9 +109,9 @@ parameters:
       # Proxy stats configuration
       ProxyStatsEnabled:
         type: boolean
-        description: "Enable Envoy proxy statistics"
+        description: "Enable the Envoy proxy statistics inclusion list (ProxyStatsRegexps)"
         required: false
-        default: true
+        default: false
         example: true
       
       ProxyStatsRegexps:
@@ -117,10 +124,10 @@ parameters:
       # Network configuration
       EnableAutoMtls:
         type: boolean
-        description: "Enable automatic mTLS"
+        description: "Enable automatic mTLS between sidecars (Istio default). Set false only to debug"
         required: false
-        default: false
-        example: false
+        default: true
+        example: true
       
       OutboundTrafficPolicy:
         type: string
@@ -171,15 +178,15 @@ parameters:
         type: string
         description: "Pilot CPU request"
         required: false
-        default: "200m"
-        example: "200m"
+        default: "100m"
+        example: "100m"
       
       PilotMemoryRequest:
         type: string
         description: "Pilot memory request"
         required: false
-        default: "1Gi"
-        example: "1Gi"
+        default: "512Mi"
+        example: "512Mi"
       
       PilotCpuLimit:
         type: string
@@ -192,8 +199,8 @@ parameters:
         type: string
         description: "Pilot memory limit"
         required: false
-        default: "2Gi"
-        example: "2Gi"
+        default: "1Gi"
+        example: "1Gi"
       
       PilotEnv:
         type: map[string]string
@@ -244,15 +251,15 @@ parameters:
         type: string
         description: "Ingress Gateway CPU request"
         required: false
-        default: "100m"
-        example: "100m"
+        default: "50m"
+        example: "50m"
       
       IngressGatewayMemoryRequest:
         type: string
         description: "Ingress Gateway memory request"
         required: false
-        default: "256Mi"
-        example: "256Mi"
+        default: "128Mi"
+        example: "128Mi"
       
       IngressGatewayCpuLimit:
         type: string
@@ -265,8 +272,8 @@ parameters:
         type: string
         description: "Ingress Gateway memory limit"
         required: false
-        default: "1Gi"
-        example: "1Gi"
+        default: "512Mi"
+        example: "512Mi"
       
       IngressGatewayServiceType:
         type: string
@@ -275,6 +282,21 @@ parameters:
         default: "LoadBalancer"
         enum: ["LoadBalancer", "NodePort", "ClusterIP"]
         example: "LoadBalancer"
+      
+      IngressGatewayExternalTrafficPolicy:
+        type: string
+        description: "Ingress Gateway Service externalTrafficPolicy. Empty = Kubernetes default (Cluster). Local keeps the client source IP (needed for IP-based AuthorizationPolicies) but only nodes running a gateway pod receive traffic, so run at least 2 replicas with a PodDisruptionBudget first"
+        required: false
+        default: ""
+        enum: ["", "Cluster", "Local"]
+        example: "Local"
+      
+      IngressGatewayLoadBalancerSourceRanges:
+        type: list[string]
+        description: "Client CIDRs allowed to reach the Ingress Gateway load balancer. Empty = no restriction (0.0.0.0/0)"
+        required: false
+        default: []
+        example: ["203.0.113.0/24"]
       
       IngressGatewayPorts:
         type: list[object]
