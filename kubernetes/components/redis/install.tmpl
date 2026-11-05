@@ -60,6 +60,9 @@ fi
 echo "Installing Redis: release=${RELEASE_NAME}, namespace=${NAMESPACE}"
 helm dependency update
 kubectl create namespace "${NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f -
+# Let ExternalSecrets in this namespace (for example the redis-shared password) use the
+# gcp-secret-store ClusterSecretStore, which only serves labelled namespaces.
+kubectl label namespace "${NAMESPACE}" gcp-secret-store-access=allowed --overwrite
 HELM_VALUES=""
 for f in ${VALUES_FILES}; do
   if [ -f "${f}" ]; then

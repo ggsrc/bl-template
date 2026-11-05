@@ -167,7 +167,7 @@ Defines three main sections:
 
 **核心（default.yaml 典型）：** external-secrets-operator、external-secrets、sealed-secret、istio、argocd、victoria-metrics-operator、victoria-metrics、grafana（corp）
 
-**可选（在 args.yaml 中 opt-in）：** cnpg、redis、paradedb、kafka、juicefs、loki、otel-collector、uptrace、n9e、bytebase；bl-template 另含 web-ide、navigation。均使用官方上游镜像。
+**可选（在 args.yaml 中 opt-in）：** cnpg、redis、paradedb、kafka、juicefs、loki、otel-collector、uptrace、n9e、bytebase；bl-template 另含 navigation。均使用官方上游镜像。
 
 #### gitops/config.yaml
 

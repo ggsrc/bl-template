@@ -3,6 +3,9 @@ name: grafana
 version: "1.0.0"
 dependencies:
   - name: grafana
-    # https://artifacthub.io/packages/helm/grafana/grafana
-    version: 10.4.0
-    repository: https://grafana.github.io/helm-charts
+    # https://github.com/grafana-community/helm-charts/tree/main/charts/grafana
+    # (the chart moved there from grafana/helm-charts in January 2026).
+    # 11.6.1 is the last chart line for Grafana 12. install runs `helm dependency build`,
+    # which only accepts the version in Chart.lock, and checks the chart's sha256.
+    version: 11.6.1
+    repository: oci://ghcr.io/grafana-community/helm-charts

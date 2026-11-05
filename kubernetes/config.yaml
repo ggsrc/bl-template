@@ -14,6 +14,7 @@ components:
   - name: sealed-secret
     path:
     - kubernetes/components/sealed-secret/kustomization.yaml.tmpl
+    - kubernetes/components/sealed-secret/controller.yaml
     args:
     - kubernetes/components/sealed-secret/args.yaml
     installType: kubectl
@@ -46,6 +47,7 @@ components:
     - kubernetes/components/argocd/argocd-cmd-params-cm.yaml.tmpl
     - kubernetes/components/argocd/install
     - kubernetes/components/argocd/gen_ssh_sealed_secrets.sh.tmpl
+    - kubernetes/components/argocd/gen_dex_sealed_secret.sh.tmpl
     args:
     - kubernetes/components/argocd/args.yaml
     install: bash ./install
@@ -124,28 +126,6 @@ components:
     installType: custom
     dependencies:
       - external-secrets
-  - name: web-ide
-    path:
-    - kubernetes/components/web-ide/Chart.yaml
-    - kubernetes/components/web-ide/values.yaml
-    - kubernetes/components/web-ide/values-override.yaml.tmpl
-    - kubernetes/components/web-ide/templates/_helpers.tpl
-    - kubernetes/components/web-ide/templates/deployment.yaml
-    - kubernetes/components/web-ide/templates/ingress.yaml
-    - kubernetes/components/web-ide/templates/oauth2-proxy-deployment.yaml
-    - kubernetes/components/web-ide/templates/oauth2-proxy-service.yaml
-    - kubernetes/components/web-ide/templates/pvc.yaml
-    - kubernetes/components/web-ide/templates/secrets.yaml
-    - kubernetes/components/web-ide/templates/service.yaml
-    - kubernetes/components/web-ide/templates/serviceaccount.yaml
-    - kubernetes/components/web-ide/install.tmpl
-    args:
-    - kubernetes/components/web-ide/args.yaml
-    install: bash ./install
-    installType: custom
-    dependencies:
-      - external-secrets
-      - istio
   - name: paradedb
     path:
     - kubernetes/components/paradedb/Chart.yaml
@@ -231,7 +211,7 @@ components:
     - kubernetes/components/juicefs/kustomization.yaml.tmpl
     - kubernetes/components/juicefs/namespace.yaml.tmpl
     - kubernetes/components/juicefs/serviceaccount.yaml.tmpl
-    - kubernetes/components/juicefs/secret.yaml.tmpl
+    - kubernetes/components/juicefs/external-secret.yaml.tmpl
     - kubernetes/components/juicefs/storageclass.yaml.tmpl
     - kubernetes/components/juicefs/job-format.yaml.tmpl
     - kubernetes/components/juicefs/statefulset.yaml.tmpl

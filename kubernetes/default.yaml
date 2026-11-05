@@ -1,4 +1,4 @@
-# Optional components (cnpg, redis, paradedb, kafka, loki, otel-collector, n9e, uptrace, bytebase, juicefs, web-ide, navigation)
+# Optional components (cnpg, redis, paradedb, kafka, loki, otel-collector, n9e, uptrace, bytebase, juicefs, navigation)
 # are registered in kubernetes/config.yaml but NOT enabled here.
 # Add them under projects[].components in your args file when needed.
 
@@ -9,10 +9,9 @@ projects:
     components:
       - name: 0-external-secrets-operator
         parameters:
-          namespace: external-secrets-operator
-          release-name: external-secrets-operator
+          namespace: external-secrets
+          release-name: external-secrets
           replica-count: 1
-          image-tag: "v2.0.1"
           min-helm-version: "v3.18.4"
           min-kubectl-version: "1.24"
       - name: 0-external-secrets
@@ -24,15 +23,11 @@ projects:
       - name: 0-sealed-secret
         parameters:
           namespace: sealed-secret
-          controller-manifest-url: https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.32.2/controller.yaml
       - name: 1-istio
         parameters:
           namespace: istio
-          istio-operator-version: 1.20.0
-          istio-version: 1.20.0
+          istio-version: 1.31.3
           istio-namespace: istio
-          istio-operator-namespace: istio-operator
-          istio-operator-service-account: istio-operator
       - name: 2-argocd
         parameters:
           namespace: argocd
@@ -45,7 +40,6 @@ projects:
                 name: GitHub
                 config:
                   clientID: XXXXXXX
-                  clientSecret: XXXXXXXX
                   orgs:
                     - name: example-org
           RBACPolicies:
@@ -80,10 +74,9 @@ projects:
     components:
       - name: 0-external-secrets-operator
         parameters:
-          namespace: external-secrets-operator
-          release-name: external-secrets-operator
+          namespace: external-secrets
+          release-name: external-secrets
           replica-count: 1
-          image-tag: "v2.0.1"
           min-helm-version: "v3.18.4"
           min-kubectl-version: "1.24"
       - name: 0-external-secrets
@@ -95,15 +88,11 @@ projects:
       - name: 0-sealed-secret
         parameters:
           namespace: sealed-secret
-          controller-manifest-url: https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.32.2/controller.yaml
       - name: 1-istio
         parameters:
           namespace: istio
-          istio-operator-version: 1.20.0
-          istio-version: 1.20.0
+          istio-version: 1.31.3
           istio-namespace: istio
-          istio-operator-namespace: istio-operator
-          istio-operator-service-account: istio-operator
       - name: 2-argocd
         parameters:
           namespace: argocd
@@ -116,7 +105,6 @@ projects:
                 name: GitHub
                 config:
                   clientID: XXXXXXX
-                  clientSecret: XXXXXXXX
                   orgs:
                     - name: example-org
           RBACPolicies:
@@ -158,15 +146,11 @@ projects:
       - name: 0-sealed-secret
         parameters:
           namespace: sealed-secret
-          controller-manifest-url: https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.32.2/controller.yaml
       - name: 1-istio
         parameters:
           namespace: istio
-          istio-operator-version: 1.20.0
-          istio-version: 1.20.0
+          istio-version: 1.31.3
           istio-namespace: istio
-          istio-operator-namespace: istio-operator
-          istio-operator-service-account: istio-operator
       - name: 2-argocd
         parameters:
           namespace: argocd
@@ -182,7 +166,7 @@ projects:
         parameters:
           namespace: grafana
           release-name: grafana
-          image-tag: "12.3.1"
+          image-tag: "12.4.13"
           root-url: "https://grafana.example.com"
           vm-datasource-url: "http://vmselect-victoriametrics-vmks.monitoring-vm.svc.cluster.local:8481/select/0/prometheus"
           loki-datasource-url: "http://loki-gateway.loki.svc.cluster.local"

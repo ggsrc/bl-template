@@ -15,7 +15,7 @@ parameters:
         type: string
         description: "Helm release name"
         required: false
-        default: "redis-shared"
+        default: "redis"
       valuesFiles:
         type: string
         description: "Space-separated values files. Use values.yaml values-override.yaml after rendering"
@@ -31,6 +31,11 @@ parameters:
         description: "Key in existingSecret for Redis password"
         required: false
         default: "REDIS_PASSWORD"
+      allowLuaScripting:
+        type: boolean
+        description: "Keep Lua scripting and functions enabled (EVAL, EVALSHA, EVAL_RO, EVALSHA_RO, FUNCTION, FCALL, FCALL_RO, SCRIPT). Disabled by default; enable only for clients that need Lua (for example BullMQ or redlock) and only with a Redis image patched for CVE-2025-49844"
+        required: false
+        default: false
       enableInternalLB:
         type: boolean
         description: "Deploy internal LoadBalancer Service for Redis (GCP internal LB)"

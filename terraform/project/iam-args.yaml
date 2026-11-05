@@ -101,6 +101,12 @@ parameters:
         required: false
         default: false
         example: false
+
+      secret_manager_accessor_secret_id_prefix:
+        type: string
+        description: "Optional, with use_secret_manager_accessor. Limit the accessor service account to Secret Manager secrets whose ID starts with this prefix. Empty (default) keeps read access to every secret in the project."
+        required: false
+        default: ""
       
       gke_cluster_dependency:
         type: string

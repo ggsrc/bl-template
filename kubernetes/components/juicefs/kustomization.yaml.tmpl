@@ -6,7 +6,7 @@ namespace: {{ default "juicefs" .namespace }}
 resources:
   - namespace.yaml
   - serviceaccount.yaml
-  - secret.yaml
+  - external-secret.yaml
   - storageclass.yaml
   - job-format.yaml
   - statefulset.yaml

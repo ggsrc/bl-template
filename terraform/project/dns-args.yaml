@@ -39,14 +39,13 @@ parameters:
               example: "public"
             dnssec_config:
               type: object
-              description: "DNSSEC configuration"
+              description: "DNSSEC configuration. If omitted, public zones get DNSSEC state \"on\" (publish the DS record at the registrar) and private zones get none"
               required: false
               properties:
                 state:
                   type: string
-                  description: "DNSSEC state"
+                  description: "DNSSEC state. Set \"off\" to disable DNSSEC on a public zone"
                   enum: ["on", "off", "transfer"]
-                  default: "off"
                 default_key_specs:
                   type: array
                   description: "Default key specs for DNSSEC"

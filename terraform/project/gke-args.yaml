@@ -152,6 +152,12 @@ parameters:
         required: false
         default: true
         example: true
+
+      smAccessorSecretIdPrefix:
+        type: string
+        description: "Optional. Limit the External Secrets service account (sa-sm-accessor) to Secret Manager secrets whose ID starts with this prefix. Empty (default) keeps read access to every secret in the project."
+        required: false
+        default: ""
       
       nodePools:
         type: array

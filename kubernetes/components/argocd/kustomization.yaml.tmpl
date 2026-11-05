@@ -5,6 +5,9 @@ resources:
 - namespace.yaml
 - app-namespace.yaml
 - github-ssh-sealed-secret.yaml
+{{- if or .DexConfig .DexGitHubEnabled }}
+- dex-github-sealed-secret.yaml
+{{- end }}
 - {{ if .ArgoCDManifestURL }}{{ .ArgoCDManifestURL }}{{ else }}https://raw.githubusercontent.com/argoproj/argo-cd/v2.11.7/manifests/install.yaml{{ end }}
 
 patchesStrategicMerge:

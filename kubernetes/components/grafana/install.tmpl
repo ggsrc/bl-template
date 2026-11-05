@@ -58,8 +58,23 @@ if [ ! -f "Chart.yaml" ]; then
   exit 1
 fi
 
+# Install exactly the chart pinned in Chart.lock: `helm dependency build` fails if Chart.lock does not
+# match Chart.yaml (it never re-resolves versions), and the downloaded archive must match this checksum.
+# When you bump the chart, run `helm dependency update` once, commit Chart.lock and update the checksum.
+CHART_ARCHIVE="charts/grafana-11.6.1.tgz"
+CHART_SHA256="ecea607545115a9f1d189870918613372a98fb47c447adcc612c9a5085d4ff79"
+
 echo "Installing Grafana: release=${RELEASE_NAME}, namespace=${NAMESPACE}"
-helm dependency update
+helm dependency build
+if command -v sha256sum &> /dev/null; then
+  ACTUAL_SHA256=$(sha256sum "${CHART_ARCHIVE}" | cut -d' ' -f1)
+else
+  ACTUAL_SHA256=$(shasum -a 256 "${CHART_ARCHIVE}" | cut -d' ' -f1)
+fi
+if [ "${ACTUAL_SHA256}" != "${CHART_SHA256}" ]; then
+  echo "Error: ${CHART_ARCHIVE} has sha256 ${ACTUAL_SHA256}, expected ${CHART_SHA256}"
+  exit 1
+fi
 kubectl create namespace "${NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f -
 HELM_VALUES=""
 for f in ${VALUES_FILES}; do

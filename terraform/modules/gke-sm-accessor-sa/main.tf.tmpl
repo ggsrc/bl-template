@@ -5,13 +5,33 @@ resource "google_service_account" "main" {
   display_name = "GKE Secret Manager Accessor"
 }
 
-resource "google_project_iam_binding" "main" {
+# Project number, needed only for the optional secret ID prefix condition:
+# Secret Manager resource names in IAM conditions use the project number,
+# not the project ID.
+data "google_project" "main" {
+  count      = var.secret_id_prefix == "" ? 0 : 1
+  project_id = var.project_id
+}
+
+# Additive grant: adds this service account to the role without removing
+# other principals that hold roles/secretmanager.secretAccessor on the project.
+resource "google_project_iam_member" "main" {
   project = var.project_id
   role    = "roles/secretmanager.secretAccessor"
+  member  = "serviceAccount:${google_service_account.main.email}"
 
-  members = [
-    "serviceAccount:${google_service_account.main.email}",
-  ]
+  # Optional: only secrets whose ID starts with var.secret_id_prefix.
+  # Secret versions are named projects/PROJECT_NUMBER/secrets/SECRET_ID/versions/VERSION,
+  # so the prefix match covers every version of a matching secret.
+  # Regional secrets (projects/PROJECT_NUMBER/locations/...) never match.
+  dynamic "condition" {
+    for_each = var.secret_id_prefix == "" ? [] : [var.secret_id_prefix]
+    content {
+      title       = "secret-id-prefix"
+      description = "Only secrets whose ID starts with ${condition.value}"
+      expression  = "resource.name.startsWith(\"projects/${data.google_project.main[0].number}/secrets/${condition.value}\")"
+    }
+  }
 }
 
 # gives the Kubernetes ServiceAccount access to impersonate the IAM service account

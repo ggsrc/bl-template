@@ -17,9 +17,6 @@ parameters:
       formatImageTag:
         type: string
         default: "ce-v1.3.1"
-      metaURL:
-        type: string
-        default: "postgres://user:pass@host:5432/juicefs?sslmode=disable"
       bucket:
         type: string
         default: "s3://example-bucket"
@@ -32,12 +29,23 @@ parameters:
       gcpServiceAccountEmail:
         type: string
         default: ""
-      gatewayAccessKey:
+      # Credentials come from GCP Secret Manager through the juicefs-secret ExternalSecret.
+      secretStoreName:
         type: string
-        default: "minioadmin"
-      gatewaySecretKey:
+        description: "ClusterSecretStore used by the juicefs-secret ExternalSecret"
+        default: "gcp-secret-store"
+      metaURLSecretName:
         type: string
-        default: "minioadmin"
+        description: "Secret Manager secret holding the JuiceFS metadata engine URL (for example postgres://USER:PASSWORD@HOST:5432/juicefs?sslmode=require)"
+        default: "juicefs-metaurl"
+      gatewayAccessKeySecretName:
+        type: string
+        description: "Secret Manager secret holding the S3 gateway access key"
+        default: "juicefs-gateway-access-key"
+      gatewaySecretKeySecretName:
+        type: string
+        description: "Secret Manager secret holding the S3 gateway secret key"
+        default: "juicefs-gateway-secret-key"
       storageClassName:
         type: string
         default: "juicefs-sc"

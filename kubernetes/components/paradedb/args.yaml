@@ -35,3 +35,13 @@ parameters:
       paradedbVersion:
         type: string
         default: "0.15.11"
+      enableSuperuserAccess:
+        type: boolean
+        description: "Allow network logins as the postgres superuser (CNPG generates the paradedb-superuser Secret). Default false"
+        required: false
+        default: false
+      requireTLS:
+        type: boolean
+        description: "Reject PostgreSQL TCP connections that do not use TLS (adds pg_hba rule 'hostnossl all all all reject'). Clients must use sslmode=require or stricter; libpq's default 'prefer' also works. Default false"
+        required: false
+        default: false

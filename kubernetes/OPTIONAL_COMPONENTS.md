@@ -38,7 +38,6 @@ Install: in the rendered output directory, run `bash ./install` (Helm components
 | uptrace | `uptrace/uptrace` | cnpg | APM (official Helm chart) |
 | n9e | `flashcatcloud/nightingale` | victoria-metrics-operator | Nightingale monitoring |
 | bytebase | `bytebase/bytebase` | — | Database change management |
-| web-ide | `codercom/code-server` | external-secrets, istio | Browser IDE (**bl-template only**) |
 | navigation | `b4bz/homer` | — | Internal navigation page (Homer, **bl-template only**) |
 
 ## Dependency order
@@ -46,7 +45,7 @@ Install: in the rendered output directory, run `bash ./install` (Helm components
 blcli orders components automatically using `dependencies` in `config.yaml`, for example:
 
 - `cnpg` ← paradedb, uptrace
-- `external-secrets` ← redis, juicefs, web-ide
+- `external-secrets` ← redis, juicefs
 - `victoria-metrics-operator` ← grafana, n9e
 
 ## Relationship to default.yaml

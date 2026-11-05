@@ -45,6 +45,16 @@ parameters:
         default: "gcp-secret-store"
         example: "gcp-secret-store"
       
+      # Namespaces allowed to use the ClusterSecretStore
+      # Any namespace labelled gcp-secret-store-access=allowed may use the store.
+      # Namespaces listed here may use it as well, without the label.
+      AllowedNamespaces:
+        type: array
+        description: "Namespaces allowed to use the ClusterSecretStore by name, in addition to namespaces labelled gcp-secret-store-access=allowed. The defaults are the namespaces where the grafana and victoria-metrics components create ExternalSecrets."
+        required: false
+        default: ["grafana", "monitoring-vm"]
+        example: ["grafana", "monitoring-vm"]
+
       # GKE Workload Identity configuration
       ClusterLocation:
         type: string

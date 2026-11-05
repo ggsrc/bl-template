@@ -17,6 +17,8 @@ spec:
         version: APP_VERSION
     spec:
       serviceAccountName: APP_NAME
+      # Apps that call the Kubernetes API set AutomountServiceAccountToken: true
+      automountServiceAccountToken: {{ if .AutomountServiceAccountToken }}true{{ else }}false{{ end }}
       {{- if .Tolerations }}
       tolerations:
         {{- range .Tolerations }}
@@ -37,6 +39,18 @@ spec:
       containers:
         - name: main
           image: APP_IMAGE
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+            {{- if .RunAsNonRoot }}
+            runAsNonRoot: true
+            {{- end }}
+            {{- if .RunAsUser }}
+            runAsUser: {{ .RunAsUser }}
+            {{- end }}
           {{- if .ContainerArgs }}
           args:
             {{- range .ContainerArgs }}

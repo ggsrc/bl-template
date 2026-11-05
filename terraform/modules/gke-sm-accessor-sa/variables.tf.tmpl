@@ -7,3 +7,13 @@ variable "service_account_name" {
   default     = "sa-sm-accessor"
 }
 
+variable "secret_id_prefix" {
+  description = "If set, the service account can read only Secret Manager secrets whose ID starts with this prefix. Empty (default) keeps access to every secret in the project."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9_-]*$", var.secret_id_prefix))
+    error_message = "secret_id_prefix may contain only letters, digits, underscores and hyphens."
+  }
+}
