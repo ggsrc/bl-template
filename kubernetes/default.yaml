@@ -45,7 +45,6 @@ projects:
                 name: GitHub
                 config:
                   clientID: XXXXXXX
-                  clientSecret: XXXXXXXX
                   orgs:
                     - name: example-org
           RBACPolicies:
@@ -116,7 +115,6 @@ projects:
                 name: GitHub
                 config:
                   clientID: XXXXXXX
-                  clientSecret: XXXXXXXX
                   orgs:
                     - name: example-org
           RBACPolicies:

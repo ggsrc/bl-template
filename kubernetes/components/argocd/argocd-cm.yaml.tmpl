@@ -33,6 +33,7 @@ data:
   url: {{ .ArgoCDURL }}
   {{- end }}
 
+  {{- /* The client secret is a $<secret>:<key> reference, resolved by ArgoCD from a Secret labelled app.kubernetes.io/part-of=argocd (see gen_dex_sealed_secret.sh). */}}
   {{- if .DexConfig }}
   dex.config: |
     connectors:
@@ -43,7 +44,7 @@ data:
         config:
           {{- if eq .type "github" }}
           clientID: {{ .config.clientID }}
-          clientSecret: {{ .config.clientSecret }}
+          clientSecret: {{ if .config.clientSecretRef }}{{ .config.clientSecretRef }}{{ else }}${{ if $.DexClientSecretName }}{{ $.DexClientSecretName }}{{ else }}argocd-dex-github{{ end }}:{{ if $.DexClientSecretKey }}{{ $.DexClientSecretKey }}{{ else }}clientSecret{{ end }}{{ end }}
           {{- if .config.orgs }}
           orgs:
             {{- range .config.orgs }}
@@ -60,7 +61,7 @@ data:
         name: GitHub
         config:
           clientID: {{ .DexGitHubClientID }}
-          clientSecret: {{ .DexGitHubClientSecret }}
+          clientSecret: ${{ if .DexClientSecretName }}{{ .DexClientSecretName }}{{ else }}argocd-dex-github{{ end }}:{{ if .DexClientSecretKey }}{{ .DexClientSecretKey }}{{ else }}clientSecret{{ end }}
           {{- if .DexGitHubOrgs }}
           orgs:
             {{- range .DexGitHubOrgs }}

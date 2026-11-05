@@ -14,6 +14,8 @@ NC='\033[0m' # No Color
 NAMESPACE="${ARGOCD_NAMESPACE:-argocd}"
 SSH_SECRET_FILE="github-ssh-sealed-secret.yaml"
 GEN_SSH_SCRIPT="${ARGOCD_GEN_SEALED_SECRET_SCRIPT:-gen_ssh_sealed_secrets.sh}"
+DEX_SECRET_FILE="dex-github-sealed-secret.yaml"
+GEN_DEX_SCRIPT="${ARGOCD_GEN_DEX_SECRET_SCRIPT:-gen_dex_sealed_secret.sh}"
 KUBERNETES_INIT_SCRIPT="${ARGOCD_KUBERNETES_INIT_SCRIPT:-../../init.sh}"
 # The deploy key lives outside the kubernetes repository: <workspace>/keys by default
 # (this directory is <workspace>/kubernetes/<project>/argocd). Earlier versions used
@@ -126,6 +128,28 @@ metadata:
   namespace: argocd
 type: Opaque
 PLACEHOLDER
+fi
+
+# Dex GitHub client secret: argocd-cm only references it, the value comes from a sealed Secret.
+# Set DEX_GITHUB_CLIENT_SECRET for non-interactive runs.
+if grep -qF -- "${DEX_SECRET_FILE}" kustomization.yaml 2>/dev/null \
+    && { [ ! -f "${DEX_SECRET_FILE}" ] || grep -qF "dex-github-placeholder" "${DEX_SECRET_FILE}"; }; then
+    if [ -f "${GEN_DEX_SCRIPT}" ] && { [ -n "${DEX_GITHUB_CLIENT_SECRET:-}" ] || [ -t 0 ]; }; then
+        info "Sealing the Dex GitHub client secret via ${GEN_DEX_SCRIPT}"
+        bash "./${GEN_DEX_SCRIPT}"
+    else
+        warn "Dex client secret not sealed: GitHub SSO will not work until you run ./${GEN_DEX_SCRIPT} and re-run this script"
+        info "Creating placeholder ${DEX_SECRET_FILE} for kustomize build"
+        cat > "${DEX_SECRET_FILE}" << 'PLACEHOLDER'
+# Placeholder - replace with output of ./gen_dex_sealed_secret.sh
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dex-github-placeholder
+  namespace: argocd
+type: Opaque
+PLACEHOLDER
+    fi
 fi
 
 # Build kustomization (kept in memory, no temporary file)

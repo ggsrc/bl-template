@@ -168,7 +168,7 @@ parameters:
       # Dex OIDC configuration
       DexConfig:
         type: object
-        description: "Complete Dex configuration with connectors"
+        description: "Complete Dex configuration with connectors. Do not put the client secret here: argocd-cm references it as $<DexClientSecretName>:<DexClientSecretKey> (or the connector's clientSecretRef), and gen_dex_sealed_secret.sh seals it"
         required: false
         default: {}
         example:
@@ -178,7 +178,6 @@ parameters:
               name: "GitHub"
               config:
                 clientID: "Ov23xxxxxxxxxxxxxxx"
-                clientSecret: "efexxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
                 orgs:
                   - name: "your-org"
       
@@ -196,12 +195,19 @@ parameters:
         default: ""
         example: "Ov23xxxxxxxxxxxxxxx"
       
-      DexGitHubClientSecret:
+      DexClientSecretName:
         type: string
-        description: "GitHub OAuth Client Secret for Dex"
+        description: "Secret in the ArgoCD namespace that holds the GitHub OAuth client secret for Dex (labelled app.kubernetes.io/part-of=argocd; created by gen_dex_sealed_secret.sh or an ExternalSecret)"
         required: false
-        default: ""
-        example: "efexxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        default: "argocd-dex-github"
+        example: "argocd-dex-github"
+
+      DexClientSecretKey:
+        type: string
+        description: "Key of the GitHub OAuth client secret inside DexClientSecretName"
+        required: false
+        default: "clientSecret"
+        example: "clientSecret"
       
       DexGitHubOrgs:
         type: list[string]
