@@ -124,28 +124,6 @@ components:
     installType: custom
     dependencies:
       - external-secrets
-  - name: web-ide
-    path:
-    - kubernetes/components/web-ide/Chart.yaml
-    - kubernetes/components/web-ide/values.yaml
-    - kubernetes/components/web-ide/values-override.yaml.tmpl
-    - kubernetes/components/web-ide/templates/_helpers.tpl
-    - kubernetes/components/web-ide/templates/deployment.yaml
-    - kubernetes/components/web-ide/templates/ingress.yaml
-    - kubernetes/components/web-ide/templates/oauth2-proxy-deployment.yaml
-    - kubernetes/components/web-ide/templates/oauth2-proxy-service.yaml
-    - kubernetes/components/web-ide/templates/pvc.yaml
-    - kubernetes/components/web-ide/templates/secrets.yaml
-    - kubernetes/components/web-ide/templates/service.yaml
-    - kubernetes/components/web-ide/templates/serviceaccount.yaml
-    - kubernetes/components/web-ide/install.tmpl
-    args:
-    - kubernetes/components/web-ide/args.yaml
-    install: bash ./install
-    installType: custom
-    dependencies:
-      - external-secrets
-      - istio
   - name: paradedb
     path:
     - kubernetes/components/paradedb/Chart.yaml

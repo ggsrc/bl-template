@@ -177,7 +177,6 @@ Defines all Kubernetes platform components. **Core stack** entries come from `de
 | uptrace | uptrace/uptrace | APM |
 | n9e | flashcatcloud/nightingale | Monitoring / alerting |
 | bytebase | bytebase/bytebase | DB schema management |
-| web-ide | codercom/code-server | Browser IDE (bl-template only) |
 | navigation | b4bz/homer | Internal links dashboard (bl-template only) |
 
 #### gitops/config.yaml
