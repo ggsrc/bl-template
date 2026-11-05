@@ -24,6 +24,13 @@ resource "google_dns_managed_zone" "{{ .name }}" {
     }
     {{ end }}
   }
+  {{ else if eq (printf "%v" .visibility) "public" }}
+  # DNSSEC signing, on by default for public zones. Resolvers validate it only
+  # after the DS record from this zone is published at the domain registrar.
+  # Set dnssec_config.state to "off" to opt out (remove the DS record first).
+  dnssec_config {
+    state = "on"
+  }
   {{ end }}
 
   visibility = "{{ .visibility }}"

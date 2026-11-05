@@ -76,6 +76,10 @@ module "sm_accessor" {
   source = "../modules/gke-sm-accessor-sa"
 
   project_id = {{ if .project_id }}"{{ .project_id }}"{{ else }}var.project_id{{ end }}
+{{- if .smAccessorSecretIdPrefix }}
+  # Read access only to secrets whose ID starts with this prefix
+  secret_id_prefix = "{{ .smAccessorSecretIdPrefix }}"
+{{- end }}
 
   # Must wait for GKE cluster to create the Workload Identity Pool
   depends_on = [module.gke]

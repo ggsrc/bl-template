@@ -20,7 +20,10 @@ resource "google_storage_bucket" "terraform-statestore" {
   location      = "US"
   force_destroy = false
 
+  # IAM-only access (no object ACLs), and no public access even if a public
+  # IAM grant (allUsers / allAuthenticatedUsers) is added by mistake.
   uniform_bucket_level_access = true
+  public_access_prevention    = "enforced"
 
   versioning {
     enabled = true

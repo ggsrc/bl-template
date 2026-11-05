@@ -1,5 +1,18 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
+# Sealed Secrets controller v0.40.0, vendored so that installs do not fetch a
+# mutable release asset at install time.
+#   Source: https://github.com/bitnami/sealed-secrets/releases/download/v0.40.0/controller.yaml
+#   sha256: ac8aabccdd9110430d117501705818115b2ab0993700a9c118d4d42cf4015a17
+# To upgrade, download the new release's controller.yaml, check its sha256
+# against the release asset digest, replace controller.yaml, and update this
+# comment and the image digest below.
 resources:
-    - {{ .ControllerManifestURL }}
+  - controller.yaml
+
+# Pin the controller image (multi-arch index of docker.io/bitnami/sealed-secrets-controller:0.40.0).
+images:
+  - name: docker.io/bitnami/sealed-secrets-controller
+    newTag: 0.40.0
+    digest: sha256:b1ff382e9300dc9e74991f3177b18cafc06ce43b5c21349c86adbdd1d1c177d3

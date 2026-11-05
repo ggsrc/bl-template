@@ -1,6 +1,20 @@
 paradedb:
   cluster:
     instances: {{ default 1 .instances }}
+    # No network login as the postgres superuser. CNPG then sets the postgres
+    # password to NULL and deletes the generated paradedb-superuser Secret.
+    # Applications use the paradedb-app Secret (database owner) or roles
+    # declared under cluster.roles; administrators use "kubectl cnpg psql".
+    # Set enableSuperuserAccess: true only if a client must log in as postgres.
+    enableSuperuserAccess: {{ if or .enableSuperuserAccess .EnableSuperuserAccess }}true{{ else }}false{{ end }}
+{{- if or .requireTLS .RequireTLS }}
+    postgresql:
+      # Reject TCP connections that do not use TLS. CNPG inserts user rules
+      # before its default "host all all all scram-sha-256" rule; replication
+      # and pooler connections use the fixed hostssl rules and are not affected.
+      pg_hba:
+        - hostnossl all all all reject
+{{- end }}
     storage:
       size: {{ default `20Gi` .storageSize }}
   version:

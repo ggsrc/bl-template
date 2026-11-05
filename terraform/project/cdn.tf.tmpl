@@ -148,10 +148,21 @@ resource "google_compute_managed_ssl_certificate" "{{ .name }}_cdn_certificate" 
 }
 {{ end }}
 
+# TLS policy for the HTTPS proxy. Without a policy the load balancer uses the
+# COMPATIBLE profile with TLS 1.0 as the minimum version. MODERN with TLS 1.2
+# drops TLS 1.0/1.1 and RSA key exchange but keeps the ECDHE suites that
+# current browsers and TLS 1.2 clients use; RESTRICTED also drops the CBC suites.
+resource "google_compute_ssl_policy" "{{ .name }}_cdn_ssl_policy" {
+  name            = "{{ if .ssl_policy_name }}{{ .ssl_policy_name }}{{ else }}{{ .https_proxy_name }}-ssl-policy{{ end }}"
+  profile         = "{{ if .ssl_policy_profile }}{{ .ssl_policy_profile }}{{ else }}MODERN{{ end }}"
+  min_tls_version = "{{ if .ssl_min_tls_version }}{{ .ssl_min_tls_version }}{{ else }}TLS_1_2{{ end }}"
+}
+
 resource "google_compute_target_https_proxy" "{{ .name }}_cdn_https_proxy" {
   name             = "{{ .https_proxy_name }}"
   url_map          = google_compute_url_map.{{ .name }}_cdn_url_map.id
   ssl_certificates = [{{ if .use_managed_certificate }}google_compute_managed_ssl_certificate.{{ .name }}_cdn_certificate.id{{ else }}{{ range $i, $cert := .ssl_certificates }}{{ if $i }}, {{ end }}{{ $cert }}{{ end }}{{ end }}]
+  ssl_policy       = google_compute_ssl_policy.{{ .name }}_cdn_ssl_policy.id
 }
 
 # HTTPS Forwarding Rule

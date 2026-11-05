@@ -243,6 +243,22 @@ parameters:
               description: "Name of the HTTPS proxy"
               required: false
               default: "cdn-https-proxy"
+            ssl_policy_name:
+              type: string
+              description: "Name of the SSL policy attached to the HTTPS proxy (default: <https_proxy_name>-ssl-policy)"
+              required: false
+            ssl_policy_profile:
+              type: string
+              description: "SSL policy profile for the HTTPS proxy. MODERN (default) or RESTRICTED; COMPATIBLE only for clients that cannot do modern TLS"
+              required: false
+              enum: ["MODERN", "RESTRICTED", "COMPATIBLE"]
+              default: "MODERN"
+            ssl_min_tls_version:
+              type: string
+              description: "Minimum TLS version accepted by the HTTPS proxy (TLS_1_3 requires the RESTRICTED profile)"
+              required: false
+              enum: ["TLS_1_0", "TLS_1_1", "TLS_1_2", "TLS_1_3"]
+              default: "TLS_1_2"
             ip_address_name:
               type: string
               description: "Name of the global IP address"
