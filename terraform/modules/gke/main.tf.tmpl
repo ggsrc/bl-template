@@ -50,6 +50,37 @@ resource "google_container_cluster" "main" {
   network    = var.network
   subnetwork = var.subnetwork
 
+  # Dataplane V2 enforces NetworkPolicy natively; the legacy datapath needs Calico.
+  datapath_provider = var.datapath_provider
+
+  dynamic "network_policy" {
+    for_each = var.network_policy_enabled && var.datapath_provider != "ADVANCED_DATAPATH" ? [1] : []
+
+    content {
+      enabled  = true
+      provider = "CALICO"
+    }
+  }
+
+  # Only rendered when an allowlist is configured; without it the control plane is open to any IP.
+  dynamic "master_authorized_networks_config" {
+    for_each = length(var.master_authorized_networks) > 0 ? [1] : []
+
+    content {
+      # Node IPs stay allowed automatically; this only drops Google's public CIDRs.
+      gcp_public_cidrs_access_enabled = false
+
+      dynamic "cidr_blocks" {
+        for_each = var.master_authorized_networks
+
+        content {
+          cidr_block   = cidr_blocks.value.cidr_block
+          display_name = cidr_blocks.value.display_name
+        }
+      }
+    }
+  }
+
   gateway_api_config {
     # Enable gateway API so that we can create LB with Gateway resource annotations.
     channel = "CHANNEL_STANDARD"
@@ -132,6 +163,15 @@ resource "google_container_node_pool" "main" {
     ]
     metadata = {
       disable-legacy-endpoints = "true"
+    }
+
+    # Secure Boot is off in the shielded-instance defaults; changing it replaces the node pool.
+    dynamic "shielded_instance_config" {
+      for_each = var.enable_secure_boot ? [1] : []
+
+      content {
+        enable_secure_boot = true
+      }
     }
   }
 

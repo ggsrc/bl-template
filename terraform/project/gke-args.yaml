@@ -50,7 +50,7 @@ parameters:
       
       masterIpv4CidrBlock:
         type: string
-        description: "CIDR block for the GKE master nodes"
+        description: "Reserved for the private control-plane CIDR. NOT applied today: the module does not create a private_cluster_config, and wiring it would force cluster recreation. Leave it unset unless you add a private control-plane block to the gke module."
         required: false
         default: "172.16.0.0/28"
         example: "172.16.0.0/28"
@@ -149,6 +149,48 @@ parameters:
       deletionProtection:
         type: boolean
         description: "Enable deletion protection for the cluster"
+        required: false
+        default: true
+        example: true
+
+      datapathProvider:
+        type: string
+        description: "GKE datapath provider. ADVANCED_DATAPATH (Dataplane V2) enforces NetworkPolicy natively and is the default for new clusters; LEGACY_DATAPATH keeps the old datapath and does not enforce NetworkPolicy unless networkPolicyEnabled is true. Changing this recreates the cluster (ForceNew): existing legacy clusters must set LEGACY_DATAPATH."
+        required: false
+        default: "ADVANCED_DATAPATH"
+        enum: ["ADVANCED_DATAPATH", "LEGACY_DATAPATH"]
+        example: "ADVANCED_DATAPATH"
+
+      networkPolicyEnabled:
+        type: boolean
+        description: "Enable Calico NetworkPolicy enforcement. Only applies with datapathProvider LEGACY_DATAPATH; Dataplane V2 rejects it. Enabling it on an existing legacy cluster updates the cluster in place, but GKE enforces network policy only on node pools recreated afterwards."
+        required: false
+        default: false
+        example: false
+
+      masterAuthorizedNetworks:
+        type: array
+        description: "CIDR ranges allowed to reach the public control-plane endpoint. Empty (default) renders no master_authorized_networks_config block, so the control plane stays reachable from any IP (behavior unchanged). When non-empty, the module renders the allowlist and disables Google public CIDR access; node IPs are always allowed. In-place change."
+        required: false
+        default: []
+        items:
+          type: object
+          properties:
+            cidrBlock:
+              type: string
+              description: "CIDR range allowed to reach the control plane, e.g. 203.0.113.0/24"
+              required: true
+            displayName:
+              type: string
+              description: "Human-readable label; defaults to the CIDR itself"
+              required: false
+        example:
+          - cidrBlock: "203.0.113.0/24"
+            displayName: "office"
+
+      enableSecureBoot:
+        type: boolean
+        description: "Enable Secure Boot on the node VMs. Default true. Changing this replaces the node pools (ForceNew). Set false only to keep existing nodes unchanged."
         required: false
         default: true
         example: true

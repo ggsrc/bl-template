@@ -10,6 +10,18 @@ module "gke" {
   cluster_ipv4_cidr_block  = {{ if .clusterIpv4CidrBlock }}"{{ .clusterIpv4CidrBlock }}"{{ else }}"10.0.0.0/14"{{ end }}
   services_ipv4_cidr_block = {{ if .servicesIpv4CidrBlock }}"{{ .servicesIpv4CidrBlock }}"{{ else }}"10.4.0.0/19"{{ end }}
 
+  # NetworkPolicy enforcement: Dataplane V2 (ADVANCED_DATAPATH) enforces it natively;
+  # the legacy datapath only enforces it with Calico (network_policy_enabled).
+  datapath_provider      = {{ .datapathProvider | default "ADVANCED_DATAPATH" | quote }}
+  network_policy_enabled = {{ .networkPolicyEnabled | default false }}
+  {{ if .masterAuthorizedNetworks }}# Restrict the public control-plane endpoint; the module also disables Google public CIDRs.
+  master_authorized_networks = [
+  {{- range .masterAuthorizedNetworks }}
+    { cidr_block = {{ .cidrBlock | quote }}, display_name = {{ .displayName | default .cidrBlock | quote }} },
+  {{- end }}
+  ]
+  {{ end }}
+
   node_locations     = {{ if .nodeLocations }}[{{ range $i, $v := .nodeLocations }}{{ if $i }}, {{ end }}"{{ $v }}"{{ end }}]{{ else }}["us-west1-a"]{{ end }}
   min_node_count     = {{ if .minNodeCount }}{{ .minNodeCount }}{{ else }}1{{ end }}
   max_node_count     = {{ if .maxNodeCount }}{{ .maxNodeCount }}{{ else }}50{{ end }}
@@ -65,6 +77,7 @@ module "{{ .name }}_node_pool" {
   machine_type = "{{ .machineType }}"
   min_nodes    = {{ .minNodes }}
   max_nodes     = {{ .maxNodes }}
+  enable_secure_boot = {{ $.enableSecureBoot | default true }}
   {{ if .spot }}spot         = true
   {{ end }}
 }

@@ -94,3 +94,8 @@ variable "preemptible" {
   default     = false
 }
 
+variable "enable_secure_boot" {
+  description = "Enable Secure Boot on the node VMs. Changing this replaces the node pool."
+  type        = bool
+  default     = true
+}
