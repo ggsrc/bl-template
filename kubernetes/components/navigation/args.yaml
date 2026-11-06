@@ -22,7 +22,7 @@ parameters:
         default: "https://grafana.example.com"
       argocdURL:
         type: string
-        default: "https://argocd.example.com"
+        default: "https://internal.example.com/argocd"
       replicas:
         type: integer
         default: 1

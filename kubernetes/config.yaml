@@ -45,8 +45,10 @@ components:
     - kubernetes/components/argocd/argocd-cm.yaml.tmpl
     - kubernetes/components/argocd/argocd-rbac-cm.yaml.tmpl
     - kubernetes/components/argocd/argocd-cmd-params-cm.yaml.tmpl
-    - kubernetes/components/argocd/install
+    - kubernetes/components/argocd/appproject.yaml.tmpl
+    - kubernetes/components/argocd/install.tmpl
     - kubernetes/components/argocd/gen_ssh_sealed_secrets.sh.tmpl
+    - kubernetes/components/argocd/gen_github_app_sealed_secret.sh.tmpl
     - kubernetes/components/argocd/gen_dex_sealed_secret.sh.tmpl
     args:
     - kubernetes/components/argocd/args.yaml

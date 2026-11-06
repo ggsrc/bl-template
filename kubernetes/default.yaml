@@ -31,8 +31,12 @@ projects:
       - name: 2-argocd
         parameters:
           namespace: argocd
-          argocd-url: https://app.example.com/argocd
-          argocd-manifest-url: https://raw.githubusercontent.com/argoproj/argo-cd/v2.11.7/manifests/install.yaml
+          argocd-url: https://internal.example.com/argocd
+          argocd-version: v3.5.6
+          GitAuthMethod: github-app
+          GitHubAppID: ""  # required: install refuses to run without it
+          GitHubAppInstallationID: ""  # required
+          GitHubAppCredsURL: https://github.com/example-org
           dex-config:
             connectors:
               - type: github
@@ -43,13 +47,15 @@ projects:
                   orgs:
                     - name: example-org
           RBACPolicies:
-            - policy: "p, role:org-admin, applications, *, default/*, allow"
+            - policy: "p, role:org-admin, applications, *, apps/*, allow"
+            - policy: "p, role:org-admin, logs, get, apps/*, allow"
+            - policy: "p, role:org-admin, projects, get, apps, allow"
             - policy: "p, role:org-admin, clusters, get, *, allow"
             - policy: "p, role:org-admin, repositories, get, *, allow"
-            - policy: "p, role:org-admin, repositories, create, *, allow"
-            - policy: "p, role:org-admin, repositories, update, *, allow"
-            - policy: "p, role:org-admin, repositories, delete, *, allow"
-            - policy: "p, role:org-backend, applications, *, default/*, allow"
+            - policy: "p, role:org-backend, applications, get, apps/*, allow"
+            - policy: "p, role:org-backend, applications, sync, apps/*, allow"
+            - policy: "p, role:org-backend, applications, action/*, apps/*, allow"
+            - policy: "p, role:org-backend, logs, get, apps/*, allow"
           RBACRoleBindings:
             - group: "example-org:Infra"
               role: "role:org-admin"
@@ -96,8 +102,12 @@ projects:
       - name: 2-argocd
         parameters:
           namespace: argocd
-          argocd-url: https://app.example.com/argocd
-          argocd-manifest-url: https://raw.githubusercontent.com/argoproj/argo-cd/v2.11.7/manifests/install.yaml
+          argocd-url: https://internal.example.com/argocd
+          argocd-version: v3.5.6
+          GitAuthMethod: github-app
+          GitHubAppID: ""  # required: install refuses to run without it
+          GitHubAppInstallationID: ""  # required
+          GitHubAppCredsURL: https://github.com/example-org
           dex-config:
             connectors:
               - type: github
@@ -108,13 +118,15 @@ projects:
                   orgs:
                     - name: example-org
           RBACPolicies:
-            - policy: "p, role:org-admin, applications, *, default/*, allow"
+            - policy: "p, role:org-admin, applications, *, apps/*, allow"
+            - policy: "p, role:org-admin, logs, get, apps/*, allow"
+            - policy: "p, role:org-admin, projects, get, apps, allow"
             - policy: "p, role:org-admin, clusters, get, *, allow"
             - policy: "p, role:org-admin, repositories, get, *, allow"
-            - policy: "p, role:org-admin, repositories, create, *, allow"
-            - policy: "p, role:org-admin, repositories, update, *, allow"
-            - policy: "p, role:org-admin, repositories, delete, *, allow"
-            - policy: "p, role:org-backend, applications, *, default/*, allow"
+            - policy: "p, role:org-backend, applications, get, apps/*, allow"
+            - policy: "p, role:org-backend, applications, sync, apps/*, allow"
+            - policy: "p, role:org-backend, applications, action/*, apps/*, allow"
+            - policy: "p, role:org-backend, logs, get, apps/*, allow"
           RBACRoleBindings:
             - group: "example-org:Infra"
               role: "role:org-admin"
@@ -154,8 +166,36 @@ projects:
       - name: 2-argocd
         parameters:
           namespace: argocd
-          argocd-url: https://app.example.com/argocd
-          argocd-manifest-url: https://raw.githubusercontent.com/argoproj/argo-cd/v2.11.7/manifests/install.yaml
+          argocd-url: https://internal.example.com/argocd
+          argocd-version: v3.5.6
+          GitAuthMethod: github-app
+          GitHubAppID: ""  # required: install refuses to run without it
+          GitHubAppInstallationID: ""  # required
+          GitHubAppCredsURL: https://github.com/example-org
+          dex-config:
+            connectors:
+              - type: github
+                id: github
+                name: GitHub
+                config:
+                  clientID: XXXXXXX
+                  orgs:
+                    - name: example-org
+          RBACPolicies:
+            - policy: "p, role:org-admin, applications, *, apps/*, allow"
+            - policy: "p, role:org-admin, logs, get, apps/*, allow"
+            - policy: "p, role:org-admin, projects, get, apps, allow"
+            - policy: "p, role:org-admin, clusters, get, *, allow"
+            - policy: "p, role:org-admin, repositories, get, *, allow"
+            - policy: "p, role:org-backend, applications, get, apps/*, allow"
+            - policy: "p, role:org-backend, applications, sync, apps/*, allow"
+            - policy: "p, role:org-backend, applications, action/*, apps/*, allow"
+            - policy: "p, role:org-backend, logs, get, apps/*, allow"
+          RBACRoleBindings:
+            - group: "example-org:Infra"
+              role: "role:org-admin"
+            - group: "example-org:backend"
+              role: "role:org-backend"
       - name: 3-victoria-metrics-operator
         parameters:
           namespace: monitoring-vm

@@ -6,34 +6,18 @@ metadata:
     app.kubernetes.io/name: argocd-cm
     app.kubernetes.io/part-of: argocd
 data:
-  repositories: |
-    {{- if .GitRepositories }}
-    {{- range .GitRepositories }}
-    - url: {{ .url }}
-      {{- if .sshPrivateKeySecret }}
-      sshPrivateKeySecret:
-        name: {{ .sshPrivateKeySecret.name }}
-        key: {{ .sshPrivateKeySecret.key }}
-      {{- end }}
-      {{- if .type }}
-      type: {{ .type }}
-      {{- end }}
-      {{- if .name }}
-      name: {{ .name }}
-      {{- end }}
-    {{- end }}
-    {{- else }}
-    - url: {{ if .GitRepositoryURL }}{{ .GitRepositoryURL }}{{ else }}git@github.com:example-org/gitops.git{{ end }}
-      sshPrivateKeySecret:
-        name: {{ if .GitSSHSecretName }}{{ .GitSSHSecretName }}{{ else }}argocd-github-ssh-secret{{ end }}
-        key: {{ if .GitSSHSecretKey }}{{ .GitSSHSecretKey }}{{ else }}sshPrivateKey{{ end }}
-    {{- end }}
+  # Repositories are not configured here: ArgoCD 3.x only reads them from Secrets labelled
+  # argocd.argoproj.io/secret-type=repository or repo-creds (sealed by gen_github_app_sealed_secret.sh
+  # or gen_ssh_sealed_secrets.sh, depending on GitAuthMethod).
+
+  # The local admin account is off; users sign in through Dex SSO.
+  admin.enabled: "{{ if .AdminEnabled }}true{{ else }}false{{ end }}"
 
   {{- if .ArgoCDURL }}
   url: {{ .ArgoCDURL }}
   {{- end }}
 
-  {{- /* The client secret is a $<secret>:<key> reference, resolved by ArgoCD from a Secret labelled app.kubernetes.io/part-of=argocd (see gen_dex_sealed_secret.sh). */}}
+  {{- /* The client secret is a $<secret>:<key> reference, resolved by ArgoCD from a Secret labelled app.kubernetes.io/part-of=argocd (see gen_dex_sealed_secret.sh). Without orgs any GitHub account can log in: the install script refuses to apply that. */}}
   {{- if .DexConfig }}
   dex.config: |
     connectors:
