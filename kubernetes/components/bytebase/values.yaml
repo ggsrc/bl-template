@@ -3,35 +3,15 @@
 # Declare variables to be passed into your templates.
 
 bytebase:
-  # version: 3.0.0
   version: "3.24.0"
   registryMirrorHost: ""
   option:
     port: 8080
     data: "/var/opt/bytebase"
     external-url: "https://bytebase.example.com"
-    # Samples are unavailable with external metadata PostgreSQL in 3.24.0.
-    # The old --disable-sample flag was removed upstream.
-    disable-sample: true
     externalPg:
-      enable: false
-      url: ""
-      # If users need to read the pgURL from a secret, they can specify the secret name and key here.
-      # Bytebase will ignore the bytebase.option.externalPg.url if this is specified.
       existingPgURLSecret: ""
-      existingPgURLSecretKey: ""
-      pgHost: ""
-      pgPort: ""
-      pgUsername: ""
-      pgPassword: ""
-      pgDatabase: "database"
-      existingPgPasswordSecret: ""
-      existingPgPasswordSecretKey: ""
-      # escapePassword controls whether to escape the password in the connection string,
-      # this is useful when the password contains special characters and it is read from a secret.
-      # It's only be applied in pgPassword or existingPgPasswordSecret.
-      # NOTE: This is an experimental feature and it may be removed in the future without any notice!!!
-      escapePassword: false
+      existingPgURLSecretKey: uri
   persistence:
     enabled: true
     existingClaim: ""

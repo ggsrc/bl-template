@@ -1,6 +1,6 @@
 dependencies:
 - name: nightingale
   repository: file://vendor/nightingale
-  version: 9.1.1-blcli.1
-digest: sha256:53f2703fe6ba00271813cf5300486f3caa9978a9a640ff33ca7e92217b22a01f
-generated: "2026-11-05T17:06:04.225277+08:00"
+  version: 9.1.1-blcli.2
+digest: sha256:d320e728268c421b3a220ce0e3c5336e3d95034446b94126c473dcb859a6c574
+generated: "2026-11-06T11:54:38.222956+08:00"

@@ -3,6 +3,25 @@
 Default changes that affect existing installations, why they were made, and what an existing install must do.
 Re-render with `blcli init` and review the diff before applying anything.
 
+## Administration-services review follow-up
+
+- n9e now allows TCP 8481 to `monitoring-vm` as well as the 8429 writer. The
+  vmselect datasource must still be configured in n9e; a write endpoint cannot
+  answer alert PromQL queries. Verify an actual query and alert trigger.
+- Migration approval is required only for a deployed pre-2.0.0 **wrapper chart**.
+  Bytebase wrapper moves from 1.1.1 to 2.0.0; the earlier hardened 1.1.1 still
+  needs one reviewed acknowledgment. New installs, routine 2.x upgrades and failed
+  2.x retries do not. Unknown/unreadable Helm metadata fails closed. Python 3 is
+  now an installer requirement. Retained bootstrap Secret guards are unchanged.
+- nginx and ClickHouse use patch versions plus multi-platform manifest digests;
+  nginx also drops capabilities, prevents privilege escalation and mounts only
+  `/tmp` writable on a read-only root filesystem. Upstream copyright headers in
+  rewritten Nightingale DB templates are restored.
+- Retired Bytebase args/values (`externalPgEnable`, split PG connection/password
+  fields, and obsolete sample/metric CLI options) are removed. Direct legacy
+  values now fail explicitly, including `enable: false`; delete those keys and
+  use a URI Secret with `metadataDatabase.enabled` instead.
+
 ## n9e, Uptrace and Bytebase (maintenance window required)
 
 - **No public entry by default.** n9e uses ClusterIP, Uptrace Ingress is off,
@@ -33,7 +52,7 @@ Re-render with `blcli init` and review the diff before applying anything.
   samples separately. Signup restriction needs licensed application configuration
   or a restricted identity gateway; **it is not automatically disabled by Helm**.
   See `kubernetes/components/bytebase/SECURITY.md` before upgrading old data.
-- **Existing releases are gated.** Installer upgrades require
+- **Existing releases are gated.** Installer upgrades from pre-2.0.0 wrapper charts require
   `BLCLI_SECURITY_MIGRATION_APPROVED=1` after backup/restore and migration rehearsal.
   n9e/Uptrace also refuse upgrades without a migrated `<release>-bootstrap` Secret.
   Editing seeds or that Secret does not rotate passwords already stored in a DB.

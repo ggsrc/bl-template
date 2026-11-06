@@ -55,10 +55,21 @@ DNS egress rule. Verify NetworkPolicy enforcement in the target CNI.
    release-namespace annotations. A missing bootstrap Secret blocks upgrades.
 5. Render into a fresh output directory and review the diff, including the correct
    two-level image override, removal of old Ingress/collectors, and policies. Run the
-   installer with `BLCLI_SECURITY_MIGRATION_APPROVED=1` only after the migration rehearsal.
+   installer with `BLCLI_SECURITY_MIGRATION_APPROVED=1` for pre-2.0.0 wrapper
+   releases only, after the migration rehearsal. Routine 2.x upgrades need no
+   acknowledgment; Python 3 is required to parse the Helm release metadata.
 6. Confirm old credentials fail, new login works, trace/log ingest and queries work,
    and operator reconciliation is healthy. Verify there is no external load balancer.
 
 Use Helm against the target cluster for upgrades; offline `helm template` cannot
 look up retained credentials and produces fresh preview values. Do not apply those
 previews or rotate only the Secret while leaving database credentials unchanged.
+
+## Failed first installation and retry
+
+A failed release using a 2.x wrapper can be retried without migration approval.
+The bootstrap Secret must still exist and be reused. If it is missing, the chart
+continues to fail closed: do not generate replacement credentials for populated
+databases. Recover the original Secret, or audit the failed installation and
+explicitly remove only proven-disposable data/resources before a clean reinstall.
+Migration approval does not bypass the missing-Secret guard.

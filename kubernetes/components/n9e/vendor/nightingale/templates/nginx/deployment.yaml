@@ -52,6 +52,9 @@ spec:
       securityContext:
         runAsUser: 10000
         fsGroup: 10000
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
@@ -59,6 +62,11 @@ spec:
       automountServiceAccountToken: {{ .Values.nginx.automountServiceAccountToken | default false }}
       containers:
       - name: nginx
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: [ALL]
         image: "{{ .Values.nginx.image.repository }}:{{ .Values.nginx.image.tag }}"
         imagePullPolicy: "{{ .Values.imagePullPolicy }}"
         {{- $_ := set . "scheme" "HTTP" -}}
@@ -89,6 +97,8 @@ spec:
         - containerPort: 8080
         - containerPort: 8443
         volumeMounts:
+        - name: nginx-tmp
+          mountPath: /tmp
         - name: config
           mountPath: /etc/nginx/nginx.conf
           subPath: nginx.conf
@@ -97,6 +107,8 @@ spec:
           mountPath: /etc/nginx/cert
         {{- end }}
       volumes:
+      - name: nginx-tmp
+        emptyDir: {}
       - name: config
         configMap:
           name: {{ template "nightingale.nginx" . }}

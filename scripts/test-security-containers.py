@@ -72,7 +72,7 @@ try:
     redis_sts=next(d for d in docs if d['kind']=='StatefulSet' and d['spec']['template']['spec']['containers'][0]['name']=='redis')
     redis=start('redis','redis:7.4.12-alpine',['redis-server','/etc/redis.conf'],['--network-alias',redis_sts['metadata']['name'],'--user','999:999','--cap-drop','ALL','--security-opt','no-new-privileges','--read-only','--tmpfs','/data:rw,uid=999,gid=999','--mount',f'type=bind,src={redisfile},dst=/etc/redis.conf,readonly'])
     # HTTP probes run inside the same isolated network via the image's curl.
-    n9e=start('n9e','flashcatcloud/nightingale:9.1.1',['-configs','/app/etc'],['--env','CONFIGTYPE_ALERT_HEARTBEAT_IP=127.0.0.1','--entrypoint','/app/n9e','--user','1000:1000','--cap-drop','ALL','--security-opt','no-new-privileges','--read-only','--tmpfs','/tmp:rw,mode=1777','--mount',f'type=bind,src={config},dst=/app/etc,readonly'])
+    n9e=start('n9e','flashcatcloud/nightingale:9.1.1',['-configs','/app/etc'],['--network-alias','n9e-nightingale-center','--env','CONFIGTYPE_ALERT_HEARTBEAT_IP=127.0.0.1','--entrypoint','/app/n9e','--user','1000:1000','--cap-drop','ALL','--security-opt','no-new-privileges','--read-only','--tmpfs','/tmp:rw,mode=1777','--mount',f'type=bind,src={config},dst=/app/etc,readonly'])
     probe = "import urllib.request,urllib.error;\ntry: urllib.request.urlopen('http://127.0.0.1:17000/',timeout=2)\nexcept urllib.error.HTTPError: pass"
     wait_for(lambda:run(['exec',n9e,'python3','-c',probe],check=False).returncode==0,60)
     login = "import json,urllib.request,sys; body=open(sys.argv[1],'rb').read(); r=urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:17000/api/n9e/auth/login',data=body,headers={'Content-Type':'application/json'})); d=json.load(r); ok=bool(d.get('dat')) and not d.get('err'); sys.exit(0 if ok else 1)"
@@ -82,6 +82,37 @@ try:
     assert 'auto get outbound ip fail' not in n9e_logs, 'n9e still probes public network for heartbeat'
     assert '127.0.0.1:17000' in n9e_logs, 'heartbeat did not use the supplied Pod IP'
     print('PASS n9e: MySQL initialized, Redis auth, non-root/read-only HTTP, random admin login, old password rejected',flush=True)
+    # Exercise the rendered nginx config and both HTTP/TLS paths under the exact
+    # Pod restrictions, including /tmp for PID and proxy buffers. No published ports.
+    nginx_deployment=next(d for d in docs if d['kind']=='Deployment' and d['spec']['template']['spec']['containers'][0]['name']=='nginx')
+    nginx_image=nginx_deployment['spec']['template']['spec']['containers'][0]['image']
+    # Docker has no Kubernetes Service NAT: map Service port 80 to container 17000.
+    nginx_config=next(d for d in docs if d['kind']=='ConfigMap' and 'nginx.conf' in d.get('data',{}))
+    nginx_file=work/'nginx.conf'; nginx_file.write_text(nginx_config['data']['nginx.conf'].replace('n9e-nightingale-center:80', 'n9e-nightingale-center:17000'))
+    nginx=start('nginx',nginx_image,[],['--user','10000:10000','--cap-drop','ALL','--security-opt','no-new-privileges','--read-only','--tmpfs','/tmp:rw,uid=10000,gid=10000','--mount',f'type=bind,src={nginx_file},dst=/etc/nginx/nginx.conf,readonly'])
+    proxy_login=login.replace('127.0.0.1:17000',nginx+':8080')
+    wait_for(lambda:run(['exec',n9e,'python3','-c',proxy_login,'/app/etc/login-new.json'],check=False).returncode==0,30)
+    assert run(['exec',nginx,'id','-u']).stdout.strip()=='10000'
+    tls_docs=T.render(T.charts['n9e'],'n9e','--set','nightingale.expose.tls.enabled=true','--set','nightingale.expose.tls.auto.commonName=nginx-test')
+    tls_config=next(d for d in tls_docs if d['kind']=='ConfigMap' and 'nginx.conf' in d.get('data',{}))
+    tls_file=work/'nginx-tls.conf'; tls_file.write_text(tls_config['data']['nginx.conf'].replace('n9e-nightingale-center:80', 'n9e-nightingale-center:17000'))
+    certdir=work/'certs'; certdir.mkdir(mode=0o755)
+    cert=next(d for d in tls_docs if d['kind']=='Secret' and 'tls.crt' in d.get('data',{}))
+    for key,value in cert['data'].items():
+        (certdir/key).write_bytes(base64.b64decode(value))
+    nginx_tls=start('nginx-tls',nginx_image,[],['--user','10000:10000','--cap-drop','ALL','--security-opt','no-new-privileges','--read-only','--tmpfs','/tmp:rw,uid=10000,gid=10000','--mount',f'type=bind,src={tls_file},dst=/etc/nginx/nginx.conf,readonly','--mount',f'type=bind,src={certdir},dst=/etc/nginx/cert,readonly'])
+    tls_login=login.replace('import json,urllib.request,sys;', 'import json,urllib.request,sys,ssl;').replace('http://127.0.0.1:17000','https://'+nginx_tls+':8443').replace("headers={'Content-Type':'application/json'}))", "headers={'Content-Type':'application/json'}),context=ssl._create_unverified_context())")
+    wait_for(lambda:run(['exec',n9e,'python3','-c',tls_login,'/app/etc/login-new.json'],check=False).returncode==0,30)
+    print('PASS nginx: pinned image, UID 10000, all capabilities dropped, read-only rootfs; HTTP/TLS proxy login',flush=True)
+    # Real VM cluster query: vmagent's 8429 writer does not implement PromQL.
+    storage=start('vmstorage','victoriametrics/vmstorage:v1.129.1-cluster',['-storageDataPath=/data','-retentionPeriod=1d','-memory.allowedBytes=64MiB'],['--tmpfs','/data:rw'])
+    insert=start('vminsert','victoriametrics/vminsert:v1.129.1-cluster',['-storageNode='+storage+':8400','-memory.allowedBytes=64MiB'])
+    select=start('vmselect','victoriametrics/vmselect:v1.129.1-cluster',['-storageNode='+storage+':8401','-search.latencyOffset=0s','-memory.allowedBytes=64MiB'],['--network-alias','vmselect-victoriametrics-vmks.monitoring-vm.svc.cluster.local'])
+    write_metric="import urllib.request; r=urllib.request.urlopen(urllib.request.Request('http://"+insert+":8480/insert/0/prometheus/api/v1/import/prometheus',data=b'blcli_review_canary 1\\n')); assert r.status==204"
+    wait_for(lambda:run(['exec',n9e,'python3','-c',write_metric],check=False).returncode==0,60)
+    query_metric="import urllib.request,json; r=json.load(urllib.request.urlopen('http://vmselect-victoriametrics-vmks.monitoring-vm.svc.cluster.local:8481/select/0/prometheus/api/v1/query?query=blcli_review_canary%3D%3D1')); assert r['status']=='success' and r['data']['result'] and r['data']['result'][0]['value'][1]=='1'"
+    wait_for(lambda:run(['exec',n9e,'python3','-c',query_metric],check=False).returncode==0,60)
+    print('PASS n9e query path: imported synthetic metric and evaluated alert expression via real vmselect:8481',flush=True)
     # Bytebase uses a dedicated non-superuser role in an isolated PostgreSQL DB.
     pgpass=secrets.token_hex(24); apppass=secrets.token_hex(24)
     all_secrets.extend([pgpass,apppass])
@@ -91,7 +122,8 @@ try:
     pg=start('pg','postgres:17.10-alpine',[],['--network-alias','postgres','--user','70:70','--cap-drop','ALL','--security-opt','no-new-privileges','--read-only','--tmpfs','/var/lib/postgresql/data:rw,uid=70,gid=70','--tmpfs','/var/run/postgresql:rw,uid=70,gid=70','--tmpfs','/tmp:rw,mode=1777','--env-file',str(pgenv),'--mount',f'type=bind,src={pginit},dst=/docker-entrypoint-initdb.d,readonly'])
     wait_for(lambda:run(['exec',pg,'pg_isready','-h','127.0.0.1'],check=False).returncode==0,120)
     chenv=work/'ch.env'; chenv.write_text('CLICKHOUSE_USER=uptrace\nCLICKHOUSE_PASSWORD='+udata['clickhouse-password']+'\nCLICKHOUSE_DB=uptrace\n'); chenv.chmod(0o600)
-    ch=start('clickhouse','clickhouse/clickhouse-server:25.3',[],['--network-alias','clickhouse-uptrace1','--tmpfs','/var/lib/clickhouse:rw,size=512m','--tmpfs','/var/log/clickhouse-server:rw,size=128m','--env-file',str(chenv)])
+    ch_image=T.find(T.docs['uptrace'],'ClickHouseInstallation')['spec']['templates']['podTemplates'][0]['spec']['containers'][0]['image']
+    ch=start('clickhouse',ch_image,[],['--network-alias','clickhouse-uptrace1','--tmpfs','/var/lib/clickhouse:rw,size=512m','--tmpfs','/var/log/clickhouse-server:rw,size=128m','--env-file',str(chenv)])
     wait_for(lambda:run(['exec',ch,'bash','-c','true </dev/tcp/127.0.0.1/9000'],check=False).returncode==0,90)
     wait_for(lambda:run(['run','--rm','--network',network,'--cap-drop','ALL','--security-opt','no-new-privileges','--mount',f'type=bind,src={ufile},dst=/etc/uptrace/config.yml,readonly','--env-file',str(uenv),'uptrace/uptrace:2.0.1','config','validate'],check=False).returncode==0,90)
     print('PASS Uptrace: actual binary validates generated config against isolated PostgreSQL/ClickHouse',flush=True)

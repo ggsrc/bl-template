@@ -42,7 +42,10 @@ were removed. Do not use the onboarding wizard's sample-instance option.
 
 ## Existing installations: do not upgrade the image against old data blindly
 
-The installer requires `BLCLI_SECURITY_MIGRATION_APPROVED=1` for existing releases.
+The installer requires `BLCLI_SECURITY_MIGRATION_APPROVED=1` only when the deployed
+wrapper chart is older than 2.0.0 (including Bytebase 1.1.1 from the first hardening
+PR). New installs and subsequent 2.x upgrades do not require it. Python 3 is needed
+to parse the Helm release list; unreadable/unknown metadata fails closed.
 This is an operator acknowledgment, not an automatic migration or security check.
 
 1. Close the public entry point, preserve incident evidence if relevant, and audit
@@ -69,3 +72,10 @@ This is an operator acknowledgment, not an automatic migration or security check
 3.24.0 also changes SQL Server/Oracle TLS handling: review and re-enable the
 appropriate certificate verification after supplying a trusted CA. Follow the
 [official upgrade notes](https://github.com/bytebase/bytebase/releases/tag/3.24.0).
+
+## Failed first installation and retry
+
+A failed release using a 2.x wrapper can be retried without migration approval.
+Keep its original metadata database and URI Secret; do not replace them with
+an empty database. The 1.1.1 wrapper remains gated once, even if it already ran
+Bytebase 3.24.0. Review the existing data and connection before acknowledging.

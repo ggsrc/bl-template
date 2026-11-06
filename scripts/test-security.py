@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import threading
 import tomllib
@@ -204,19 +205,97 @@ class SecurityTemplates(unittest.TestCase):
             self.run_command(["helm", "lint", "--strict", str(path)])
             self.run_command(["bash", "-n", str(path / "install")])
 
-    def test_installer_gate_prevents_mutations(self):
+    def test_installer_version_gate_and_failed_install_retry(self):
         fake = self.work / "installer-bin"
         fake.mkdir()
+        log = self.work / "installer-commands.log"
+        helm = fake / "helm"
+        helm.write_text(f"#!{sys.executable}\n" + """import json, os, re, sys
+with open(os.environ['FAKE_LOG'], 'a') as f:
+    f.write(sys.argv[1] + '\\n')
+if sys.argv[1] == 'list':
+    assert sys.argv[sys.argv.index('--filter') + 1] == '^' + re.escape(os.environ['FAKE_EXPECTED_RELEASE']) + '$'
+    print(os.environ['FAKE_RELEASES'])
+    sys.exit(int(os.environ.get('FAKE_LIST_EXIT', '0')))
+# Stop before any writes: reaching dependency means the version gate passed.
+sys.exit(97)
+""")
+        helm.chmod(0o755)
+        kubectl = fake / "kubectl"
+        kubectl.write_text('#!/bin/sh\nif [ "$1" = get ] && [ "$2" = crd ]; then exit 0; fi\nexit 97\n')
+        kubectl.chmod(0o755)
         for name, path in self.charts.items():
-            log = self.work / f"{name}-commands.log"
-            helm = fake / "helm"
-            helm.write_text(f'#!/bin/sh\nprintf "%s\\n" "$1" >> "{log}"\nif [ "$1" = list ]; then printf "%s\\n" "{name}"; else exit 97; fi\n')
-            helm.chmod(0o755)
-            env = dict(self.env, PATH=str(fake) + os.pathsep + self.env["PATH"])
-            p = subprocess.run(["bash", "./install"], cwd=path, env=env, capture_output=True, text=True, timeout=10)
-            self.assertNotEqual(p.returncode, 0)
-            self.assertIn("BLCLI_SECURITY_MIGRATION_APPROVED", p.stdout)
-            self.assertEqual(log.read_text().splitlines(), ["list"])
+            row = lambda chart, status="deployed", release=name: {"name": release, "chart": chart, "status": status}
+            cases = [
+                ("fresh", [], False, True),
+                ("legacy", [row(name + "-1.0.0")], False, False),
+                ("legacy-approved", [row(name + "-1.1.1")], True, True),
+                ("current", [row(name + "-2.0.0")], False, True),
+                ("patch-upgrade", [row(name + "-2.0.1")], False, True),
+                ("failed-new-retry", [row(name + "-2.0.0", "failed")], False, True),
+                ("failed-old-retry", [row(name + "-1.0.0", "failed")], False, False),
+                ("exact-name", [row(name + "-1.0.0", release=name + "-other")], False, True),
+                ("unknown-chart", [row("other-2.0.0")], True, False),
+                ("malformed-version", [row(name + "-nonsense")], True, False),
+                ("duplicates", [row(name + "-1.0.0"), row(name + "-2.0.0")], True, False),
+                ("malformed-row", ["bad"], True, False),
+                ("malformed-list", {}, True, False),
+            ]
+            for title, rows, approved, passed in cases:
+                with self.subTest(component=name, scenario=title):
+                    log.write_text("")
+                    env = dict(self.env, PATH=str(fake) + os.pathsep + self.env["PATH"],
+                               FAKE_LOG=str(log), FAKE_RELEASES=json.dumps(rows), FAKE_EXPECTED_RELEASE=name)
+                    if approved:
+                        env["BLCLI_SECURITY_MIGRATION_APPROVED"] = "1"
+                    result = subprocess.run(["bash", "./install"], cwd=path, env=env, capture_output=True, text=True, timeout=10)
+                    self.assertNotEqual(result.returncode, 0)  # fake helm stops at dependency
+                    self.assertEqual(log.read_text().splitlines(), ["list", "dependency"] if passed else ["list"])
+            # A failed API read must not look like a first installation, even with approval.
+            for output in ["[]", "not-json"]:
+                log.write_text("")
+                env = dict(self.env, PATH=str(fake) + os.pathsep + self.env["PATH"],
+                           FAKE_LOG=str(log), FAKE_RELEASES=output, FAKE_EXPECTED_RELEASE=name, FAKE_LIST_EXIT="1",
+                           BLCLI_SECURITY_MIGRATION_APPROVED="1")
+                result = subprocess.run(["bash", "./install"], cwd=path, env=env, capture_output=True, text=True, timeout=10)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(log.read_text().splitlines(), ["list"])
+
+    def test_n9e_allows_monitoring_query_and_write_only(self):
+        policy = self.find(self.docs["n9e"], "NetworkPolicy")["spec"]
+        rules = [rule for rule in policy["egress"] if any(
+            peer.get("namespaceSelector", {}).get("matchLabels", {}).get("kubernetes.io/metadata.name") == "monitoring-vm"
+            for peer in rule.get("to", []))]
+        self.assertEqual(len(rules), 1)
+        self.assertEqual({(p["protocol"], p["port"]) for p in rules[0]["ports"]}, {("TCP", 8429), ("TCP", 8481)})
+        self.assertTrue(all(rule.get("to") and rule.get("ports") for rule in rules))
+
+    def test_nginx_privileges_and_immutable_images(self):
+        deployment = next(d for d in self.docs["n9e"] if d["kind"] == "Deployment" and d["spec"]["template"]["spec"]["containers"][0]["name"] == "nginx")
+        spec = deployment["spec"]["template"]["spec"]
+        container = spec["containers"][0]
+        self.assertTrue(spec["securityContext"]["runAsNonRoot"])
+        self.assertTrue(container["securityContext"]["readOnlyRootFilesystem"])
+        self.assertFalse(container["securityContext"]["allowPrivilegeEscalation"])
+        self.assertEqual(container["securityContext"]["capabilities"]["drop"], ["ALL"])
+        self.assertIn({"name": "nginx-tmp", "mountPath": "/tmp"}, container["volumeMounts"])
+        self.assertRegex(container["image"], r"nginx:[0-9]+\.[0-9]+\.[0-9]+-alpine@sha256:[a-f0-9]{64}$")
+        clickhouse = self.find(self.docs["uptrace"], "ClickHouseInstallation")
+        image = clickhouse["spec"]["templates"]["podTemplates"][0]["spec"]["containers"][0]["image"]
+        self.assertRegex(image, r"clickhouse/clickhouse-server:25\.3\.[0-9]+\.[0-9]+@sha256:[a-f0-9]{64}$")
+        override = self.render(self.charts["uptrace"], "uptrace", "--set", "uptrace.clickhouse.image.tag=25.3.14.14-test")
+        self.assertIn("clickhouse/clickhouse-server:25.3.14.14-test", yaml.safe_dump(override))
+
+    def test_bytebase_removed_parameters_are_not_advertised(self):
+        old = ["externalPgEnable", "pgHost", "pgPort", "pgUsername", "pgDatabase", "existingPgPasswordSecret", "existingPgPasswordSecretKey"]
+        args = yaml.safe_load((ROOT / "kubernetes/components/bytebase/args.yaml").read_text())["parameters"]["components"]["bytebase"]
+        for name in old:
+            self.assertNotIn(name, args)
+            self.assertNotIn("." + name, (ROOT / "kubernetes/components/bytebase/values-override.yaml.tmpl").read_text())
+        for value in ["bytebase.option.externalPg.enable=false", "bytebase.option.externalPg.pgDatabase=old", "bytebase.option.disable-sample=true"]:
+            result = self.run_command(["helm", "template", "bytebase", str(self.charts["bytebase"]), "--set", value], success=False)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("removed", result.stderr)
 
     def test_upgrade_lookup_retains_actual_secret(self):
         secrets = {n + "-bootstrap": self.find(self.docs[n], "Secret", n + "-bootstrap") for n in ["n9e", "uptrace"]}
