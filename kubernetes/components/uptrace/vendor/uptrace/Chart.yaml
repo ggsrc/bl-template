@@ -1,0 +1,14 @@
+annotations:
+  artifacthub.io/category: monitoring-logging
+  artifacthub.io/links: |
+    - name: Uptrace Open Source APM
+      url: https://uptrace.dev/get/hosted/open-source-apm
+  artifacthub.io/screenshots: |
+    - title: Uptrace screenshot
+      url: https://uptrace.dev/home/screenshots/apm.png
+apiVersion: v2
+appVersion: 2.0.1
+description: Uptrace Helm chart for Kubernetes
+name: uptrace
+type: application
+version: 2.0.1-blcli.1

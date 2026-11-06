@@ -1,0 +1,6 @@
+dependencies:
+- name: uptrace
+  repository: file://vendor/uptrace
+  version: 2.0.1-blcli.1
+digest: sha256:fb4678e4d41a247f14c6daf5ee94c77e0e6cc54fbe0127eb95ff51b1db611ebb
+generated: "2026-11-05T17:06:05.249034+08:00"

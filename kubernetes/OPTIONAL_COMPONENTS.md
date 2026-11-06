@@ -57,3 +57,27 @@ blcli orders components automatically using `dependencies` in `config.yaml`, for
 | Components listed in this file | You must **opt in** to them in args |
 
 For each component's parameters, see `kubernetes/components/<name>/args.yaml` or run `blcli explain -r <repo> -m kubernetes -c <name>`.
+
+## Security-sensitive administration services
+
+Before enabling or upgrading n9e, Uptrace or Bytebase, read their component
+`SECURITY.md` files and the repository `SECURITY-CHANGES.md`. They default to private
+access and restrictive NetworkPolicy. Complete bootstrap over authorized
+port-forward, configure identity/signup restrictions, and then allow trusted
+peers. NetworkPolicy requires an enforcing CNI; default policies are not a substitute
+for authentication. Uptrace additionally needs an Altinity ClickHouse operator.
+Bytebase's default metadata database depends on the CNPG operator.
+
+Run `python scripts/test-security.py` with blcli, Helm 3.18.4 and PyYAML 6.0.3
+installed. Tests generate into `workspace/`, use fake kubectl/terraform and a local
+fake Kubernetes API with an explicit temporary kubeconfig, and clean up afterward.
+They never connect to the caller's current context or cloud accounts.
+
+For explicit local Docker canaries, run
+`BLCLI_SECURITY_CONTAINER_TESTS=1 python scripts/test-security-containers.py`.
+It rejects remote Docker endpoints, publishes no host ports, uses an internal
+network and temporary databases, and removes its containers, anonymous volumes,
+network and workspace files. It checks actual n9e login/new-vs-old credentials,
+Uptrace config against temporary PostgreSQL/ClickHouse, and Bytebase's non-root,
+read-only startup without embedded PostgreSQL. It does not validate a real CNI,
+GKE load balancer, production migration, or the complete telemetry/business flow.

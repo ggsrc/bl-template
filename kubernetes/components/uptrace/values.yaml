@@ -1,5 +1,51 @@
 uptrace:
-  image:
-    repository: uptrace/uptrace
-    tag: "1.7.0"
-  replicaCount: 1
+  postgresql:
+    imageName: ghcr.io/cloudnative-pg/postgresql:17.10
+  ingress:
+    enabled: false
+  otelcol:
+    enabled: false
+  otelcolDaemonset:
+    enabled: false
+  clickhouse:
+    allowedCIDR: "10.0.0.0/8"
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: [ALL]
+    seccompProfile:
+      type: RuntimeDefault
+  uptrace:
+    image:
+      repository: uptrace/uptrace
+      tag: "2.0.1"
+    replicaCount: 1
+    config:
+      pg:
+        addr: ${PG_HOST}:5432
+        user: ${PG_USER}
+        password: ${PG_PASSWORD}
+        database: ${PG_DATABASE}
+      redis_cache:
+        addrs: null
+      ch_cluster:
+        shards:
+          - replicas:
+              - addr: clickhouse-uptrace1:9000
+                database: uptrace
+                user: uptrace
+                password: ${CH_PASSWORD}
+      self_monitoring:
+        disabled: true
+networkPolicy:
+  enabled: true
+  ingress: []
+  egress: []
+  clickhouseEgress: []
+  clickhouseOperatorIngress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: clickhouse-operator
+      ports:
+        - {protocol: TCP, port: 8123}

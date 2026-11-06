@@ -1,0 +1,6 @@
+{{- if or (ne .Values.database.type "internal") (ne .Values.redis.type "internal") -}}
+{{ fail "this hardened chart requires bundled MySQL/Redis; external services need a reviewed Secret-based configuration" }}
+{{- end -}}
+{{- if or (ne .Values.categraf.type "external") (ne .Values.prometheus.type "external") -}}
+{{ fail "bundled collectors/Prometheus were removed; use the existing monitoring stack" }}
+{{- end -}}

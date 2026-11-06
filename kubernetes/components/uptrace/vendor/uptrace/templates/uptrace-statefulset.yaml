@@ -1,0 +1,109 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "uptrace.fullname" . }}
+  labels:
+    app: uptrace
+    {{- include "uptrace.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.uptrace.replicaCount }}
+  serviceName: {{ include "uptrace.fullname" . }}
+  selector:
+    matchLabels:
+      app: uptrace
+      {{- include "uptrace.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/uptrace-configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        app: uptrace
+        {{- include "uptrace.selectorLabels" . | nindent 8 }}
+    spec:
+      automountServiceAccountToken: false
+      {{- with .Values.uptrace.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "uptrace.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          image: "{{ .Values.uptrace.image.repository }}:{{ .Values.uptrace.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.uptrace.image.pullPolicy }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/uptrace/config.yml
+              subPath: uptrace.yml
+          ports:
+            - name: http
+              containerPort: {{ .Values.uptrace.service.http_port }}
+              protocol: TCP
+            - name: grpc
+              containerPort: {{ .Values.uptrace.service.grpc_port }}
+              protocol: TCP
+          {{ with (tpl .Values.uptrace.config.site.url $) | urlParse }}
+          livenessProbe:
+            httpGet:
+              path: {{ .path }}
+              port: http
+          readinessProbe:
+            httpGet:
+              path: {{ .path }}
+              port: http
+          {{ end }}
+          env:
+            - name: CH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ printf "%s-bootstrap" .Release.Name }}
+                  key: clickhouse-password
+          {{- if .Values.postgresql.enabled }}
+            - name: PG_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: uptrace-postgresql-app
+                  key: host
+            - name: PG_USER
+              valueFrom:
+                secretKeyRef:
+                  name: uptrace-postgresql-app
+                  key: username
+            - name: PG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: uptrace-postgresql-app
+                  key: password
+            - name: PG_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: uptrace-postgresql-app
+                  key: dbname
+            {{- end }}
+            {{- toYaml .Values.uptrace.env | nindent 12 }}
+          envFrom:
+            {{- toYaml .Values.uptrace.envFrom | nindent 12 }}
+          resources:
+            {{- toYaml .Values.uptrace.resources | nindent 12 }}
+      {{- with .Values.uptrace.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.uptrace.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.uptrace.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: config
+          secret:
+            secretName: {{ include "uptrace.fullname" . }}

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Install Bytebase via Helm
 # Rendered by blcli; namespace and values can be parameterized.
-set -e
+set -euo pipefail
 
 if ! command -v helm &> /dev/null; then
   echo "Error: helm is not installed or not in PATH"
@@ -48,8 +48,8 @@ if [ -n "${MIN_KUBECTL_VERSION}" ]; then
   echo "kubectl version ${ACTUAL} meets requirement >= ${MIN_KUBECTL_VERSION}"
 fi
 
-NAMESPACE="{{ default "bytebase" .namespace }}"
-RELEASE_NAME="{{ default "bytebase" .releaseName }}"
+NAMESPACE="{{ .namespace }}"
+RELEASE_NAME="{{ .releaseName }}"
 VALUES_FILES="{{ if .valuesFiles }}{{ .valuesFiles }}{{ else }}values.yaml values-override.yaml{{ end }}"
 
 if [ ! -f "Chart.yaml" ]; then
@@ -57,15 +57,26 @@ if [ ! -f "Chart.yaml" ]; then
   exit 1
 fi
 
-echo "Installing Bytebase: release=${RELEASE_NAME}, namespace=${NAMESPACE}"
-helm dependency update
-kubectl create namespace "${NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f -
-HELM_VALUES=""
+HELM_VALUES=()
 for f in ${VALUES_FILES}; do
-  if [ -f "${f}" ]; then
-    HELM_VALUES="${HELM_VALUES} -f ${f}"
+  if [ ! -f "${f}" ]; then
+    echo "Error: required values file missing: ${f}"
+    exit 1
   fi
+  HELM_VALUES+=(-f "${f}")
 done
-helm upgrade --install "${RELEASE_NAME}" . -n "${NAMESPACE}" ${HELM_VALUES} --wait
+
+echo "Installing Bytebase: release=${RELEASE_NAME}, namespace=${NAMESPACE}"
+# Do not let a security upgrade implicitly migrate existing application data.
+RELEASES=$(helm list -n "${NAMESPACE}" --all --short)
+if grep -Fxq "${RELEASE_NAME}" <<<"${RELEASES}"; then
+  if [ "${BLCLI_SECURITY_MIGRATION_APPROVED:-}" != "1" ]; then
+    echo "Error: review SECURITY.md, back up data and complete migration; then set BLCLI_SECURITY_MIGRATION_APPROVED=1."
+    exit 1
+  fi
+fi
+helm dependency build --skip-refresh
+kubectl create namespace "${NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f -
+helm upgrade --install "${RELEASE_NAME}" . -n "${NAMESPACE}" "${HELM_VALUES[@]}" --wait
 
 echo "Bytebase installed successfully."

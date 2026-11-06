@@ -171,6 +171,37 @@ components:
   - name: n9e
     path:
     - kubernetes/components/n9e/Chart.yaml
+    - kubernetes/components/n9e/vendor/nightingale/Chart.yaml
+    - kubernetes/components/n9e/vendor/nightingale/LICENSE
+    - kubernetes/components/n9e/vendor/nightingale/metrics/metrics.yaml
+    - kubernetes/components/n9e/vendor/nightingale/scripts/a-n9e.sql
+    - kubernetes/components/n9e/vendor/nightingale/templates/NOTES.txt
+    - kubernetes/components/n9e/vendor/nightingale/templates/_bootstrap.tpl
+    - kubernetes/components/n9e/vendor/nightingale/templates/_helpers.tpl
+    - kubernetes/components/n9e/vendor/nightingale/templates/bootstrap-secret.yaml
+    - kubernetes/components/n9e/vendor/nightingale/templates/database/conf-cm.yaml
+    - kubernetes/components/n9e/vendor/nightingale/templates/database/init-cm.yaml
+    - kubernetes/components/n9e/vendor/nightingale/templates/database/secret.yaml
+    - kubernetes/components/n9e/vendor/nightingale/templates/database/service.yaml
+    - kubernetes/components/n9e/vendor/nightingale/templates/database/statefulset.yaml
+    - kubernetes/components/n9e/vendor/nightingale/templates/ingress/ingress.yaml
+    - kubernetes/components/n9e/vendor/nightingale/templates/ingress/secret.yaml
+    - kubernetes/components/n9e/vendor/nightingale/templates/n9e/conf-cm.yaml
+    - kubernetes/components/n9e/vendor/nightingale/templates/n9e/deployment.yaml
+    - kubernetes/components/n9e/vendor/nightingale/templates/n9e/service.yaml
+    - kubernetes/components/n9e/vendor/nightingale/templates/nginx/configmap-http.yaml
+    - kubernetes/components/n9e/vendor/nightingale/templates/nginx/configmap-https.yaml
+    - kubernetes/components/n9e/vendor/nightingale/templates/nginx/deployment.yaml
+    - kubernetes/components/n9e/vendor/nightingale/templates/nginx/secret.yaml
+    - kubernetes/components/n9e/vendor/nightingale/templates/nginx/service.yaml
+    - kubernetes/components/n9e/vendor/nightingale/templates/redis/service.yaml
+    - kubernetes/components/n9e/vendor/nightingale/templates/redis/statefulset.yaml
+    - kubernetes/components/n9e/vendor/nightingale/templates/validate.yaml
+    - kubernetes/components/n9e/vendor/nightingale/values.yaml
+    - kubernetes/components/n9e/SECURITY.md
+    - kubernetes/components/n9e/UPSTREAM.md
+    - kubernetes/components/n9e/Chart.lock
+    - kubernetes/components/n9e/templates/networkpolicy.yaml
     - kubernetes/components/n9e/values.yaml
     - kubernetes/components/n9e/values-override.yaml.tmpl
     - kubernetes/components/n9e/install.tmpl
@@ -183,6 +214,30 @@ components:
   - name: uptrace
     path:
     - kubernetes/components/uptrace/Chart.yaml
+    - kubernetes/components/uptrace/vendor/uptrace/Chart.yaml
+    - kubernetes/components/uptrace/vendor/uptrace/LICENSE
+    - kubernetes/components/uptrace/vendor/uptrace/templates/_bootstrap.tpl
+    - kubernetes/components/uptrace/vendor/uptrace/templates/_helpers.tpl
+    - kubernetes/components/uptrace/vendor/uptrace/templates/bootstrap-secret.yaml
+    - kubernetes/components/uptrace/vendor/uptrace/templates/clickhouse-configmap.yaml
+    - kubernetes/components/uptrace/vendor/uptrace/templates/clickhouse-installation.yaml
+    - kubernetes/components/uptrace/vendor/uptrace/templates/otelcol-clusterrole.yaml
+    - kubernetes/components/uptrace/vendor/uptrace/templates/otelcol-clusterrolebinding.yaml
+    - kubernetes/components/uptrace/vendor/uptrace/templates/otelcol-configmap.yaml
+    - kubernetes/components/uptrace/vendor/uptrace/templates/otelcol-deployment.yaml
+    - kubernetes/components/uptrace/vendor/uptrace/templates/otelcol-serviceaccount.yaml
+    - kubernetes/components/uptrace/vendor/uptrace/templates/otelcol-sidecar.yaml
+    - kubernetes/components/uptrace/vendor/uptrace/templates/postgresql-cluster.yml
+    - kubernetes/components/uptrace/vendor/uptrace/templates/uptrace-configmap.yaml
+    - kubernetes/components/uptrace/vendor/uptrace/templates/uptrace-ingress.yaml
+    - kubernetes/components/uptrace/vendor/uptrace/templates/uptrace-service.yaml
+    - kubernetes/components/uptrace/vendor/uptrace/templates/uptrace-serviceaccount.yaml
+    - kubernetes/components/uptrace/vendor/uptrace/templates/uptrace-statefulset.yaml
+    - kubernetes/components/uptrace/vendor/uptrace/values.yaml
+    - kubernetes/components/uptrace/SECURITY.md
+    - kubernetes/components/uptrace/UPSTREAM.md
+    - kubernetes/components/uptrace/Chart.lock
+    - kubernetes/components/uptrace/templates/networkpolicy.yaml
     - kubernetes/components/uptrace/values.yaml
     - kubernetes/components/uptrace/values-override.yaml.tmpl
     - kubernetes/components/uptrace/install.tmpl
@@ -195,6 +250,9 @@ components:
   - name: bytebase
     path:
     - kubernetes/components/bytebase/Chart.yaml
+    - kubernetes/components/bytebase/SECURITY.md
+    - kubernetes/components/bytebase/templates/metadata-database.yaml
+    - kubernetes/components/bytebase/templates/networkpolicy.yaml
     - kubernetes/components/bytebase/values.yaml
     - kubernetes/components/bytebase/values-override.yaml.tmpl
     - kubernetes/components/bytebase/templates/_helpers.tpl
@@ -206,6 +264,8 @@ components:
     - kubernetes/components/bytebase/args.yaml
     install: bash ./install
     installType: custom
+    dependencies:
+      - cnpg
   - name: juicefs
     path:
     - kubernetes/components/juicefs/kustomization.yaml.tmpl

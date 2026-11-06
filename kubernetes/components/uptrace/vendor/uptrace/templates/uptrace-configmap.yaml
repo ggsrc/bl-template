@@ -1,0 +1,16 @@
+{{- $data := include "uptrace.bootstrap" . | fromJson -}}
+{{- $_ := set .Values.uptrace.config.service "secret" (index $data "service-secret") -}}
+{{- $_ := set (index .Values.uptrace.config.seed_data.users 0) "password" (index $data "admin-password") -}}
+{{- $_ := set (index .Values.uptrace.config.seed_data.user_tokens 0) "token" (index $data "user-token") -}}
+{{- $_ := set (index .Values.uptrace.config.seed_data.project_tokens 0) "token" (index $data "project-token") -}}
+{{- $_ := unset .Values.uptrace.config.self_monitoring "dsn" -}}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "uptrace.fullname" . }}
+  labels:
+    {{- include "uptrace.labels" . | nindent 4 }}
+type: Opaque
+stringData:
+  uptrace.yml: |
+{{ tpl (toYaml .Values.uptrace.config) $ | indent 4 }}

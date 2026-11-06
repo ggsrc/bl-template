@@ -1,0 +1,15 @@
+{{ if .Values.otelcolDaemonset.enabled }}
+# https://github.com/open-telemetry/opentelemetry-operator/blob/main/docs/api/opentelemetrycollectors.md#opentelemetryiov1beta1
+apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  name: otelcol-daemonset
+  labels:
+    {{- include "uptrace.labels" . | nindent 4 }}
+spec:
+  mode: daemonset
+  hostNetwork: true
+  serviceAccount: otelcol
+  config:
+    {{- .Values.otelcolDaemonset.config | toYaml | nindent 4 }}
+{{ end }}

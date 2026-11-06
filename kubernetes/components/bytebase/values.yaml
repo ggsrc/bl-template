@@ -4,13 +4,15 @@
 
 bytebase:
   # version: 3.0.0
-  version: 3.1.0 	## bugfixed for set role issue
+  version: "3.24.0"
   registryMirrorHost: ""
   option:
     port: 8080
     data: "/var/opt/bytebase"
     external-url: "https://bytebase.example.com"
-    disable-sample: false
+    # Samples are unavailable with external metadata PostgreSQL in 3.24.0.
+    # The old --disable-sample flag was removed upstream.
+    disable-sample: true
     externalPg:
       enable: false
       url: ""
@@ -65,3 +67,16 @@ bytebase:
     #     nodePublishSecretRef:
     #       # Only required when using service principal mode, usually is the secret store the service principal's credentials
     #       name: secrets-store-creds
+
+# Requires the cnpg operator; its generated application role has no superuser access.
+metadataDatabase:
+  enabled: true
+  instances: 1
+  imageName: ghcr.io/cloudnative-pg/postgresql:17.10
+  storage: 20Gi
+
+# No incoming connections until bootstrap has been completed through port-forward.
+networkPolicy:
+  enabled: true
+  ingress: []
+  egress: []

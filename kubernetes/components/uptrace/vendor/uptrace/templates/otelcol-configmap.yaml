@@ -1,0 +1,12 @@
+{{ if .Values.otelcol.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otelcol
+  labels:
+    app: otelcol
+    {{- include "uptrace.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+{{ .Values.otelcol.config | toYaml | indent 4 }}
+{{ end }}
