@@ -26,6 +26,12 @@ ADMIN_ENABLED="{{ if .AdminEnabled }}true{{ else }}false{{ end }}"
 {{- if .DexConfig }}{{ range .DexConfig.connectors }}{{ if and (eq .type "github") (not .config.orgs) }}{{ $dexOrgsMissing = true }}{{ end }}{{ end }}
 {{- else if .DexGitHubEnabled }}{{ if not .DexGitHubOrgs }}{{ $dexOrgsMissing = true }}{{ end }}{{ end }}
 DEX_GITHUB_ORGS_MISSING="{{ $dexOrgsMissing }}"
+{{- $ssoConfigured := false }}
+{{- if .DexConfig }}{{ if .DexConfig.connectors }}{{ $ssoConfigured = true }}{{ end }}{{ else if .DexGitHubEnabled }}{{ $ssoConfigured = true }}{{ end }}
+SSO_CONFIGURED="{{ $ssoConfigured }}"
+{{- $allReposHaveKeys := false }}
+{{- if .GitRepositories }}{{ $allReposHaveKeys = true }}{{ range .GitRepositories }}{{ if not .sshPrivateKeyFile }}{{ $allReposHaveKeys = false }}{{ end }}{{ end }}{{ end }}
+ALL_REPOS_HAVE_KEYS="{{ $allReposHaveKeys }}"
 SSH_SECRET_FILE="github-ssh-sealed-secret.yaml"
 GEN_SSH_SCRIPT="${ARGOCD_GEN_SEALED_SECRET_SCRIPT:-gen_ssh_sealed_secrets.sh}"
 DEX_SECRET_FILE="dex-github-sealed-secret.yaml"
@@ -83,6 +89,13 @@ if [ "${DEX_GITHUB_ORGS_MISSING}" = "true" ]; then
     exit 1
 fi
 
+# With the local admin disabled, SSO is the only way to log in.
+if [ "${ADMIN_ENABLED}" != "true" ] && [ "${SSO_CONFIGURED}" != "true" ]; then
+    error "AdminEnabled is false and no Dex connector is configured (DexConfig.connectors or DexGitHubEnabled):"
+    error "nobody could log in to ArgoCD. Configure SSO, or set AdminEnabled: true, re-render and run this script again."
+    exit 1
+fi
+
 sha256_of() {
     if command -v sha256sum &> /dev/null; then
         sha256sum "$1" | awk '{print $1}'
@@ -120,9 +133,14 @@ if [ -f "${GEN_SSH_SCRIPT}" ]; then
     if [ ! -x "${GEN_SSH_SCRIPT}" ]; then
         chmod +x "${GEN_SSH_SCRIPT}"
     fi
+    # Seals every configured repository with its own key (GitRepositories[].sshPrivateKeyFile)
+    # or, for entries without one, the default key.
     if [ -f "${SSH_PRIVATE_KEY_PATH}" ]; then
         info "Generating SSH sealed secret via ${GEN_SSH_SCRIPT}"
-        "./${GEN_SSH_SCRIPT}" "${SSH_PRIVATE_KEY_PATH}"
+        ARGOCD_KEYS_DIR="${SSH_KEYS_DIR}" "./${GEN_SSH_SCRIPT}" "${SSH_PRIVATE_KEY_PATH}"
+    elif [ "${ALL_REPOS_HAVE_KEYS}" = "true" ]; then
+        info "Generating SSH sealed secret via ${GEN_SSH_SCRIPT} (per-repository keys in ${SSH_KEYS_DIR})"
+        ARGOCD_KEYS_DIR="${SSH_KEYS_DIR}" "./${GEN_SSH_SCRIPT}"
     fi
 fi
 
@@ -195,22 +213,34 @@ PLACEHOLDER
     fi
 fi
 
-# Download the pinned ArgoCD manifest and refuse it unless its sha256 matches.
-info "Downloading ArgoCD ${ARGOCD_VERSION} manifest: ${ARGOCD_MANIFEST_URL}"
-trap 'rm -f "${ARGOCD_MANIFEST_FILE}"' EXIT
-if ! curl -fsSL --retry 3 -o "${ARGOCD_MANIFEST_FILE}" "${ARGOCD_MANIFEST_URL}"; then
-    error "Failed to download ${ARGOCD_MANIFEST_URL}"
-    exit 1
-fi
-ACTUAL_SHA256=$(sha256_of "${ARGOCD_MANIFEST_FILE}")
+# The pinned ArgoCD manifest, verified by sha256. It is kept next to kustomization.yaml (commit
+# it with the rest of this directory): `kubectl delete -k`, which `blcli destroy kubernetes`
+# runs, `kustomize build` and `kubectl diff -k` all need it. A copy that does not match the pin
+# is replaced by a fresh download; a download that does not match is refused.
 if [ -z "${ARGOCD_MANIFEST_SHA256}" ]; then
     error "No sha256 is pinned for ${ARGOCD_MANIFEST_URL}."
-    error "Downloaded digest: ${ACTUAL_SHA256}. Verify it against the release, set ArgoCDManifestSHA256 and re-render."
+    if curl -fsSL --retry 3 -o "${ARGOCD_MANIFEST_FILE}.download" "${ARGOCD_MANIFEST_URL}"; then
+        error "Downloaded digest: $(sha256_of "${ARGOCD_MANIFEST_FILE}.download"). Verify it against the release, set ArgoCDManifestSHA256 and re-render."
+        rm -f "${ARGOCD_MANIFEST_FILE}.download"
+    fi
     exit 1
 fi
-if [ "${ACTUAL_SHA256}" != "${ARGOCD_MANIFEST_SHA256}" ]; then
-    error "sha256 mismatch for ${ARGOCD_MANIFEST_URL}: expected ${ARGOCD_MANIFEST_SHA256}, got ${ACTUAL_SHA256}"
-    exit 1
+if [ -f "${ARGOCD_MANIFEST_FILE}" ] && [ "$(sha256_of "${ARGOCD_MANIFEST_FILE}")" = "${ARGOCD_MANIFEST_SHA256}" ]; then
+    info "Using verified ArgoCD ${ARGOCD_VERSION} manifest: ${ARGOCD_MANIFEST_FILE}"
+else
+    info "Downloading ArgoCD ${ARGOCD_VERSION} manifest: ${ARGOCD_MANIFEST_URL}"
+    trap 'rm -f "${ARGOCD_MANIFEST_FILE}.download"' EXIT
+    if ! curl -fsSL --retry 3 -o "${ARGOCD_MANIFEST_FILE}.download" "${ARGOCD_MANIFEST_URL}"; then
+        error "Failed to download ${ARGOCD_MANIFEST_URL}"
+        exit 1
+    fi
+    ACTUAL_SHA256=$(sha256_of "${ARGOCD_MANIFEST_FILE}.download")
+    if [ "${ACTUAL_SHA256}" != "${ARGOCD_MANIFEST_SHA256}" ]; then
+        error "sha256 mismatch for ${ARGOCD_MANIFEST_URL}: expected ${ARGOCD_MANIFEST_SHA256}, got ${ACTUAL_SHA256}"
+        exit 1
+    fi
+    mv "${ARGOCD_MANIFEST_FILE}.download" "${ARGOCD_MANIFEST_FILE}"
+    info "Verified and saved ${ARGOCD_MANIFEST_FILE}; commit it so kubectl delete -k and kustomize build keep working"
 fi
 
 # Build kustomization (kept in memory, no temporary file)
@@ -226,6 +256,13 @@ info "Applying ArgoCD manifests..."
 if ! printf '%s\n' "${MANIFESTS}" | kubectl apply --server-side --force-conflicts -f -; then
     error "Failed to apply ArgoCD manifests"
     exit 1
+fi
+
+# 3.x ignores argocd-cm.data.repositories, but apply does not remove a key it no longer renders.
+# Drop the leftover 2.x repository list so the live ConfigMap matches this configuration.
+if kubectl -n "${NAMESPACE}" get configmap argocd-cm -o jsonpath='{.data.repositories}' 2>/dev/null | grep -q .; then
+    info "Removing the obsolete repositories key from argocd-cm (repositories now come from Secrets)"
+    kubectl -n "${NAMESPACE}" patch configmap argocd-cm --type=json -p='[{"op":"remove","path":"/data/repositories"}]'
 fi
 
 # AppProjects need the AppProject CRD, which the manifests above install.

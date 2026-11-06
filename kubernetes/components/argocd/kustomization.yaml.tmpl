@@ -8,8 +8,9 @@ resources:
 {{- if or .DexConfig .DexGitHubEnabled }}
 - dex-github-sealed-secret.yaml
 {{- end }}
-# ArgoCD {{ if .ArgoCDVersion }}{{ .ArgoCDVersion }}{{ else }}v3.5.6{{ end }} manifests/install.yaml. The install script downloads it, checks its sha256 and
-# deletes it after the build, so kustomize never fetches an unverified remote manifest.
+# ArgoCD {{ if .ArgoCDVersion }}{{ .ArgoCDVersion }}{{ else }}v3.5.6{{ end }} manifests/install.yaml, downloaded by the install script and kept only if its
+# sha256 matches the pin, so kustomize never fetches an unverified remote manifest. Commit it:
+# kubectl delete -k (blcli destroy) and kustomize build need it.
 - argocd-install.yaml
 
 patchesStrategicMerge:

@@ -69,7 +69,7 @@ parameters:
 
       AdminEnabled:
         type: boolean
-        description: "Enable the local admin account. Off by default: sign in through Dex SSO; for break-glass access use kubectl (argocd admin, port-forward) or enable it temporarily"
+        description: "Enable the local admin account. Off by default: sign in through Dex SSO; for break-glass access use kubectl (argocd admin, port-forward) or enable it temporarily. The install script refuses to run with it off and no Dex connector configured"
         required: false
         default: false
         example: false
@@ -100,7 +100,7 @@ parameters:
 
       RestrictDefaultProject:
         type: boolean
-        description: "Empty the built-in default AppProject (no sources, destinations or resources), so applications must use AppProjectName. Set false while existing applications still use the default project"
+        description: "Empty the built-in default AppProject (no sources, destinations or resources), so applications must use AppProjectName. Set false while existing applications still use the default project: the install script then restores the default project to what ArgoCD creates (all sources, destinations and resources), also after it was emptied"
         required: false
         default: true
         example: true
@@ -164,13 +164,14 @@ parameters:
       # Git repository configuration
       GitRepositories:
         type: list[object]
-        description: "Git repositories for ArgoCD. gen_ssh_sealed_secrets.sh seals one repository Secret per entry (url, type, name and the SSH key, label argocd.argoproj.io/secret-type=repository); sshPrivateKeySecret.name names that Secret (default GitSSHSecretName-<index>)"
+        description: "Git repositories for ArgoCD. gen_ssh_sealed_secrets.sh seals one repository Secret per entry (url, type, name and the SSH key, label argocd.argoproj.io/secret-type=repository); sshPrivateKeySecret.name names that Secret (default GitSSHSecretName-<index>). sshPrivateKeyFile is the entry's own private key, relative to the keys directory (default <workspace>/keys); without it the default key argocd_github is used. A GitHub deploy key reads only one repository, so give every entry its own key unless the default key belongs to a machine user"
         required: false
         default: []
         example:
           - url: "git@github.com:example-org/gitops.git"
             sshPrivateKeySecret:
               name: "argocd-github-ssh-secret"
+            sshPrivateKeyFile: "argocd_github"
             name: "gitops"
             type: "git"
       

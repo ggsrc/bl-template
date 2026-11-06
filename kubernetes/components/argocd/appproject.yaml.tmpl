@@ -48,4 +48,24 @@ spec:
   destinations: []
   clusterResourceWhitelist: []
   namespaceResourceWhitelist: []
+{{- else }}
+---
+# default, restored to what ArgoCD creates (every source, destination and resource). Rendered
+# while RestrictDefaultProject is false so that turning the flag off undoes an earlier emptying:
+# kubectl apply never reverts a resource it no longer renders, and ArgoCD only creates the
+# default project when it is missing.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: default
+  namespace: {{ if .Namespace }}{{ .Namespace }}{{ else }}argocd{{ end }}
+spec:
+  sourceRepos:
+  - '*'
+  destinations:
+  - server: '*'
+    namespace: '*'
+  clusterResourceWhitelist:
+  - group: '*'
+    kind: '*'
 {{- end }}
