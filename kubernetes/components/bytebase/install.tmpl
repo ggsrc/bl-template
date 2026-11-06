@@ -67,13 +67,37 @@ for f in ${VALUES_FILES}; do
 done
 
 echo "Installing Bytebase: release=${RELEASE_NAME}, namespace=${NAMESPACE}"
-# Do not let a security upgrade implicitly migrate existing application data.
-RELEASES=$(helm list -n "${NAMESPACE}" --all --short)
-if grep -Fxq "${RELEASE_NAME}" <<<"${RELEASES}"; then
-  if [ "${BLCLI_SECURITY_MIGRATION_APPROVED:-}" != "1" ]; then
-    echo "Error: review SECURITY.md, back up data and complete migration; then set BLCLI_SECURITY_MIGRATION_APPROVED=1."
-    exit 1
-  fi
+# Security generation 2 is the one-time migration boundary (chart, not app version).
+# Exact JSON matching avoids release-name regex/substring errors. Fail closed on
+# malformed output, unknown charts, or an unreadable Helm release list.
+if ! command -v python3 >/dev/null; then
+  echo "Error: python3 is required to inspect the deployed chart version."
+  exit 1
+fi
+# Filter server-side too: Helm list otherwise truncates large namespaces.
+RELEASE_FILTER=$(python3 -c 'import re, sys; print("^" + re.escape(sys.argv[1]) + "$")' "${RELEASE_NAME}")
+RELEASES=$(helm list -n "${NAMESPACE}" --all --filter "${RELEASE_FILTER}" -o json)
+MIGRATION_STATE=$(printf '%s' "${RELEASES}" | python3 -c '
+import json, re, sys
+rows = json.load(sys.stdin)
+if not isinstance(rows, list):
+    sys.exit("Error: Helm release list must be an array")
+if any(not isinstance(row, dict) for row in rows):
+    sys.exit("Error: malformed Helm release row")
+matches = [row for row in rows if row.get("name") == sys.argv[1]]
+if not matches:
+    print("absent")
+else:
+    if len(matches) != 1:
+        sys.exit("Error: ambiguous Helm release metadata")
+    match = re.fullmatch(re.escape(sys.argv[2]) + r"-(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)", matches[0].get("chart", ""))
+    if not match:
+        sys.exit("Error: unrecognized deployed chart version; inspect migration manually")
+    print("legacy" if int(match.group(1)) < 2 else "current")
+' "${RELEASE_NAME}" "bytebase")
+if [ "${MIGRATION_STATE}" = legacy ] && [ "${BLCLI_SECURITY_MIGRATION_APPROVED:-}" != "1" ]; then
+  echo "Error: review SECURITY.md, back up data and complete migration; then set BLCLI_SECURITY_MIGRATION_APPROVED=1 for this upgrade."
+  exit 1
 fi
 helm dependency build --skip-refresh
 kubectl create namespace "${NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f -

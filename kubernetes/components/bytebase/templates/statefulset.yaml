@@ -6,8 +6,15 @@
 {{- if and (not .Values.metadataDatabase.enabled) (not $pg.existingPgURLSecret) -}}
 {{- fail "provide externalPg.existingPgURLSecret or enable metadataDatabase; embedded PostgreSQL is disabled" -}}
 {{- end -}}
-{{- if or $pg.url $pg.pgPassword $pg.escapePassword $pg.enable $pg.pgHost $pg.pgPort $pg.pgUsername $pg.existingPgPasswordSecret -}}
-{{- fail "inline/escaped metadata credentials are disabled; use externalPg.existingPgURLSecret" -}}
+{{- range $key := list "enable" "url" "pgHost" "pgPort" "pgUsername" "pgPassword" "pgDatabase" "existingPgPasswordSecret" "existingPgPasswordSecretKey" "escapePassword" -}}
+{{- if hasKey $pg $key -}}
+{{- fail (printf "externalPg.%s was removed; use existingPgURLSecret/Key and metadataDatabase.enabled" $key) -}}
+{{- end -}}
+{{- end -}}
+{{- range $key := list "disable-sample" "disable-metric" -}}
+{{- if hasKey $bb.option $key -}}
+{{- fail (printf "bytebase.option.%s was removed upstream; use external metadata PostgreSQL and review SECURITY.md" $key) -}}
+{{- end -}}
 {{- end -}}
 apiVersion: apps/v1
 kind: StatefulSet

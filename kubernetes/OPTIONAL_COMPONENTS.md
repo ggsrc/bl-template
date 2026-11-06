@@ -81,3 +81,10 @@ network and workspace files. It checks actual n9e login/new-vs-old credentials,
 Uptrace config against temporary PostgreSQL/ClickHouse, and Bytebase's non-root,
 read-only startup without embedded PostgreSQL. It does not validate a real CNI,
 GKE load balancer, production migration, or the complete telemetry/business flow.
+
+The follow-up canary also checks nginx HTTP/TLS proxy login with UID 10000,
+dropped capabilities and a read-only root filesystem, plus a synthetic metric
+write/query against temporary vmstorage/vminsert/vmselect. Docker uses a private
+DNS alias and maps the Kubernetes center Service port 80 to container port 17000;
+it does not simulate CNI policy enforcement or run n9e's full alert/notification
+lifecycle. The offline test asserts the rendered monitoring namespace/8481 rule.

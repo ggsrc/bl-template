@@ -1,4 +1,8 @@
 nightingale:
+  nginx:
+    image:
+      repository: nginx
+      tag: "1.30.6-alpine@sha256:e9b2d7624fd7957f4ed44ae0a272d93fb73aeb8512ba8916f8118ae6143fd115"
   expose:
     type: clusterIP
   n9e:
@@ -34,3 +38,4 @@ networkPolicy:
               kubernetes.io/metadata.name: monitoring-vm
       ports:
         - {protocol: TCP, port: 8429}
+        - {protocol: TCP, port: 8481}

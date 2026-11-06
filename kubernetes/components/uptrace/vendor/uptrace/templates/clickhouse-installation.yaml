@@ -31,7 +31,7 @@ spec:
           automountServiceAccountToken: false
           containers:
             - name: clickhouse
-              image: clickhouse/clickhouse-server:25.3
+              image: {{ printf "%s:%s" .Values.clickhouse.image.repository .Values.clickhouse.image.tag | quote }}
               env:
                 - name: CLICKHOUSE_ALWAYS_RUN_INITDB_SCRIPTS
                   value: 'true'

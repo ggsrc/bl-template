@@ -3,15 +3,8 @@ bytebase:
   option:
     external-url: {{ .externalURL }}
     externalPg:
-      enable: {{ .externalPgEnable }}
       existingPgURLSecret: {{ .existingPgURLSecret | quote }}
       existingPgURLSecretKey: {{ .existingPgURLSecretKey | quote }}
-      pgHost: {{ .pgHost }}
-      pgPort: {{ .pgPort }}
-      pgUsername: {{ .pgUsername }}
-      pgDatabase: {{ .pgDatabase }}
-      existingPgPasswordSecret: {{ .existingPgPasswordSecret }}
-      existingPgPasswordSecretKey: {{ .existingPgPasswordSecretKey }}
   persistence:
     storage: {{ .persistenceSize }}
 metadataDatabase:

@@ -3,8 +3,11 @@
 This component defaults to ClusterIP, authenticated MySQL/Redis, no bundled
 node collector, no agent API, and a non-root application with a read-only root
 filesystem. NetworkPolicy allows only the release's internal traffic, DNS and
-the default VictoriaMetrics writer. Allow trusted gateways, agents and notification
-destinations explicitly in `networkPolicy.ingress` / `networkPolicy.egress`.
+the default VictoriaMetrics writer (8429) and vmselect query endpoint (8481).
+Configure the n9e datasource URL as
+`http://vmselect-victoriametrics-vmks.monitoring-vm.svc.cluster.local:8481/select/0/prometheus`;
+opening the port does not create the application datasource automatically.
+Allow trusted gateways, agents and notification destinations explicitly in `networkPolicy.ingress` / `networkPolicy.egress`.
 The alert engine heartbeat uses `status.podIP` through Downward API instead of
 probing a public IP to discover its local address.
 Adjust the VictoriaMetrics namespace/port if you change its endpoint. NodeLocal
@@ -63,8 +66,11 @@ an existing administrator password.
    manage it. Do not set this up while the old deployment is still publicly usable.
 6. Render into a fresh output directory and review the resource diff, PVC names,
    policies and removal of the old Ingress/collector. After rehearsing, run install
-   with `BLCLI_SECURITY_MIGRATION_APPROVED=1`. This gate also applies to direct
-   subsequent installer upgrades; direct Helm users must follow the same procedure.
+   with `BLCLI_SECURITY_MIGRATION_APPROVED=1`. The gate applies only when the
+   deployed wrapper chart is older than 2.0.0;
+   routine 2.x installer upgrades no longer require the acknowledgment. Python 3
+   is required to parse deployed release metadata. Direct Helm users must still
+   follow the same migration procedure.
 7. Check old credentials fail, new login works, rules evaluate, and notifications
    reach only approved destinations. Confirm no unexpected external LB or node
    mounts remain. Keep the old backups/volumes until the restore plan is accepted.
@@ -81,3 +87,16 @@ switch: path-based execution and future execution features still require treatin
 an administrator as having code execution within the restricted Pod. Use HTTP/SMTP
 notifications, keep administrator membership small, and review script channels.
 The Pod has no Kubernetes token, node mounts or host network; egress is restricted.
+
+## Failed first installation and retry
+
+A failed release using a 2.x wrapper can be retried without migration approval.
+The bootstrap Secret must still exist and be reused. If it is missing, the chart
+continues to fail closed: do not generate replacement credentials for populated
+databases. Recover the original Secret, or audit the failed installation and
+explicitly remove only proven-disposable data/resources before a clean reinstall.
+Migration approval does not bypass the missing-Secret guard.
+
+The nginx proxy is pinned to `1.30.6-alpine` with a multi-platform manifest digest.
+It runs non-root with no capabilities and a read-only root filesystem; its PID
+and proxy buffer paths use a writable `/tmp` emptyDir for HTTP and TLS modes.
