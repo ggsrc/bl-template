@@ -88,7 +88,7 @@ parameters:
         required: false
         default: []
         example:
-          - "git@github.com:example-org/gitops.git"
+          - "https://github.com/example-org/gitops.git"
 
       AppProjectNamespaces:
         type: list[string]
@@ -162,12 +162,64 @@ parameters:
           istio-injection: "enabled"
       
       # Git repository configuration
+      GitAuthMethod:
+        type: string
+        description: "How ArgoCD authenticates to GitHub. github-app: one GitHub App credential template (gen_github_app_sealed_secret.sh) for every https repository under GitHubAppCredsURL; repository URLs must be https. ssh: one SSH deploy key per repository (gen_ssh_sealed_secrets.sh); repository URLs must be git@ or ssh://. The install script refuses URLs of the other kind, since they would get no credentials"
+        required: false
+        default: "github-app"
+        enum: ["github-app", "ssh"]
+        example: "github-app"
+
+      GitHubAppID:
+        type: string
+        description: "GitHub App ID (GitAuthMethod github-app). The App needs read-only Contents and Metadata permission on the GitOps repositories"
+        required: false
+        default: ""
+        example: "123456"
+
+      GitHubAppInstallationID:
+        type: string
+        description: "Installation ID of the GitHub App in the organization (GitAuthMethod github-app; shown in the installation's settings URL)"
+        required: false
+        default: ""
+        example: "12345678"
+
+      GitHubAppCredsURL:
+        type: string
+        description: "URL prefix the GitHub App credentials apply to (GitAuthMethod github-app). ArgoCD uses them for every repository URL that starts with it"
+        required: false
+        default: "https://github.com/example-org"
+        example: "https://github.com/example-org"
+
+      GitHubAppSecretName:
+        type: string
+        description: "Name of the repo-creds Secret that gen_github_app_sealed_secret.sh seals"
+        required: false
+        default: "argocd-github-app-creds"
+        example: "argocd-github-app-creds"
+
+      GitHubAppPrivateKeyFile:
+        type: string
+        description: "GitHub App private key file, relative to the keys directory (default <workspace>/keys). Keep it outside the repository; only the sealed Secret is committed"
+        required: false
+        default: "argocd_github_app.pem"
+        example: "argocd_github_app.pem"
+
+      GitHubAppEnterpriseBaseURL:
+        type: string
+        description: "GitHub Enterprise Server API URL (GitAuthMethod github-app). Empty for github.com"
+        required: false
+        default: ""
+        example: "https://github.example.com/api/v3"
+
       GitRepositories:
         type: list[object]
-        description: "Git repositories for ArgoCD. gen_ssh_sealed_secrets.sh seals one repository Secret per entry (url, type, name and the SSH key, label argocd.argoproj.io/secret-type=repository); sshPrivateKeySecret.name names that Secret (default GitSSHSecretName-<index>). sshPrivateKeyFile is the entry's own private key, relative to the keys directory (default <workspace>/keys); without it the default key argocd_github is used. A GitHub deploy key reads only one repository, so give every entry its own key unless the default key belongs to a machine user"
+        description: "Git repositories for ArgoCD; their URLs also fill the AppProject sourceRepos when AppProjectSourceRepos is empty. With GitAuthMethod ssh, gen_ssh_sealed_secrets.sh seals one repository Secret per entry (url, type, name and the SSH key, label argocd.argoproj.io/secret-type=repository); sshPrivateKeySecret.name names that Secret (default GitSSHSecretName-<index>). sshPrivateKeyFile is the entry's own private key, relative to the keys directory (default <workspace>/keys); without it the default key argocd_github is used. A GitHub deploy key reads only one repository, so give every entry its own key unless the default key belongs to a machine user"
         required: false
         default: []
         example:
+          - url: "https://github.com/example-org/gitops.git"
+            name: "gitops"
           - url: "git@github.com:example-org/gitops.git"
             sshPrivateKeySecret:
               name: "argocd-github-ssh-secret"
@@ -177,10 +229,10 @@ parameters:
       
       GitRepositoryURL:
         type: string
-        description: "Git repository URL (used when GitRepositories is not provided, for backward compatibility)"
+        description: "Git repository URL (used when GitRepositories is not provided, for backward compatibility). https for GitAuthMethod github-app, git@ for ssh"
         required: false
-        default: "git@github.com:example-org/gitops.git"
-        example: "git@github.com:example-org/gitops.git"
+        default: "https://github.com/example-org/gitops.git"
+        example: "https://github.com/example-org/gitops.git"
       
       GitSSHSecretName:
         type: string

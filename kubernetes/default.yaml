@@ -33,6 +33,10 @@ projects:
           namespace: argocd
           argocd-url: https://internal.example.com/argocd
           argocd-version: v3.5.6
+          GitAuthMethod: github-app
+          GitHubAppID: ""  # required: install refuses to run without it
+          GitHubAppInstallationID: ""  # required
+          GitHubAppCredsURL: https://github.com/example-org
           dex-config:
             connectors:
               - type: github
@@ -100,6 +104,10 @@ projects:
           namespace: argocd
           argocd-url: https://internal.example.com/argocd
           argocd-version: v3.5.6
+          GitAuthMethod: github-app
+          GitHubAppID: ""  # required: install refuses to run without it
+          GitHubAppInstallationID: ""  # required
+          GitHubAppCredsURL: https://github.com/example-org
           dex-config:
             connectors:
               - type: github
@@ -160,6 +168,10 @@ projects:
           namespace: argocd
           argocd-url: https://internal.example.com/argocd
           argocd-version: v3.5.6
+          GitAuthMethod: github-app
+          GitHubAppID: ""  # required: install refuses to run without it
+          GitHubAppInstallationID: ""  # required
+          GitHubAppCredsURL: https://github.com/example-org
           dex-config:
             connectors:
               - type: github

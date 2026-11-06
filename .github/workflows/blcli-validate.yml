@@ -39,3 +39,9 @@ jobs:
           blcli init-args "$GITHUB_WORKSPACE" -o /tmp/args.yaml --preview
           blcli init-args "$GITHUB_WORKSPACE" -o /tmp/args.yaml
           blcli check args --args /tmp/args.yaml -r "$GITHUB_WORKSPACE"
+
+      - name: ArgoCD render and install-guard tests (fake kubectl, no network)
+        run: |
+          python3 -m venv /tmp/test-venv
+          /tmp/test-venv/bin/pip install PyYAML==6.0.3
+          /tmp/test-venv/bin/python scripts/test-argocd.py

@@ -32,6 +32,23 @@ SSO_CONFIGURED="{{ $ssoConfigured }}"
 {{- $allReposHaveKeys := false }}
 {{- if .GitRepositories }}{{ $allReposHaveKeys = true }}{{ range .GitRepositories }}{{ if not .sshPrivateKeyFile }}{{ $allReposHaveKeys = false }}{{ end }}{{ end }}{{ end }}
 ALL_REPOS_HAVE_KEYS="{{ $allReposHaveKeys }}"
+{{- $mode := "github-app" }}{{ if .GitAuthMethod }}{{ $mode = .GitAuthMethod }}{{ end }}
+GIT_AUTH_METHOD="{{ $mode }}"
+GITHUB_APP_IDS_SET="{{ if and .GitHubAppID .GitHubAppInstallationID }}true{{ else }}false{{ end }}"
+# Every repository URL ArgoCD is given; checked against GIT_AUTH_METHOD below.
+REPO_URLS=(
+{{- if .GitRepositories }}{{ range .GitRepositories }}
+    "{{ .url }}"
+{{- end }}{{ else if .GitRepositoryURL }}
+    "{{ .GitRepositoryURL }}"
+{{- end }}
+{{- range .AppProjectSourceRepos }}
+    "{{ . }}"
+{{- end }}
+)
+GITHUB_APP_SECRET_FILE="github-app-sealed-secret.yaml"
+GEN_GITHUB_APP_SCRIPT="${ARGOCD_GEN_GITHUB_APP_SCRIPT:-gen_github_app_sealed_secret.sh}"
+GITHUB_APP_KEY_PATH="${ARGOCD_GITHUB_APP_PRIVATE_KEY_PATH:-}"
 SSH_SECRET_FILE="github-ssh-sealed-secret.yaml"
 GEN_SSH_SCRIPT="${ARGOCD_GEN_SEALED_SECRET_SCRIPT:-gen_ssh_sealed_secrets.sh}"
 DEX_SECRET_FILE="dex-github-sealed-secret.yaml"
@@ -50,6 +67,7 @@ else
     SSH_KEYS_DIR="../../../keys"
 fi
 SSH_PRIVATE_KEY_PATH="${ARGOCD_SSH_PRIVATE_KEY_PATH:-${SSH_KEYS_DIR}/argocd_github}"
+GITHUB_APP_KEY_PATH="${GITHUB_APP_KEY_PATH:-${SSH_KEYS_DIR}/{{ if .GitHubAppPrivateKeyFile }}{{ .GitHubAppPrivateKeyFile }}{{ else }}argocd_github_app.pem{{ end }}}"
 
 # Function to print colored messages
 info() {
@@ -96,6 +114,27 @@ if [ "${ADMIN_ENABLED}" != "true" ] && [ "${SSO_CONFIGURED}" != "true" ]; then
     exit 1
 fi
 
+# Repository credentials are matched by URL: GitHub App credentials only apply to https URLs,
+# an SSH key only to SSH URLs. A URL of the other kind would silently get no credentials.
+case "${GIT_AUTH_METHOD}" in
+    github-app|ssh) ;;
+    *) error "GitAuthMethod must be github-app or ssh, not '${GIT_AUTH_METHOD}'"; exit 1 ;;
+esac
+for url in ${REPO_URLS[@]+"${REPO_URLS[@]}"}; do
+    if [ "${GIT_AUTH_METHOD}" = "github-app" ] && [[ "${url}" != https://* ]]; then
+        error "GitAuthMethod is github-app but ${url} is not an https URL; GitHub App credentials only work over https."
+        exit 1
+    fi
+    if [ "${GIT_AUTH_METHOD}" = "ssh" ] && [[ "${url}" == https://* ]]; then
+        error "GitAuthMethod is ssh but ${url} is an https URL; the SSH deploy key only works with git@ or ssh:// URLs."
+        exit 1
+    fi
+done
+if [ "${GIT_AUTH_METHOD}" = "github-app" ] && [ "${GITHUB_APP_IDS_SET}" != "true" ]; then
+    error "GitAuthMethod is github-app: set GitHubAppID and GitHubAppInstallationID, re-render and run this script again."
+    exit 1
+fi
+
 sha256_of() {
     if command -v sha256sum &> /dev/null; then
         sha256sum "$1" | awk '{print $1}'
@@ -114,64 +153,95 @@ CURRENT_CONTEXT=$(kubectl config current-context)
 info "Current Kubernetes context: ${CURRENT_CONTEXT}"
 warn "Please ensure you are connected to the correct cluster"
 
-if [ "${SSH_KEYS_DIR}" = "../../keys" ]; then
-    warn "Using the deploy key in ${SSH_KEYS_DIR}, which is inside the kubernetes repository."
-    warn "Move it to ../../../keys (or set BLCLI_KEYS_DIR). If it was ever committed, rotate the deploy key."
-fi
-
-# Ensure SSH key material exists before generating sealed secret
-if [ ! -f "${SSH_PRIVATE_KEY_PATH}" ] && [ -f "${KUBERNETES_INIT_SCRIPT}" ]; then
-    if [ ! -x "${KUBERNETES_INIT_SCRIPT}" ]; then
-        chmod +x "${KUBERNETES_INIT_SCRIPT}"
+if [ "${GIT_AUTH_METHOD}" = "github-app" ]; then
+    # GitHub App: one credential template Secret for every https repository under GitHubAppCredsURL.
+    if [ -f "${GEN_GITHUB_APP_SCRIPT}" ] && [ -f "${GITHUB_APP_KEY_PATH}" ]; then
+        info "Sealing the GitHub App credentials via ${GEN_GITHUB_APP_SCRIPT}"
+        ARGOCD_KEYS_DIR="${SSH_KEYS_DIR}" bash "./${GEN_GITHUB_APP_SCRIPT}" "${GITHUB_APP_KEY_PATH}"
     fi
-    info "Generating ArgoCD SSH keys via ${KUBERNETES_INIT_SCRIPT}"
-    BLCLI_KEYS_DIR="${SSH_KEYS_DIR}" "./${KUBERNETES_INIT_SCRIPT}"
-fi
-
-# Generate SSH sealed secret before kustomize build
-if [ -f "${GEN_SSH_SCRIPT}" ]; then
-    if [ ! -x "${GEN_SSH_SCRIPT}" ]; then
-        chmod +x "${GEN_SSH_SCRIPT}"
-    fi
-    # Seals every configured repository with its own key (GitRepositories[].sshPrivateKeyFile)
-    # or, for entries without one, the default key.
-    if [ -f "${SSH_PRIVATE_KEY_PATH}" ]; then
-        info "Generating SSH sealed secret via ${GEN_SSH_SCRIPT}"
-        ARGOCD_KEYS_DIR="${SSH_KEYS_DIR}" "./${GEN_SSH_SCRIPT}" "${SSH_PRIVATE_KEY_PATH}"
-    elif [ "${ALL_REPOS_HAVE_KEYS}" = "true" ]; then
-        info "Generating SSH sealed secret via ${GEN_SSH_SCRIPT} (per-repository keys in ${SSH_KEYS_DIR})"
-        ARGOCD_KEYS_DIR="${SSH_KEYS_DIR}" "./${GEN_SSH_SCRIPT}"
-    fi
-fi
-
-# Check if SSH sealed secret exists
-if [ ! -f "${SSH_SECRET_FILE}" ]; then
-    warn "GitHub SSH sealed secret file (${SSH_SECRET_FILE}) not found"
-    if [ -f "${GEN_SSH_SCRIPT}" ]; then
-        warn "SSH private key not found at ${SSH_PRIVATE_KEY_PATH}"
-        info "To generate the SSH sealed secret manually, run:"
-        info "  ./${GEN_SSH_SCRIPT} <path_to_ssh_private_key>"
+    if [ ! -f "${GITHUB_APP_SECRET_FILE}" ]; then
+        warn "GitHub App sealed secret (${GITHUB_APP_SECRET_FILE}) not found and no private key at ${GITHUB_APP_KEY_PATH}"
+        info "Seal it with: ./${GEN_GITHUB_APP_SCRIPT} <path_to_github_app_private_key.pem>"
         if [ -t 0 ]; then
-            read -p "Do you want to continue without SSH secret? (y/N): " -n 1 -r
+            read -p "Do you want to continue without repository credentials? (y/N): " -n 1 -r
             echo
             if [[ ! $REPLY =~ ^[Yy]$ ]]; then
                 info "Installation cancelled"
                 exit 0
             fi
         else
-            warn "Non-interactive mode: continuing without SSH secret"
+            warn "Non-interactive mode: continuing without repository credentials"
         fi
-    else
-        warn "Continuing without SSH secret file"
+        info "Creating placeholder ${GITHUB_APP_SECRET_FILE} for kustomize build (replace with the real sealed secret later)"
+        cat > "${GITHUB_APP_SECRET_FILE}" << 'PLACEHOLDER'
+# Placeholder - replace with output of ./gen_github_app_sealed_secret.sh <path_to_github_app_private_key.pem>
+apiVersion: v1
+kind: Secret
+metadata:
+  name: github-app-placeholder
+  namespace: argocd
+type: Opaque
+PLACEHOLDER
     fi
 else
-    info "Found SSH sealed secret file: ${SSH_SECRET_FILE}"
-fi
+    if [ "${SSH_KEYS_DIR}" = "../../keys" ]; then
+        warn "Using the deploy key in ${SSH_KEYS_DIR}, which is inside the kubernetes repository."
+        warn "Move it to ../../../keys (or set BLCLI_KEYS_DIR). If it was ever committed, rotate the deploy key."
+    fi
 
-# Ensure kustomize can run: create placeholder if resource is missing
-if [ ! -f "${SSH_SECRET_FILE}" ]; then
-    info "Creating placeholder ${SSH_SECRET_FILE} for kustomize build (replace with real sealed secret later)"
-    cat > "${SSH_SECRET_FILE}" << 'PLACEHOLDER'
+    # Ensure SSH key material exists before generating sealed secret
+    if [ ! -f "${SSH_PRIVATE_KEY_PATH}" ] && [ -f "${KUBERNETES_INIT_SCRIPT}" ]; then
+        if [ ! -x "${KUBERNETES_INIT_SCRIPT}" ]; then
+            chmod +x "${KUBERNETES_INIT_SCRIPT}"
+        fi
+        info "Generating ArgoCD SSH keys via ${KUBERNETES_INIT_SCRIPT}"
+        BLCLI_KEYS_DIR="${SSH_KEYS_DIR}" "./${KUBERNETES_INIT_SCRIPT}"
+    fi
+
+    # Generate SSH sealed secret before kustomize build
+    if [ -f "${GEN_SSH_SCRIPT}" ]; then
+        if [ ! -x "${GEN_SSH_SCRIPT}" ]; then
+            chmod +x "${GEN_SSH_SCRIPT}"
+        fi
+        # Seals every configured repository with its own key (GitRepositories[].sshPrivateKeyFile)
+        # or, for entries without one, the default key.
+        if [ -f "${SSH_PRIVATE_KEY_PATH}" ]; then
+            info "Generating SSH sealed secret via ${GEN_SSH_SCRIPT}"
+            ARGOCD_KEYS_DIR="${SSH_KEYS_DIR}" "./${GEN_SSH_SCRIPT}" "${SSH_PRIVATE_KEY_PATH}"
+        elif [ "${ALL_REPOS_HAVE_KEYS}" = "true" ]; then
+            info "Generating SSH sealed secret via ${GEN_SSH_SCRIPT} (per-repository keys in ${SSH_KEYS_DIR})"
+            ARGOCD_KEYS_DIR="${SSH_KEYS_DIR}" "./${GEN_SSH_SCRIPT}"
+        fi
+    fi
+
+    # Check if SSH sealed secret exists
+    if [ ! -f "${SSH_SECRET_FILE}" ]; then
+        warn "GitHub SSH sealed secret file (${SSH_SECRET_FILE}) not found"
+        if [ -f "${GEN_SSH_SCRIPT}" ]; then
+            warn "SSH private key not found at ${SSH_PRIVATE_KEY_PATH}"
+            info "To generate the SSH sealed secret manually, run:"
+            info "  ./${GEN_SSH_SCRIPT} <path_to_ssh_private_key>"
+            if [ -t 0 ]; then
+                read -p "Do you want to continue without SSH secret? (y/N): " -n 1 -r
+                echo
+                if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                    info "Installation cancelled"
+                    exit 0
+                fi
+            else
+                warn "Non-interactive mode: continuing without SSH secret"
+            fi
+        else
+            warn "Continuing without SSH secret file"
+        fi
+    else
+        info "Found SSH sealed secret file: ${SSH_SECRET_FILE}"
+    fi
+
+    # Ensure kustomize can run: create placeholder if resource is missing
+    if [ ! -f "${SSH_SECRET_FILE}" ]; then
+        info "Creating placeholder ${SSH_SECRET_FILE} for kustomize build (replace with real sealed secret later)"
+        cat > "${SSH_SECRET_FILE}" << 'PLACEHOLDER'
 # Placeholder - replace with output of ./gen_ssh_sealed_secrets.sh <path_to_ssh_private_key>
 apiVersion: v1
 kind: Secret
@@ -180,6 +250,7 @@ metadata:
   namespace: argocd
 type: Opaque
 PLACEHOLDER
+    fi
 fi
 
 # Dex GitHub client secret: argocd-cm only references it, the value comes from a sealed Secret.

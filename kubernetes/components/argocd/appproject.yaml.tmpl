@@ -20,7 +20,7 @@ spec:
   - {{ .url }}
   {{- end }}
   {{- else }}
-  - {{ if .GitRepositoryURL }}{{ .GitRepositoryURL }}{{ else }}git@github.com:example-org/gitops.git{{ end }}
+  - {{ if .GitRepositoryURL }}{{ .GitRepositoryURL }}{{ else if eq (printf "%v" .GitAuthMethod) "ssh" }}git@github.com:example-org/gitops.git{{ else }}https://github.com/example-org/gitops.git{{ end }}
   {{- end }}
   destinations:
   {{- if .AppProjectNamespaces }}

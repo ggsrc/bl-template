@@ -7,7 +7,8 @@ metadata:
     app.kubernetes.io/part-of: argocd
 data:
   # Repositories are not configured here: ArgoCD 3.x only reads them from Secrets labelled
-  # argocd.argoproj.io/secret-type=repository (sealed by gen_ssh_sealed_secrets.sh).
+  # argocd.argoproj.io/secret-type=repository or repo-creds (sealed by gen_github_app_sealed_secret.sh
+  # or gen_ssh_sealed_secrets.sh, depending on GitAuthMethod).
 
   # The local admin account is off; users sign in through Dex SSO.
   admin.enabled: "{{ if .AdminEnabled }}true{{ else }}false{{ end }}"

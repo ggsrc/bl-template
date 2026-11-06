@@ -4,7 +4,11 @@ kind: Kustomization
 resources:
 - namespace.yaml
 - app-namespace.yaml
+{{- if eq (printf "%v" .GitAuthMethod) "ssh" }}
 - github-ssh-sealed-secret.yaml
+{{- else }}
+- github-app-sealed-secret.yaml
+{{- end }}
 {{- if or .DexConfig .DexGitHubEnabled }}
 - dex-github-sealed-secret.yaml
 {{- end }}
