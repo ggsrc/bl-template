@@ -4,14 +4,14 @@
 
 **One config. Full cloud platform lifecycle.**
 
-Enterprise **GCP-first** platform template for [blcli](https://github.com/ggsrc/blcli) — Terraform, Kubernetes, and ArgoCD GitOps from one self-describing repository.
+Infrastructure from 0 to 1 for **startups and indie developers** — a **GCP-first** template for [blcli](https://github.com/ggsrc/blcli) covering Terraform, Kubernetes, and ArgoCD GitOps, built so you understand every layer you run.
 
 [![GitHub stars](https://img.shields.io/github/stars/ggsrc/bl-template?style=flat-square)](https://github.com/ggsrc/bl-template/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/ggsrc/bl-template?style=flat-square)](https://github.com/ggsrc/bl-template/network/members)
 [![blcli](https://img.shields.io/badge/powered%20by-blcli-blue?style=flat-square)](https://github.com/ggsrc/blcli)
 [![Personal template](https://img.shields.io/badge/personal-bl--template--personal-green?style=flat-square)](https://github.com/ggsrc/bl-template-personal)
 
-[Quick Start](#blcli-usage) · [Chinese](README_zh.md) · [ARGS_DESIGN](ARGS_DESIGN.md)
+[0→1 Guide](docs/GETTING_STARTED.md) · [Quick Start](#blcli-usage) · [Chinese](README_zh.md) · [ARGS_DESIGN](ARGS_DESIGN.md)
 
 </div>
 
@@ -25,11 +25,16 @@ For Chinese documentation, see [README_zh.md](./README_zh.md).
 
 ## What is bl-template?
 
-Official **enterprise** template repository for [blcli](https://github.com/ggsrc/blcli). Use it under a GCP Organization to generate multi-project, multi-environment infrastructure — Terraform for GCP resources, Kubernetes platform components, and ArgoCD GitOps applications — from `config.yaml`, `args.yaml`, and Go templates.
+The official template repository for [blcli](https://github.com/ggsrc/blcli), aimed at **startups and individual developers** who need production-grade infrastructure but don't have a platform team. It gives you two things:
+
+1. **The capability** — generate Terraform for GCP resources, Kubernetes platform components, and ArgoCD GitOps applications from `config.yaml`, `args.yaml`, and Go templates, then apply them with blcli.
+2. **The understanding** — every layer is documented: what it is, why you need it, and when you can skip it. You end up owning infra you can explain, not a black box.
 
 ```
-bl-template  +  args.yaml  +  blcli  →  corp / stg / prd  →  apply with blcli
+bl-template  +  args.yaml  +  blcli  →  your environments  →  apply with blcli
 ```
+
+New here? Start with **[Build Your Infra from 0 to 1](docs/GETTING_STARTED.md)**.
 
 Fork this repo to customize modules and components while keeping the same blcli protocol.
 
@@ -37,17 +42,19 @@ Fork this repo to customize modules and components while keeping the same blcli 
 
 ## Who is it for?
 
-| Audience | When to use bl-template |
-|----------|-------------------------|
-| Platform / SRE teams | Multi-project GCP org (e.g. corp, stg, prd), production GitOps with ArgoCD |
-| Teams standardizing on blcli | Want a batteries-included reference implementation to fork |
-| Not you? | Solo developers → use [bl-template-personal](https://github.com/ggsrc/bl-template-personal) instead |
+| Audience | How bl-template helps |
+|----------|-----------------------|
+| Early-stage startups | Go from an empty GCP account to GKE + GitOps + monitoring, and grow from one environment to `stg` / `prd` / `corp` without rebuilding |
+| Individual developers | Learn how real-world infra fits together by building it, layer by layer |
+| Small teams without SRE | Opinionated, documented defaults instead of assembling modules and manifests by hand |
+| Want the lightest setup? | Start with [bl-template-personal](https://github.com/ggsrc/bl-template-personal) and move here as you grow |
 
 ---
 
 ## Why this template?
 
 - **Self-describing** — `config.yaml` declares components and dependencies; `args.yaml` documents every parameter for `blcli init-args` and `explain`.
+- **Learn by building** — the [0→1 guide](docs/GETTING_STARTED.md) explains each layer and which parts a small team can defer.
 - **Full stack** — Terraform init + projects + modules, Kubernetes base/optional components, GitOps app templates and ArgoCD Applications.
 - **Convention over configuration** — args discovery from `path`, dependency ordering in config, `default.yaml` for sensible defaults.
 - **blcli-native** — Designed for `init-args` → `init` → `apply` → `status` → `rollback`; not a standalone Terraform-only blueprint.
