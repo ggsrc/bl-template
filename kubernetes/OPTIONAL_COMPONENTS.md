@@ -28,7 +28,7 @@ Install: in the rendered output directory, run `bash ./install` (Helm components
 | Component | Official image / chart | Depends on | Description |
 |------|------------------|------|------|
 | cnpg | `ghcr.io/cloudnative-pg/cloudnative-pg` | — | CloudNativePG Operator |
-| redis | Bitnami Chart → `bitnami/redis` | external-secrets | Shared Redis |
+| redis | Official Valkey chart → `valkey/valkey` | external-secrets | Shared Redis-compatible cache (Valkey) |
 | paradedb | Official ParadeDB chart | cnpg | PostgreSQL + search extensions |
 | kafka | Bitnami Chart → `bitnami/kafka` | — | Kafka in KRaft mode |
 | juicefs | `juicedata/mount` | external-secrets | JuiceFS S3 Gateway (Kustomize) |

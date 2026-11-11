@@ -1,14 +1,14 @@
 version: 1.0.0
 
 # Parameter definitions for the kubernetes/components/redis component
-# Shared Redis based on the Bitnami Redis Helm chart.
+# Shared Valkey (Redis-compatible) based on the official Valkey Helm chart.
 
 parameters:
   components:
     redis:
       namespace:
         type: string
-        description: "Namespace to install Redis"
+        description: "Namespace to install the shared Valkey"
         required: false
         default: "redis"
       releaseName:
@@ -23,47 +23,57 @@ parameters:
         default: "values.yaml values-override.yaml"
       existingSecret:
         type: string
-        description: "Kubernetes secret name containing Redis password"
+        description: "Kubernetes secret name containing the password (used by the default and metrics ACL users)"
         required: false
         default: "redis-shared"
       existingSecretPasswordKey:
         type: string
-        description: "Key in existingSecret for Redis password"
+        description: "Key in existingSecret for the password"
         required: false
         default: "REDIS_PASSWORD"
       allowLuaScripting:
         type: boolean
-        description: "Keep Lua scripting and functions enabled (EVAL, EVALSHA, EVAL_RO, EVALSHA_RO, FUNCTION, FCALL, FCALL_RO, SCRIPT). Disabled by default; enable only for clients that need Lua (for example BullMQ or redlock) and only with a Redis image patched for CVE-2025-49844"
+        description: "Allow Lua scripting and functions (the @scripting ACL category: EVAL, EVALSHA, FUNCTION, FCALL, SCRIPT, ...) for the default user. Disabled by default; enable only for clients that need Lua (for example BullMQ or redlock)"
         required: false
         default: false
+      extraAclRules:
+        type: string
+        description: "Extra ACL rules appended to the default user's permissions, for example \"+keys +sort\" (both are in @dangerous and denied by default)"
+        required: false
+        default: ""
       enableInternalLB:
         type: boolean
-        description: "Deploy internal LoadBalancer Service for Redis (GCP internal LB)"
+        description: "Deploy an internal LoadBalancer Service (GCP internal LB) for clients outside the cluster. Requires internalLBSourceRanges"
         required: false
-        default: true
+        default: false
       internalLBServiceName:
         type: string
         description: "Name of internal LoadBalancer Service"
         required: false
         default: "redis-shared-lb"
+      internalLBSourceRanges:
+        type: string
+        description: "Comma-separated client CIDRs allowed through the internal LoadBalancer (loadBalancerSourceRanges); required when enableInternalLB is true"
+        required: false
+        default: ""
       cpuLimit:
         type: string
-        description: "Redis sentinel resources limits cpu"
+        description: "Valkey container CPU limit"
         required: false
         default: "1000m"
       memoryLimit:
         type: string
-        description: "Redis sentinel resources limits memory"
+        description: "Valkey container memory limit"
         required: false
         default: "500M"
       cpuRequest:
         type: string
-        description: "Redis sentinel resources requests cpu"
+        description: "Valkey container CPU request"
         required: false
         default: "150m"
       memoryRequest:
         type: string
-        description: "Redis sentinel resources requests memory"
+        description: "Valkey container memory request"
         required: false
         default: "100M"
       minHelmVersion:

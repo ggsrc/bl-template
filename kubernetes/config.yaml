@@ -119,7 +119,9 @@ components:
   - name: redis
     path:
     - kubernetes/components/redis/Chart.yaml
+    - kubernetes/components/redis/Chart.lock
     - kubernetes/components/redis/values.yaml
+    - kubernetes/components/redis/templates/internal-lb.yaml
     - kubernetes/components/redis/values-override.yaml.tmpl
     - kubernetes/components/redis/install.tmpl
     args:
