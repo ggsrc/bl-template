@@ -168,7 +168,7 @@ Defines all Kubernetes platform components. **Core stack** entries come from `de
 | Component | Official image / chart | Notes |
 |-----------|------------------------|--------|
 | cnpg | CloudNativePG Operator | PostgreSQL operator |
-| redis | Bitnami Redis | Shared cache |
+| redis | Valkey (official chart) | Shared Redis-compatible cache |
 | paradedb | ParadeDB | Requires cnpg |
 | kafka | Bitnami Kafka | Message queue |
 | juicefs | juicedata/mount | S3 gateway (Kustomize) |

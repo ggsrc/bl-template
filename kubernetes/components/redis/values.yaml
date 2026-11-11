@@ -1,37 +1,45 @@
-# Bitnami Redis base values
-# Based on the upstream Bitnami Redis chart values.
-# Per-environment differences are overridden in values-override.yaml.tmpl
-redis:
-  architecture: standalone
-  auth:
-    enabled: true
-    sentinel: false
-    password: ""
-    existingSecret: ""
-    existingSecretPasswordKey: ""
-  commonConfiguration: |-
-    appendonly yes
-    save ""
-  master:
-    persistence:
-      enabled: false
-  replica:
-    persistence:
-      enabled: false
-  sentinel:
-    enabled: false
+# Shared Valkey (Redis-compatible) based on the official Valkey Helm chart.
+# Per-environment settings, ACL users and the internal load balancer are set in values-override.yaml.
+valkey:
   image:
     registry: docker.io
-    repository: bitnami/redis
-    tag: 7.2.5-debian-12-r0
+    repository: valkey/valkey
+    tag: "9.1.3"
     pullPolicy: IfNotPresent
+  # Same server settings as before: AOF on, RDB snapshots off. Data lives in an emptyDir
+  # (dataStorage.enabled: false), so it is lost when the pod restarts.
+  valkeyConfig: |-
+    appendonly yes
+    save ""
+  dataStorage:
+    enabled: false
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9121"
   metrics:
     enabled: true
-    image:
-      registry: docker.io
-      repository: bitnami/redis-exporter
-      tag: 1.67.0-debian-12-r0
-      pullPolicy: IfNotPresent
-    podAnnotations:
-      prometheus.io/scrape: "true"
-      prometheus.io/port: "9121"
+    exporter:
+      image:
+        registry: ghcr.io
+        repository: oliver006/redis_exporter
+        tag: "v1.96.0"
+        pullPolicy: IfNotPresent
+      # The exporter logs in as the read-only "metrics" ACL user defined in values-override.yaml.
+      extraEnvs:
+        REDIS_USER: metrics
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 59000
+        runAsGroup: 59000
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop:
+            - ALL
+
+# Optional GCP internal load balancer, rendered by templates/internal-lb.yaml.
+internalLB:
+  enabled: false
+  name: redis-shared-lb
+  # Comma-separated client CIDRs; required when enabled.
+  sourceRanges: ""

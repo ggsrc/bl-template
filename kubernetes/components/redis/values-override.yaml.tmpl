@@ -1,83 +1,32 @@
 # Per-environment overrides, rendered by blcli.
 # Use together with values.yaml: helm upgrade -i -f values.yaml -f values-override.yaml
-redis:
-  image:
-    registry: docker.io
-    repository: bitnami/redis
+valkey:
+  # Keep the in-cluster address of the previous Bitnami chart: <release>-master.<namespace>.svc
+  fullnameOverride: {{ default `redis` .releaseName }}-master
+  # The chart default is auth.enabled: false; authentication must stay on.
   auth:
-    existingSecret: {{ default `redis-shared` .existingSecret }}
-    existingSecretPasswordKey: {{ default `REDIS_PASSWORD` .existingSecretPasswordKey }}
-  # Commands renamed to "" (disabled). The chart default is FLUSHDB and FLUSHALL only.
-  # CONFIG, DEBUG, MODULE and SLAVEOF/REPLICAOF let any client that knows the
-  # password reconfigure the server, write files or load native code.
-  # Sentinel mode needs CONFIG and REPLICAOF; remove them if you enable Sentinel.
-  master:
-    disableCommands:
-      - FLUSHDB
-      - FLUSHALL
-      - CONFIG
-      - DEBUG
-      - MODULE
-      - SLAVEOF
-      - REPLICAOF
-{{- if not (or .allowLuaScripting .AllowLuaScripting) }}
-      # Lua scripting and functions (CVE-2025-49844 and other Lua engine bugs).
-      # Set allowLuaScripting: true to keep them for clients that need Lua.
-      - EVAL
-      - EVALSHA
-      - EVAL_RO
-      - EVALSHA_RO
-      - FUNCTION
-      - FCALL
-      - FCALL_RO
-      - SCRIPT
-{{- end }}
-  replica:
-    disableCommands:
-      - FLUSHDB
-      - FLUSHALL
-      - CONFIG
-      - DEBUG
-      - MODULE
-      - SLAVEOF
-      - REPLICAOF
-{{- if not (or .allowLuaScripting .AllowLuaScripting) }}
-      # Lua scripting and functions (CVE-2025-49844 and other Lua engine bugs).
-      # Set allowLuaScripting: true to keep them for clients that need Lua.
-      - EVAL
-      - EVALSHA
-      - EVAL_RO
-      - EVALSHA_RO
-      - FUNCTION
-      - FCALL
-      - FCALL_RO
-      - SCRIPT
-{{- end }}
-  sentinel:
-    resources:
-      requests:
-        cpu: {{ default `150m` .cpuRequest }}
-        memory: {{ default `100M` .memoryRequest }}
-      limits:
-        cpu: {{ default `1000m` .cpuLimit }}
-        memory: {{ default `500M` .memoryLimit }}
-{{- if .enableInternalLB }}
-  extraDeploy:
-    - apiVersion: v1
-      kind: Service
-      metadata:
-        name: {{ default `redis-shared-lb` .internalLBServiceName }}
-        namespace: {{ default `redis` .namespace }}
-        annotations:
-          cloud.google.com/load-balancer-type: "Internal"
-      spec:
-        type: LoadBalancer
-        ports:
-          - name: redis
-            port: 6379
-            protocol: TCP
-            targetPort: 6379
-        selector:
-          app.kubernetes.io/name: redis
-          app.kubernetes.io/component: master
-{{- end }}
+    enabled: true
+    usersExistingSecret: {{ default `redis-shared` .existingSecret }}
+    aclUsers:
+      # Application user. @dangerous covers CONFIG, DEBUG, MODULE, REPLICAOF/SLAVEOF, FLUSHALL,
+      # FLUSHDB, KEYS, MONITOR, SHUTDOWN, CLIENT LIST/KILL and similar; INFO is added back for
+      # client libraries. @scripting (EVAL, FUNCTION, SCRIPT, ...) is removed unless allowLuaScripting.
+      default:
+        passwordKey: {{ default `REDIS_PASSWORD` .existingSecretPasswordKey }}
+        permissions: "~* &* +@all -@dangerous +info{{ if not (or .allowLuaScripting .AllowLuaScripting) }} -@scripting{{ end }}{{ if .extraAclRules }} {{ .extraAclRules }}{{ end }}"
+      # Read-only user for the metrics exporter sidecar (same password Secret key).
+      metrics:
+        passwordKey: {{ default `REDIS_PASSWORD` .existingSecretPasswordKey }}
+        permissions: "-@all +ping +info +select +client|setname +client|list +slowlog|get +slowlog|len +latency|latest +latency|histogram +commandlog|get +commandlog|len +memory|stats"
+  resources:
+    requests:
+      cpu: {{ default `150m` .cpuRequest }}
+      memory: {{ default `100M` .memoryRequest }}
+    limits:
+      cpu: {{ default `1000m` .cpuLimit }}
+      memory: {{ default `500M` .memoryLimit }}
+
+internalLB:
+  enabled: {{ if .enableInternalLB }}true{{ else }}false{{ end }}
+  name: {{ default `redis-shared-lb` .internalLBServiceName }}
+  sourceRanges: "{{ .internalLBSourceRanges }}"

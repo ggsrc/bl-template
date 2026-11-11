@@ -1,0 +1,29 @@
+{{- if .Values.internalLB.enabled }}
+{{- $ranges := compact (splitList "," (nospace (.Values.internalLB.sourceRanges | default ""))) }}
+{{- if not $ranges }}
+{{- fail "internalLB.sourceRanges is required when internalLB.enabled is true (set internalLBSourceRanges to the client CIDRs, for example 10.0.0.0/8)" }}
+{{- end }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.internalLB.name }}
+  labels:
+    app.kubernetes.io/name: valkey
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  annotations:
+    cloud.google.com/load-balancer-type: "Internal"
+spec:
+  type: LoadBalancer
+  loadBalancerSourceRanges:
+    {{- range $ranges }}
+    - {{ . | quote }}
+    {{- end }}
+  ports:
+    - name: tcp
+      port: 6379
+      protocol: TCP
+      targetPort: tcp
+  selector:
+    app.kubernetes.io/name: valkey
+    app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}

@@ -3,6 +3,24 @@
 Default changes that affect existing installations, why they were made, and what an existing install must do.
 Re-render with `blcli init` and review the diff before applying anything.
 
+## Shared Redis replaced by Valkey
+
+- **The `redis` component now installs Valkey 9.1.3** from the official Valkey chart 0.12.1, pinned by
+  `Chart.lock` and a sha256 check. The Bitnami `bitnami/redis:7.2.5` image no longer exists on Docker Hub,
+  and the frozen `bitnamilegacy` images are not patched for CVE-2025-49844. The in-cluster address stays
+  `<release>-master.<namespace>.svc:6379`, and the password Secret (`redis-shared` / `REDIS_PASSWORD`) is unchanged.
+  The upgrade replaces the StatefulSet with a Deployment; data is in an emptyDir and is lost, as on any restart.
+- **Commands are now denied by ACL, not renamed.** The default user has `+@all -@dangerous +info -@scripting`.
+  Compared with before, `KEYS`, `SORT`, `MONITOR`, `CLIENT LIST`/`KILL`, `SHUTDOWN`, `SAVE`/`BGSAVE`, `MIGRATE`
+  and `RESTORE` are also denied (`NOPERM`). Clients that need them set `extraAclRules` (for example `+keys`);
+  clients that need Lua set `allowLuaScripting: true`.
+- **Internal load balancer off by default and source-limited.** `enableInternalLB` now defaults to `false`.
+  An install that uses it must set `enableInternalLB: true` and `internalLBSourceRanges` (client CIDRs) explicitly,
+  or the install fails.
+- **CPU and memory settings now apply.** `cpuRequest`, `memoryRequest`, `cpuLimit` and `memoryLimit` used to set
+  the (disabled) Sentinel container only; they now set the Valkey container (default limit `500M`). Raise
+  `memoryLimit` before upgrading if the cache holds more data, or the pod is OOM-killed.
+
 ## Administration-services review follow-up
 
 - n9e now allows TCP 8481 to `monitoring-vm` as well as the 8429 writer. The

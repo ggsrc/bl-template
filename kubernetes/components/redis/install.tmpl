@@ -1,5 +1,5 @@
 #!/bin/bash
-# Install Redis via Helm
+# Install the shared Valkey (Redis-compatible) via Helm
 # Rendered by blcli; namespace and values can be parameterized.
 set -e
 
@@ -57,8 +57,28 @@ if [ ! -f "Chart.yaml" ]; then
   exit 1
 fi
 
-echo "Installing Redis: release=${RELEASE_NAME}, namespace=${NAMESPACE}"
-helm dependency update
+# Install exactly the chart pinned in Chart.lock, and check the archive against this checksum.
+# `helm pull --repo` needs no `helm repo add`. When you bump the chart, run `helm dependency update`
+# once, commit Chart.lock and update the version and checksum here.
+CHART_REPO="https://valkey.io/valkey-helm/"
+CHART_VERSION="0.12.1"
+CHART_ARCHIVE="charts/valkey-${CHART_VERSION}.tgz"
+CHART_SHA256="4ffe1a53f2902ddefd3774c1aab5bd60bfdc4b74cc670614899967972b153f7d"
+
+echo "Installing shared Valkey (Redis-compatible): release=${RELEASE_NAME}, namespace=${NAMESPACE}"
+mkdir -p charts
+if [ ! -f "${CHART_ARCHIVE}" ]; then
+  helm pull valkey --repo "${CHART_REPO}" --version "${CHART_VERSION}" --destination charts
+fi
+if command -v sha256sum &> /dev/null; then
+  ACTUAL_SHA256=$(sha256sum "${CHART_ARCHIVE}" | cut -d' ' -f1)
+else
+  ACTUAL_SHA256=$(shasum -a 256 "${CHART_ARCHIVE}" | cut -d' ' -f1)
+fi
+if [ "${ACTUAL_SHA256}" != "${CHART_SHA256}" ]; then
+  echo "Error: ${CHART_ARCHIVE} has sha256 ${ACTUAL_SHA256}, expected ${CHART_SHA256}"
+  exit 1
+fi
 kubectl create namespace "${NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f -
 # Let ExternalSecrets in this namespace (for example the redis-shared password) use the
 # gcp-secret-store ClusterSecretStore, which only serves labelled namespaces.
@@ -71,4 +91,4 @@ for f in ${VALUES_FILES}; do
 done
 helm upgrade --install "${RELEASE_NAME}" . -n "${NAMESPACE}" ${HELM_VALUES} --wait
 
-echo "Redis installed successfully."
+echo "Valkey installed successfully. In-cluster address: ${RELEASE_NAME}-master.${NAMESPACE}.svc:6379"

@@ -1,28 +1,42 @@
-# Redis
+# Redis (Valkey)
 
-Shared Redis deployment based on the Bitnami Redis Helm chart.
+Shared Redis-compatible cache based on the official [Valkey Helm chart](https://github.com/valkey-io/valkey-helm)
+(`valkey` 0.12.1, image `valkey/valkey:9.1.3`). The component keeps the name `redis` so existing args files keep working.
 
 ## Features
 
-- Standalone mode with AOF persistence
-- Password injected through an ExternalSecret (`auth.existingSecret`)
-- Optional GCP internal load balancer (`enable-internal-lb`)
-- Dangerous commands disabled (see below)
+- Standalone mode, AOF on, RDB snapshots off, data in an emptyDir (lost on restart)
+- ACL authentication always on; the password comes from an ExternalSecret (`existingSecret`, key `existingSecretPasswordKey`)
+- Dangerous commands and Lua scripting denied through ACL categories (see below)
+- Metrics exporter sidecar (`oliver006/redis_exporter`) logging in as a read-only `metrics` user
+- In-cluster address unchanged from the previous Bitnami chart: `<release>-master.<namespace>.svc:6379` (default `redis-master.redis.svc:6379`)
+- Optional GCP internal load balancer, off by default and limited to `internalLBSourceRanges`
 
-## Disabled commands
+## ACL users
 
-The template renames these commands to `""` on master and replicas, so clients cannot run them:
+Both users read their password from the same Secret key.
 
-- `FLUSHDB`, `FLUSHALL` (chart default)
-- `CONFIG`, `DEBUG`, `MODULE`, `SLAVEOF`, `REPLICAOF`: server reconfiguration, file writes and native code loading
-- `EVAL`, `EVALSHA`, `EVAL_RO`, `EVALSHA_RO`, `FUNCTION`, `FCALL`, `FCALL_RO`, `SCRIPT`: Lua scripting and functions. This blocks CVE-2025-49844 (Lua use-after-free, remote code execution for any authenticated client) and other Lua engine bugs in the pinned image.
+| User | Permissions |
+|------|-------------|
+| `default` | `~* &* +@all -@dangerous +info -@scripting` |
+| `metrics` | `-@all` plus `PING`, `INFO`, `SELECT`, `CLIENT SETNAME/LIST`, `SLOWLOG GET/LEN`, `LATENCY LATEST/HISTOGRAM`, `COMMANDLOG GET/LEN`, `MEMORY STATS` |
 
-Notes:
+`@dangerous` includes `CONFIG`, `DEBUG`, `MODULE`, `REPLICAOF`/`SLAVEOF`, `FLUSHALL`, `FLUSHDB`, `KEYS`, `SORT`, `MONITOR`,
+`SHUTDOWN`, `SAVE`/`BGSAVE`, `MIGRATE`, `RESTORE`, `CLIENT LIST`/`KILL`, `ACL` write commands and similar. `INFO` is added back
+because client libraries (for example ioredis and BullMQ) call it. Denied commands fail with `NOPERM`.
 
-- Clients that need Lua (for example BullMQ or redlock) fail with `ERR unknown command`. To keep scripting, set `allowLuaScripting: true` for this component, and use a Redis image patched for CVE-2025-49844 (7.2.11, 7.4.6, 8.0.4, 8.2.2 or later).
-- With `CONFIG` disabled the metrics exporter no longer reports `redis_config_*` metrics; other metrics are unaffected.
-- Sentinel mode needs `CONFIG` and `REPLICAOF`. Remove them from `disableCommands` in `values-override.yaml` if you enable Sentinel.
-- `rename-command` fails at startup for commands the server does not know; `EVAL_RO`, `EVALSHA_RO`, `FUNCTION`, `FCALL` and `FCALL_RO` need Redis 7.0 or later.
+Parameters:
+
+- `allowLuaScripting: true` drops `-@scripting`, for clients that need Lua (for example BullMQ or redlock).
+  Valkey 9.1.3 is not affected by CVE-2025-49844.
+- `extraAclRules` is appended to the default user's rules, for example `+keys +sort`.
+
+The exporter cannot read `CONFIG`, so `redis_config_*` metrics are not reported.
+
+## Internal load balancer
+
+`enableInternalLB: true` adds a GCP internal `LoadBalancer` Service (`internalLBServiceName`, default `redis-shared-lb`).
+`internalLBSourceRanges` (comma-separated CIDRs) is required; the install fails without it.
 
 ## Install
 
@@ -30,8 +44,10 @@ Notes:
 bash ./install
 ```
 
+The script downloads the chart version pinned in `Chart.lock` with `helm pull --repo` (no `helm repo add` needed) and checks its sha256.
+
 ## Prerequisites
 
-- Store the Redis password in GCP Secret Manager
+- Store the password in GCP Secret Manager
 - Sync it into the `redis-shared` Secret (key `REDIS_PASSWORD`) with the `external-secrets` component
 - The install script labels the namespace `gcp-secret-store-access=allowed`, so an ExternalSecret there can use the `gcp-secret-store` ClusterSecretStore
