@@ -110,7 +110,7 @@ curl localhost:8081                             # Hello from hello-world
 |------|------------|
 | 报 `open .../helm/repository/<某个仓库>-index.yaml: no such file or directory` | 安装脚本的 `helm dependency update` 会刷新你本机所有的 Helm 仓库，其中某个无关仓库的缓存坏了。执行 `helm repo update`，或用 `helm repo remove <仓库名>` 删掉它，再重新执行第 4 步 |
 | 某个组件失败，后面的组件报 `no matches for kind ...` / `ensure CRDs are installed first` | 后面的组件依赖前面组件装的 CRD。先修好第一个失败的组件，再重新执行第 4 步；已装好的组件重复执行不会有问题 |
-| 安装报 `context deadline exceeded` / `TLS handshake timeout` | 多半是内存不够，集群 API Server 卡住。用 `docker stats` 看是否有别的容器占用内存，腾出内存后重新执行第 4 步 |
+| 安装报 `context deadline exceeded` / `TLS handshake timeout` | 如果 `kubectl get pods -A` 里还有 Pod 在拉镜像，只是网络慢：Helm 最多等 15 分钟，可以用 `HELM_TIMEOUT=30m` 调长后重新执行第 4 步。如果 kubectl 本身也很慢或超时，是内存不够、API Server 卡住：用 `docker stats` 看是否有别的容器占用内存，腾出内存后重新执行第 4 步 |
 | Pod 长时间 `ContainerCreating` / `Pending` | 首次拉镜像较慢，`kubectl get pods -A -w` 观察；如果是 `Pending`，`kubectl describe pod` 多半是内存不够，给 Docker / minikube 多分配些 |
 | Application 显示认证失败 | Deploy Key 没加，或加到了别的仓库；`args.yaml` 里两处仓库地址要和实际仓库一致 |
 

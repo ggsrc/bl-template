@@ -101,6 +101,6 @@ if [ "${MIGRATION_STATE}" = legacy ] && [ "${BLCLI_SECURITY_MIGRATION_APPROVED:-
 fi
 helm dependency build --skip-refresh
 kubectl create namespace "${NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f -
-helm upgrade --install "${RELEASE_NAME}" . -n "${NAMESPACE}" "${HELM_VALUES[@]}" --wait
+helm upgrade --install "${RELEASE_NAME}" . -n "${NAMESPACE}" "${HELM_VALUES[@]}" --wait --timeout "${HELM_TIMEOUT:-15m}"
 
 echo "Uptrace installed successfully."

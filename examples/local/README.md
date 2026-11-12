@@ -112,7 +112,7 @@ curl localhost:8081                             # Hello from hello-world
 |---------|---------------|
 | `open .../helm/repository/<some-repo>-index.yaml: no such file or directory` | The install scripts' `helm dependency update` refreshes every Helm repository on your machine, and an unrelated one has a broken cache. Run `helm repo update`, or `helm repo remove <name>`, then repeat step 4 |
 | One component fails and later ones report `no matches for kind ...` / `ensure CRDs are installed first` | Later components need CRDs from earlier ones. Fix the first failure and repeat step 4; re-applying components that are already installed is fine |
-| Install fails with `context deadline exceeded` / `TLS handshake timeout` | Usually out of memory, with the API server stalled. Check `docker stats` for other containers using memory, free some, and repeat step 4 |
+| Install fails with `context deadline exceeded` / `TLS handshake timeout` | If `kubectl get pods -A` shows pods still pulling images, the network is just slow: Helm waits up to 15 minutes, raise it with `HELM_TIMEOUT=30m` and repeat step 4. If kubectl itself is slow or times out, you are out of memory and the API server stalled: check `docker stats` for other containers using memory, free some, and repeat step 4 |
 | Pods stay `ContainerCreating` / `Pending` | First image pulls are slow; watch with `kubectl get pods -A -w`. For `Pending`, `kubectl describe pod` usually shows insufficient memory: give Docker / minikube more |
 | The Application shows an authentication error | The deploy key is missing or on another repository; both repository URLs in `args.yaml` must match the real repository |
 

@@ -332,7 +332,13 @@ class ArgoCDTemplates(unittest.TestCase):
         # Placeholders for the missing Dex secret keep the build working.
         self.assertIn("dex-github-placeholder", (path / "dex-github-sealed-secret.yaml").read_text())
         self.assertTrue(any(c.startswith("apply") for c in calls))
-        self.run_command([self.kustomize, "build", str(path)])
+        built = list(yaml.safe_load_all(self.run_command([self.kustomize, "build", str(path)]).stdout))
+        # The upstream manifest has no namespaces: everything namespaced must land in argocd,
+        # and the Namespace objects keep their own names.
+        self.assertEqual(sorted(d["metadata"]["name"] for d in built if d["kind"] == "Namespace"), ["app", "argocd"])
+        for d in built:
+            if d["kind"] != "Namespace":
+                self.assertEqual(d["metadata"].get("namespace"), "argocd", d["metadata"]["name"])
 
     def test_ssh_seals_each_repository_with_its_own_key(self):
         keys = self.work / "ssh-keys"

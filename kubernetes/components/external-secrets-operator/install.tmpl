@@ -61,6 +61,6 @@ fi
 echo "Installing External Secrets Operator: release=${RELEASE_NAME}, namespace=${NAMESPACE}"
 helm dependency update
 kubectl create namespace "${NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f -
-helm upgrade --install "${RELEASE_NAME}" . -n "${NAMESPACE}" -f "${VALUES_FILE}" --wait
+helm upgrade --install "${RELEASE_NAME}" . -n "${NAMESPACE}" -f "${VALUES_FILE}" --wait --timeout "${HELM_TIMEOUT:-15m}"
 
 echo "External Secrets Operator installed successfully."

@@ -1,6 +1,18 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
+# The upstream install.yaml has no namespaces; without this every ArgoCD workload lands in the
+# kubectl default namespace while the install script and the Applications expect argocd.
+# unsetOnly: a plain `namespace:` would also rename the Namespace objects (argocd, app).
+transformers:
+- |-
+  apiVersion: builtin
+  kind: NamespaceTransformer
+  metadata:
+    name: argocd-namespace
+    namespace: {{ if .Namespace }}{{ .Namespace }}{{ else }}argocd{{ end }}
+  unsetOnly: true
+
 resources:
 - namespace.yaml
 - app-namespace.yaml
