@@ -39,7 +39,16 @@ Each layer depends on the one below it, so you always build **bottom-up**. blcli
 - A GCP account and Billing Account (a GCP Organization is **not** required — set `OrganizationID` to `"0"`, see [terraform/TERRAFORM_PROJECT.md](../terraform/TERRAFORM_PROJECT.md))
 - A domain (can come later, but certificates and public access depend on it)
 - A GitHub org or account to hold the generated terraform / kubernetes / gitops repos
-- Local tools: `blcli`, `terraform`, `gcloud`, `kubectl`, `helm`, `gh`
+- Local tools: `blcli`, `terraform`, `gcloud`, `kubectl`, `helm`, `gh`, plus `kustomize` and `curl` for the ArgoCD install script
+- `gcloud auth login` and `gcloud auth application-default login` (Terraform uses the latter)
+
+**Have these ready before you start, and fill them into the argocd parameters in `args.yaml`:**
+
+| What | Used by | Without it |
+|------|---------|------------|
+| A GitHub App (App ID, Installation ID and private key `.pem`) installed on the org that holds the gitops repo | ArgoCD pulling the private gitops repo | ArgoCD install stops with `set GitHubAppID and GitHubAppInstallationID` |
+| A GitHub OAuth App (Client ID and Client Secret) and the GitHub org allowed to sign in | ArgoCD GitHub login (Dex) | The defaults are placeholders (`clientID: XXXXXXX`, `example-org`): it installs but nobody can log in; removing the org restriction makes install stop with `The Dex GitHub connector has no orgs` |
+| `slack-webhook-url-infra-alert` in Secret Manager (a Slack Incoming Webhook URL) | Alerts to Slack | Rules are still evaluated, but Alertmanager has no webhook and cannot send alerts |
 
 **Generate your parameter file:**
 
@@ -67,6 +76,24 @@ blcli init-args -r github.com/ggsrc/bl-template -o args.yaml
 
 **Small-team tip:** Atlantis can wait. With one or two people on infra, local `terraform apply` plus code review is enough.
 
+**✅ Checkpoint**
+
+```bash
+gcloud projects list                   # shows <GlobalName>-tfstore-xxxx and <GlobalName>-prd-xxxx
+gcloud storage ls --project <GlobalName>-tfstore-xxxx   # shows the state bucket
+# in terraform/init/1-<GlobalName>-projects/:
+terraform output project_ids           # the real project ID behind prd, used in later stages
+```
+
+Project IDs get a random suffix (GCP project IDs are globally unique). blcli replaces `prd` in your args with the real ID; you don't edit it by hand.
+
+**Common issues**
+
+| Symptom | Cause and fix |
+|---------|---------------|
+| Project creation fails with a billing error | Wrong `BillingAccountID`, or the billing account hit its (small) project limit; request an increase in the console |
+| `SERVICE_DISABLED` / API not enabled | Newly enabled APIs take a few minutes; wait and apply again |
+
 ---
 
 ## Stage 2: Environment resources (`terraform/project/`)
@@ -86,6 +113,23 @@ Suggested order (also the dependency order):
 Per-component guidance: [terraform/TERRAFORM_PROJECT.md](../terraform/TERRAFORM_PROJECT.md).
 
 **Default components:** `main, backend, config-gcs-tfbackend, provider, variables, vpc, ip, gke, dns, cert, artifacts-registry, outputs` — everything a single environment needs. Add `firewall`, `iam`, `cdn`, `loki-logs` as needed; `vpc-peering` matters only when environments must talk to each other (e.g. a shared corp cluster).
+
+**✅ Checkpoint**
+
+```bash
+gcloud container clusters get-credentials prd-cluster --region us-west1 --project <prd project ID>
+kubectl get nodes                      # 1 Ready node (e2-standard-2); the two app pools at 0 nodes is expected
+gcloud dns managed-zones list --project <prd project ID>     # the public zone's dns_name is your domain
+gcloud certificate-manager certificates list --project <prd project ID>   # certificates end up ACTIVE
+```
+
+**Common issues**
+
+| Symptom | Cause and fix |
+|---------|---------------|
+| Certificate stuck in `PROVISIONING` | The domain is not delegated to Cloud DNS yet. Get the NS records with `gcloud dns managed-zones describe <zone> --format='value(nameServers)'` and set them for the domain (or subdomain) at your registrar; the certificate usually turns ACTIVE within tens of minutes |
+| Quota errors (`CPUS`, `IN_USE_ADDRESSES`, ...) | New projects have low quotas; request more under IAM & Admin → Quotas |
+| `terraform destroy` cannot delete the cluster | `deletionProtection: true` is deliberate; set it to false and apply first if you really want to delete |
 
 ---
 
@@ -111,6 +155,27 @@ Optional components (databases, cache, queues, logs, APM, …) are listed in [ku
 - **Metrics storage:** `storage-mode: local` by default keeps metrics in an in-cluster VMSingle. With several environments, switch to `remote` to ship every cluster's metrics to one central cluster (see [examples/multi-env/](../examples/multi-env/)).
 - **Databases:** Prefer managed (Cloud SQL) early; enable `cnpg` when you want Postgres in-cluster.
 
+**✅ Checkpoint**
+
+```bash
+kubectl get pods -n external-secrets; kubectl get pods -n sealed-secret
+kubectl get pods -n argocd; kubectl get pods -n monitoring-vm; kubectl get pods -n grafana
+                                       # all Running / Completed
+kubectl get clustersecretstore gcp-secret-store         # READY True: the cluster can read Secret Manager
+kubectl -n monitoring-vm get vmsingle,vmagent,vmalert   # all operational
+kubectl -n grafana port-forward svc/grafana 3000:80     # open http://localhost:3000, log in as admin
+kubectl -n argocd port-forward svc/argocd-server 8080:443   # open https://localhost:8080, log in with GitHub
+```
+
+**Common issues**
+
+| Symptom | Cause and fix |
+|---------|---------------|
+| `gcp-secret-store` not Ready | Workload Identity mismatch: the component's `ClusterName` must equal the GKE cluster name in Terraform (both `prd-cluster` by default); also check that stage 2 created `sa-sm-accessor` |
+| ExternalSecret shows `SecretSyncedError` | The secret does not exist in Secret Manager yet (e.g. `slack-webhook-url-infra-alert`); create it and wait for the next sync |
+| Pods stuck in `Pending` | Not enough node capacity; `kubectl describe pod` shows why. The main pool scales to 3 nodes; beyond that raise `machineType` |
+| ArgoCD install script exits, or nobody can log in afterwards | See the stage 0 table: GitHub App ID / Installation ID, Dex Client ID and org |
+
 ---
 
 ## Stage 4: Applications (`gitops/`)
@@ -124,6 +189,21 @@ blcli apply gitops -d ./workspace/output/gitops --args args.yaml
 ```
 
 **Why:** Every release becomes a Git commit; rollback is `git revert`. Who changed what, and when, is always on record.
+
+**✅ Checkpoint**
+
+```bash
+kubectl -n argocd get applications     # hello-world is Synced + Healthy
+kubectl -n app get pods                # the app's pods are Running
+```
+
+**Common issues**
+
+| Symptom | Cause and fix |
+|---------|---------------|
+| Application shows `repository not found` / `ComparisonError` | `SourceRepoURL` is still the sample `example-org/gitops`; point it at your gitops repo and make sure the GitHub App is installed on it |
+| Sync fails with `no matches for kind "VirtualService"` | The app sets `VirtualServiceEnabled: true` but the cluster has no Istio; remove it or install the `istio` component first |
+| Sync rejected for a repo or namespace | ArgoCD's `apps` project only allows the configured gitops repos and the app namespace; add yours with the argocd parameters `AppProjectSourceRepos` / `AppProjectNamespaces` |
 
 ---
 

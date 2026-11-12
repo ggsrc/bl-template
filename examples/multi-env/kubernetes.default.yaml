@@ -20,6 +20,7 @@ projects:
           project-id: prd
           secret-manager-service-account-email: sa-sm-accessor@prd.iam.gserviceaccount.com
           service-account-name: external-secrets-sa
+          ClusterName: prd-cluster  # must match the GKE cluster name in terraform (Workload Identity)
       - name: 0-sealed-secret
         parameters:
           namespace: sealed-secret
@@ -92,6 +93,7 @@ projects:
           project-id: stg
           secret-manager-service-account-email: sa-sm-accessor@stg.iam.gserviceaccount.com
           service-account-name: external-secrets-sa
+          ClusterName: stg-cluster  # must match the GKE cluster name in terraform (Workload Identity)
       - name: 0-sealed-secret
         parameters:
           namespace: sealed-secret
@@ -157,6 +159,7 @@ projects:
           project-id: corp
           secret-manager-service-account-email: sa-sm-accessor@corp.iam.gserviceaccount.com
           service-account-name: external-secrets-sa
+          ClusterName: corp-cluster  # must match the GKE cluster name in terraform (Workload Identity)
       - name: 0-sealed-secret
         parameters:
           namespace: sealed-secret

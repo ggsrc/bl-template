@@ -31,6 +31,7 @@ projects:
           project-id: prd
           secret-manager-service-account-email: sa-sm-accessor@prd.iam.gserviceaccount.com
           service-account-name: external-secrets-sa
+          ClusterName: prd-cluster  # must match the GKE cluster name in terraform (Workload Identity)
       - name: 0-sealed-secret
         parameters:
           namespace: sealed-secret

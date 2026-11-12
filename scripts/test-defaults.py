@@ -79,6 +79,20 @@ class Layouts(unittest.TestCase):
     def values(path):
         return yaml.safe_load(path.read_text())
 
+    # Both layouts
+
+    def test_secret_store_names_the_terraform_cluster(self):
+        # External Secrets authenticates with GKE Workload Identity for this cluster; a name that
+        # differs from the cluster Terraform creates breaks secret sync on first install.
+        for output in [self.single, self.multi]:
+            for store in (output / "kubernetes").glob("*/0-external-secrets/cluster-secret-store.yaml"):
+                project = store.parts[-3]
+                docs = [d for d in yaml.safe_load_all(store.read_text()) if d]
+                spec = next(d for d in docs if d["kind"] == "ClusterSecretStore")["spec"]
+                wi = spec["provider"]["gcpsm"]["auth"]["workloadIdentity"]
+                gke = (output / "terraform/gcp" / project / "gke.tf").read_text()
+                self.assertIn(f'cluster_name = "{wi["clusterName"]}"', gke, f"{output.name}/{project}")
+
     # Single environment (template defaults)
 
     def test_single_env_renders_only_prd(self):
