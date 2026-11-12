@@ -77,7 +77,7 @@ blcli init-args -r github.com/ggsrc/bl-template -o args.yaml
 
 1. **`main` / `provider` / `variables` / `backend`** — 每个 Terraform 项目的骨架
 2. **`vpc`** — 私有网络，集群和数据库都放在里面
-3. **`gke`** — Kubernetes 集群（模板里带 on-demand + spot 两种节点池，spot 节点能显著省钱）
+3. **`gke`** — Kubernetes 集群。主节点池（1–3 台 e2-standard-2，自动扩缩）跑平台组件；另有 on-demand 和 spot 两个带污点的节点池（e2-standard-4，可缩到 0），应用加上对应的 toleration 才会调度过去。spot 节点能显著省钱
 4. **`ip` / `firewall`** — 对外入口的静态 IP 与防火墙规则
 5. **`dns` / `cert`** — 域名解析与 HTTPS 证书
 6. **`artifacts-registry`** — 存放你的容器镜像
@@ -99,13 +99,14 @@ blcli init-args -r github.com/ggsrc/bl-template -o args.yaml
 | 0 | `sealed-secret` | 必须放进 Git 的密钥先加密再提交 |
 | 2 | `argocd` | GitOps：Git 里是什么，集群里就是什么 |
 | 3–4 | `victoria-metrics-operator` + `victoria-metrics` | 指标采集、存储（VMSingle）与告警，全部在本集群内 |
-| 4 | `grafana` | 看板 |
+| 4 | `grafana` | 看板（默认用 admin 账号密码登录，不需要 Google Workspace） |
 
 可选组件（数据库、缓存、消息队列、日志、APM 等）见 [kubernetes/OPTIONAL_COMPONENTS.md](../kubernetes/OPTIONAL_COMPONENTS.md)，需要时在 `args.yaml` 中加上即可。
 
 **小团队建议：**
 
 - **一定要装：** 密钥管理（external-secrets）、ArgoCD、指标监控。这三样越晚补越痛。
+- **Grafana 登录：** 默认 `auth-mode: password`，用 admin 账号登录：`kubectl -n grafana port-forward svc/grafana 3000:80` 后打开 http://localhost:3000，密码用 `kubectl -n grafana get secret grafana -o jsonpath='{.data.admin-password}' | base64 -d` 取得。团队用 Google Workspace 时可改为 `auth-mode: google`。
 - **默认不装：** Istio。只有一两个服务时，GKE 自带的 Ingress / Gateway 已经够用；服务变多、需要 mTLS 或灰度时，在 `args.yaml` 中加上 `istio` 组件，并给 gitops 应用设置 `VirtualServiceEnabled: true`。
 - **监控存储：** 默认 `storage-mode: local`，指标存在本集群的 VMSingle 里。多环境时可以改为 `remote`，把各集群的指标汇总到一个中心集群（见 [examples/multi-env/](../examples/multi-env/)）。
 - **数据库：** 早期优先用托管服务（Cloud SQL）；需要在集群内跑 Postgres 时再启用 `cnpg`。
@@ -171,4 +172,4 @@ blcli 本身不需要改动。
 可以。`OrganizationID` 设为 `"0"`，只用 Billing Account 即可。
 
 **大概要花多少钱？**
-主要成本来自 GKE 节点和负载均衡。单环境 + spot 节点池是最省钱的起步方式；具体以 GCP 定价为准。
+主要成本来自 GKE 节点和负载均衡。默认配置空闲时只有一台 e2-standard-2 节点在跑，两个应用节点池都缩到 0；无状态应用优先放到 spot 节点池最省钱。具体以 GCP 定价为准。

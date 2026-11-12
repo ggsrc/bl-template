@@ -77,7 +77,7 @@ Suggested order (also the dependency order):
 
 1. **`main` / `provider` / `variables` / `backend`** — skeleton of every Terraform project
 2. **`vpc`** — private network for clusters and databases
-3. **`gke`** — Kubernetes cluster (on-demand + spot node pools; spot cuts cost significantly)
+3. **`gke`** — Kubernetes cluster. The main pool (1–3 × e2-standard-2, autoscaled) runs the platform components; tainted on-demand and spot pools (e2-standard-4, scale to zero) take apps that add the matching toleration. Spot cuts cost significantly
 4. **`ip` / `firewall`** — static ingress IPs and firewall rules
 5. **`dns` / `cert`** — DNS records and HTTPS certificates
 6. **`artifacts-registry`** — your container images
@@ -99,13 +99,14 @@ Per-component guidance: [terraform/TERRAFORM_PROJECT.md](../terraform/TERRAFORM_
 | 0 | `sealed-secret` | Encrypt the secrets that must live in Git |
 | 2 | `argocd` | GitOps: the cluster matches what's in Git |
 | 3–4 | `victoria-metrics-operator` + `victoria-metrics` | Metrics collection, storage (VMSingle) and alerting, all in this cluster |
-| 4 | `grafana` | Dashboards |
+| 4 | `grafana` | Dashboards (admin password login by default; no Google Workspace needed) |
 
 Optional components (databases, cache, queues, logs, APM, …) are listed in [kubernetes/OPTIONAL_COMPONENTS.md](../kubernetes/OPTIONAL_COMPONENTS.md); add them to `args.yaml` when you need them.
 
 **Small-team tips:**
 
 - **Install from day one:** secret management (external-secrets), ArgoCD, metrics. They get more painful the later you add them.
+- **Grafana sign-in:** `auth-mode: password` by default: `kubectl -n grafana port-forward svc/grafana 3000:80`, open http://localhost:3000, and log in as admin with the password from `kubectl -n grafana get secret grafana -o jsonpath='{.data.admin-password}' | base64 -d`. Teams on Google Workspace can switch to `auth-mode: google`.
 - **Off by default:** Istio. With one or two services, GKE's built-in Ingress / Gateway is enough. When you need mTLS or canaries, add the `istio` component to `args.yaml` and set `VirtualServiceEnabled: true` on your gitops apps.
 - **Metrics storage:** `storage-mode: local` by default keeps metrics in an in-cluster VMSingle. With several environments, switch to `remote` to ship every cluster's metrics to one central cluster (see [examples/multi-env/](../examples/multi-env/)).
 - **Databases:** Prefer managed (Cloud SQL) early; enable `cnpg` when you want Postgres in-cluster.
@@ -171,4 +172,4 @@ The default is already one environment with the core components; trim further pe
 Yes. Set `OrganizationID` to `"0"` and use a Billing Account only.
 
 **What does it cost?**
-Mostly GKE nodes and load balancers. A single environment with a spot node pool is the cheapest way to start; check current GCP pricing for numbers.
+Mostly GKE nodes and load balancers. Idle, the default runs a single e2-standard-2 node, with both app pools scaled to zero; put stateless apps on the spot pool for the lowest cost. Check current GCP pricing for numbers.

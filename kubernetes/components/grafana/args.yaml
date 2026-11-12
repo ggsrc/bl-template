@@ -52,6 +52,17 @@ parameters:
         description: "Grafana server root_url (e.g. https://example.com/grafana)"
         required: false
         default: "https://example.com/grafana"
+      cookieSecure:
+        type: boolean
+        description: "Send session cookies over HTTPS only (grafana.ini security.cookie_secure). Keep true when Grafana is served over HTTPS; set false only while you reach it over plain HTTP, e.g. kubectl port-forward"
+        required: false
+        default: true
+      authMode:
+        type: string
+        description: "How users sign in. google: Google sign-in limited to hostedDomain; needs the grafana-google-auth secret (GOOGLE_AUTH_CLIENT_ID, GOOGLE_AUTH_CLIENT_SECRET) in GCP Secret Manager. password: Grafana's own login form with the admin user; the chart generates a random admin password, read it with: kubectl -n <namespace> get secret <release-name> -o jsonpath='{.data.admin-password}' | base64 -d"
+        required: false
+        default: "google"
+        enum: ["google", "password"]
       hostedDomain:
         type: string
         description: "Google Workspace (or Cloud Identity) domain allowed to sign in. Rendered as auth.google hosted_domain and allowed_domains: only accounts whose e-mail is in this domain can log in"

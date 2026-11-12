@@ -89,6 +89,12 @@ projects:
           namespace: grafana
           release-name: grafana
           image-tag: "12.4.13"
-          root-url: "https://grafana.example.com"
           vm-datasource-url: "http://vmsingle-victoriametrics-vmks.monitoring-vm.svc.cluster.local:8429"
-          hosted-domain: "example.com"
+          # Sign in with Grafana's admin user; no Google Workspace or OAuth client needed.
+          #   kubectl -n grafana port-forward svc/grafana 3000:80   -> http://localhost:3000
+          #   kubectl -n grafana get secret grafana -o jsonpath='{.data.admin-password}' | base64 -d
+          # Once Grafana has an HTTPS URL: set root-url to it and cookie-secure: true,
+          # or switch to auth-mode: google with hosted-domain for team SSO.
+          auth-mode: password
+          root-url: "http://localhost:3000"
+          cookie-secure: false
