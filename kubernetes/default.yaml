@@ -90,6 +90,7 @@ projects:
           release-name: grafana
           image-tag: "12.4.13"
           vm-datasource-url: "http://vmsingle-victoriametrics-vmks.monitoring-vm.svc.cluster.local:8429"
+          loki-enabled: false  # set true after adding the loki component
           # Sign in with Grafana's admin user; no Google Workspace or OAuth client needed.
           #   kubectl -n grafana port-forward svc/grafana 3000:80   -> http://localhost:3000
           #   kubectl -n grafana get secret grafana -o jsonpath='{.data.admin-password}' | base64 -d

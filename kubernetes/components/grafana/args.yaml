@@ -42,9 +42,14 @@ parameters:
         description: "VictoriaMetrics datasource URL (Prometheus endpoint)"
         required: false
         default: "http://vmselect-victoriametrics-vmks.monitoring-vm.svc.cluster.local:8481/select/0/prometheus"
+      lokiEnabled:
+        type: boolean
+        description: "Add the Loki logs datasource. Set false when the loki component is not installed, otherwise Grafana shows a broken datasource"
+        required: false
+        default: true
       lokiDatasourceUrl:
         type: string
-        description: "Loki datasource URL"
+        description: "Loki datasource URL (used when lokiEnabled is true)"
         required: false
         default: "http://loki-gateway.loki.svc.cluster.local"
       rootUrl:

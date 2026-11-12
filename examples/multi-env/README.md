@@ -24,4 +24,4 @@ What changes compared with the single-environment default:
 your `args.yaml` as usual, then copy the `terraform`, `kubernetes` and `gitops` sections you need from
 these files into it, and run `blcli check args` before `blcli init`.
 
-These files are a reference and are not validated in CI.
+CI renders this layout on every pull request (`scripts/test-defaults.py`) and checks that it still installs Istio, ships metrics to `corp` and keeps Google sign-in.

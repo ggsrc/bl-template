@@ -115,6 +115,7 @@ grafana:
           timeInterval: 15s
           queryTimeout: 90s
           disableMetricsLookup: false
+{{- if ne (printf "%v" .lokiEnabled) "false" }}
       - name: loki-logs
         type: loki
         access: proxy
@@ -125,6 +126,7 @@ grafana:
           httpHeaderName1: X-Scope-OrgID
         secureJsonData:
           httpHeaderValue1: fake
+{{- end }}
 
 {{- if ne (default "google" .authMode) "password" }}
   envFromSecrets:
