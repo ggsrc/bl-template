@@ -64,7 +64,10 @@ class Layouts(unittest.TestCase):
 
     @classmethod
     def generate(cls, name, args):
-        f = cls.work / f"{name}-args.yaml"
+        # Each args file gets its own directory: blcli init auto-loads the .env that init-args wrote next to
+        # args.yaml, and its overrides (e.g. BLCLI_ARGOCD_GIT_REPOSITORY_URL) would apply to every case.
+        (cls.work / "args" / name).mkdir(parents=True)
+        f = cls.work / "args" / name / "args.yaml"
         f.write_text(yaml.safe_dump(args, sort_keys=False))
         cls.run_command([cls.blcli, "check", "args", "--args", str(f), "-r", str(ROOT)])
         output = cls.work / name
@@ -137,6 +140,26 @@ class Layouts(unittest.TestCase):
             stack = self.values(self.multi / f"kubernetes/{project}/3-victoria-metrics-operator/values-override.yaml")["victoria-metrics-k8s-stack"]
             self.assertFalse(stack["vmsingle"]["enabled"], project)
             self.assertTrue(stack["vmagent"]["spec"]["remoteWrite"][0]["url"].startswith("http://"), project)
+
+    @staticmethod
+    def argocd(output, project):
+        path = output / "kubernetes" / project / "2-argocd"
+        install = (path / "install").read_text()
+        method = next(l.split('"')[1] for l in install.splitlines() if l.startswith("GIT_AUTH_METHOD="))
+        admin = yaml.safe_load((path / "argocd-cm.yaml").read_text())["data"]["admin.enabled"]
+        repos = next(d for d in yaml.safe_load_all((path / "appproject.yaml").read_text()) if d and d["metadata"]["name"] == "apps")["spec"]["sourceRepos"]
+        return method, admin, repos
+
+    def test_single_env_argocd_is_admin_and_ssh(self):
+        method, admin, repos = self.argocd(self.single, "prd")
+        self.assertEqual((method, admin), ("ssh", "true"))
+        self.assertTrue(repos and all(r.startswith("git@") for r in repos), repos)
+
+    def test_multi_env_argocd_is_github_app_and_sso(self):
+        for project in ["corp", "prd", "stg"]:
+            method, admin, repos = self.argocd(self.multi, project)
+            self.assertEqual((method, admin), ("github-app", "false"), project)
+            self.assertTrue(repos and all(r.startswith("https://") for r in repos), (project, repos))
 
     def test_multi_env_keeps_istio_routing_and_google_sign_in(self):
         vss = list((self.multi / "gitops").rglob("virtualservice.yaml"))

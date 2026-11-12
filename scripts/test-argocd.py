@@ -100,7 +100,10 @@ class ArgoCDTemplates(unittest.TestCase):
         cls.args = yaml.safe_load((cls.work / "args.yaml").read_text())
         cls.defaults = cls.generate("defaults", cls.args, modules=["kubernetes", "gitops"])
 
-        base = next(c for c in cls.args["kubernetes"]["projects"][0]["components"] if c["name"] == COMPONENT)["parameters"]
+        # The single-environment default uses the local admin and an SSH deploy key. The full setup
+        # (GitHub App credentials, GitHub SSO through Dex, RBAC) lives in examples/multi-env; the cases build on it.
+        example = yaml.safe_load((ROOT / "examples/multi-env/kubernetes.default.yaml").read_text())
+        base = next(c for c in example["projects"][0]["components"] if c["name"] == COMPONENT)["parameters"]
         app = dict(base, GitHubAppID="1", GitHubAppInstallationID="2",
                    ArgoCDManifestURL="https://example.invalid/install.yaml", ArgoCDManifestSHA256=FAKE_SHA256)
         no_dex = {k: v for k, v in app.items() if k != "dex-config"}
@@ -109,6 +112,7 @@ class ArgoCDTemplates(unittest.TestCase):
             {"url": "git@github.com:example-org/charts.git", "sshPrivateKeyFile": "key_charts"},
         ])
         cls.cases = {
+            "enterprise": base,
             "app": app,
             "permissive": dict(app, RestrictDefaultProject=False),
             "ssh": ssh,
@@ -136,7 +140,10 @@ class ArgoCDTemplates(unittest.TestCase):
 
     @classmethod
     def generate(cls, name, args, modules=("kubernetes",)):
-        f = cls.work / f"{name}-args.yaml"
+        # Each args file gets its own directory: blcli init auto-loads the .env that init-args wrote next to
+        # args.yaml, and its overrides (e.g. BLCLI_ARGOCD_GIT_REPOSITORY_URL) would apply to every case.
+        (cls.work / "args" / name).mkdir(parents=True)
+        f = cls.work / "args" / name / "args.yaml"
         f.write_text(yaml.safe_dump(args, sort_keys=False))
         output = cls.work / name
         command = [cls.blcli, "init", str(ROOT), "--no-resume", "--args", str(f), "--output", str(output)]
@@ -169,9 +176,36 @@ class ArgoCDTemplates(unittest.TestCase):
 
     # Rendering
 
-    def test_default_render_is_valid(self):
+    def test_default_render_is_simple(self):
+        # Single environment: local admin, no SSO, SSH deploy key, and the default project still locked down.
         for project in self.args["kubernetes"]["projects"]:
             path = self.defaults / "kubernetes" / project["name"] / COMPONENT
+            for script in ["install", "gen_ssh_sealed_secrets.sh"]:
+                self.run_command(["bash", "-n", str(path / script)])
+            cm = self.docs(path / "argocd-cm.yaml")[0]["data"]
+            self.assertEqual(cm["admin.enabled"], "true")
+            self.assertNotIn("dex.config", cm)
+            self.assertEqual(self.docs(path / "argocd-rbac-cm.yaml")[0]["data"].get("policy.default", ""), "")
+            kustomization = self.docs(path / "kustomization.yaml")[0]
+            self.assertIn("github-ssh-sealed-secret.yaml", kustomization["resources"])
+            self.assertNotIn("github-app-sealed-secret.yaml", kustomization["resources"])
+            projects = {d["metadata"]["name"]: d["spec"] for d in self.docs(path / "appproject.yaml")}
+            self.assertEqual(projects["default"]["sourceRepos"], [])
+            self.assertEqual(projects["apps"]["clusterResourceWhitelist"], [])
+            self.assertTrue(all(r.startswith("git@") for r in projects["apps"]["sourceRepos"]))
+
+    def test_default_install_passes_guards(self):
+        path = self.defaults / "kubernetes" / self.args["kubernetes"]["projects"][0]["name"] / COMPONENT
+        log = self.work / "default-install.log"
+        log.write_text("")
+        p = subprocess.run(["bash", "./install"], cwd=path, env=dict(self.env, FAKE_LOG=str(log)),
+                           stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=60)
+        out = p.stdout + p.stderr
+        for guard in ["no Dex connector is configured", "has no orgs", "GitHubAppID", "is an https URL", "GitAuthMethod must be"]:
+            self.assertNotIn(guard, out)
+
+    def test_enterprise_render_is_valid(self):
+        for path in [self.component("enterprise")]:
             for script in ["install", "gen_ssh_sealed_secrets.sh", "gen_github_app_sealed_secret.sh", "gen_dex_sealed_secret.sh"]:
                 self.run_command(["bash", "-n", str(path / script)])
             cm = self.docs(path / "argocd-cm.yaml")[0]["data"]
@@ -222,7 +256,7 @@ class ArgoCDTemplates(unittest.TestCase):
 
     def test_install_guards(self):
         cases = {
-            "defaults": (self.defaults / "kubernetes" / "prd" / COMPONENT, "set GitHubAppID and GitHubAppInstallationID"),
+            "enterprise": (None, "set GitHubAppID and GitHubAppInstallationID"),
             "app-ssh-url": (None, "not an https URL"),
             "ssh-https-url": (None, "is an https URL"),
             "no-sso": (None, "no Dex connector is configured"),

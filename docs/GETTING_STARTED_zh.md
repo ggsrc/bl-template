@@ -42,13 +42,15 @@ English version: [GETTING_STARTED.md](./GETTING_STARTED.md)
 - 本地工具：`blcli`、`terraform`、`gcloud`、`kubectl`、`helm`、`gh`，以及 ArgoCD 安装脚本要用的 `kustomize`、`curl`
 - `gcloud auth login` 和 `gcloud auth application-default login`（Terraform 用后者的凭据）
 
-**动手前先准备好这几样，并填进 `args.yaml` 对应的 argocd 参数：**
+**动手前先准备好这几样：**
 
 | 准备什么 | 给谁用 | 不准备会怎样 |
 |----------|--------|--------------|
-| GitHub App（App ID、Installation ID 和私钥 `.pem`），装到存放 gitops 仓库的组织 | ArgoCD 拉取私有 gitops 仓库 | ArgoCD 安装脚本报 `set GitHubAppID and GitHubAppInstallationID` 并退出 |
-| GitHub OAuth App（Client ID 和 Client Secret），以及允许登录的 GitHub 组织 | ArgoCD 的 GitHub 登录（Dex） | 默认值是占位符（`clientID: XXXXXXX`、`example-org`），装得上但没人能登录；去掉组织限制时安装脚本会报 `The Dex GitHub connector has no orgs` 并退出 |
+| 一个 gitops 仓库（GitHub 上新建一个空仓库即可），把它的 SSH 地址 `git@github.com:<你>/<仓库>.git` 填到 argocd 的 `GitRepositoryURL` 和 gitops 应用的 `SourceRepoURL` | ArgoCD 从这里同步应用 | ArgoCD 找不到仓库，应用无法同步 |
+| 仓库的只读 Deploy Key：安装 argocd 时脚本会生成 `<workspace>/keys/argocd_github.pub`，把它加到仓库 Settings → Deploy keys（不要勾选写权限） | ArgoCD 读取私有仓库 | 同步报认证失败 |
 | Secret Manager 中的 `slack-webhook-url-infra-alert`（一个 Slack Incoming Webhook URL） | 告警发到 Slack | 告警规则照常计算，但 Alertmanager 拿不到 webhook，告警发不出去 |
+
+ArgoCD 默认用内置 admin 账号登录，不需要配置 GitHub 登录。团队变大后可以换成 GitHub App + GitHub 登录（Dex）+ 按组织分权限，配置见 [examples/multi-env/](../examples/multi-env/)。
 
 **生成参数文件：**
 
@@ -56,7 +58,7 @@ English version: [GETTING_STARTED.md](./GETTING_STARTED.md)
 blcli init-args -r github.com/ggsrc/bl-template -o args.yaml
 ```
 
-`args.yaml` 是你整套 infra 的"唯一事实来源"。每个参数在模板的 `args.yaml` 里都有描述和示例，看不懂某个参数时用 `blcli explain` 查询（例如 `blcli explain -r github.com/ggsrc/bl-template -m kubernetes -c argocd`），设计细节见 [ARGS_DESIGN.md](../ARGS_DESIGN.md)。
+`args.yaml` 是你整套 infra 的"唯一事实来源"。注意 `init-args` 还会在旁边生成一个 `.env`，里面的值（例如 `BLCLI_ARGOCD_GIT_REPOSITORY_URL`）会在 `blcli init` 时覆盖 `args.yaml` 的对应字段，并作用于所有环境；改仓库地址时两边要一起改，或者直接删掉 `.env` 里不需要的行。每个参数在模板的 `args.yaml` 里都有描述和示例，看不懂某个参数时用 `blcli explain` 查询（例如 `blcli explain -r github.com/ggsrc/bl-template -m kubernetes -c argocd`），设计细节见 [ARGS_DESIGN.md](../ARGS_DESIGN.md)。
 
 > **默认只有一个环境。** 模板默认只生成一个 `prd` 项目：一个 GCP 项目、一个 GKE 集群、一套平台组件，监控也在同一集群内闭环。团队变大、需要 `stg` / `prd` / 共享的 `corp` 时，参考 [examples/multi-env/](../examples/multi-env/) 按同样的方式加环境——这正是模板化的意义。
 
@@ -164,7 +166,8 @@ kubectl get pods -n argocd; kubectl get pods -n monitoring-vm; kubectl get pods 
 kubectl get clustersecretstore gcp-secret-store         # READY 为 True：集群能读 Secret Manager 了
 kubectl -n monitoring-vm get vmsingle,vmagent,vmalert   # 状态均为 operational
 kubectl -n grafana port-forward svc/grafana 3000:80     # 打开 http://localhost:3000，用 admin 登录
-kubectl -n argocd port-forward svc/argocd-server 8080:443   # 打开 https://localhost:8080，用 GitHub 登录
+kubectl -n argocd port-forward svc/argocd-server 8080:443   # 打开 https://localhost:8080，用 admin 登录
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d   # admin 密码
 ```
 
 **常见问题**
@@ -174,7 +177,7 @@ kubectl -n argocd port-forward svc/argocd-server 8080:443   # 打开 https://loc
 | `gcp-secret-store` 不是 Ready | Workload Identity 没对上：组件参数 `ClusterName` 必须和 Terraform 里的 GKE 集群名一致（默认都是 `prd-cluster`）；再确认阶段 2 已创建 `sa-sm-accessor` |
 | ExternalSecret 显示 `SecretSyncedError` | Secret Manager 里还没有对应的 secret（例如 `slack-webhook-url-infra-alert`），创建后等下一次同步 |
 | Pod 一直 `Pending` | 节点资源不够，`kubectl describe pod` 看原因；主节点池会自动扩到 3 台，仍不够就调大 `machineType` |
-| ArgoCD 安装脚本直接退出，或装好后无法登录 | 见阶段 0 的准备表：GitHub App ID / Installation ID、Dex 的 Client ID 和组织 |
+| ArgoCD 安装脚本报 `is an https URL` | 默认用 SSH Deploy Key，仓库地址必须是 `git@github.com:...` 形式，不能是 https |
 
 ---
 
@@ -201,7 +204,7 @@ kubectl -n app get pods                # 应用 Pod 为 Running
 
 | 现象 | 原因与处理 |
 |------|------------|
-| Application 报 `repository not found` / `ComparisonError` | `SourceRepoURL` 还是示例的 `example-org/gitops`，改成你自己的 gitops 仓库；并确认 GitHub App 已安装到该仓库 |
+| Application 报 `repository not found` / `ComparisonError` / 认证失败 | `SourceRepoURL` 和 `GitRepositoryURL` 还是示例的 `example-org/gitops`，改成你自己的仓库（两处要一致，`.env` 里也要改）；并确认 `argocd_github.pub` 已加为该仓库的 Deploy key |
 | 同步时报 `no matches for kind "VirtualService"` | 给应用设置了 `VirtualServiceEnabled: true`，但集群没装 Istio；去掉该参数，或先安装 `istio` 组件 |
 | 同步时报不允许的仓库或命名空间 | ArgoCD 的 `apps` 项目只允许配置过的 gitops 仓库和应用命名空间，在 argocd 组件参数 `AppProjectSourceRepos` / `AppProjectNamespaces` 中加上 |
 

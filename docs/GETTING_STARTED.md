@@ -42,13 +42,15 @@ Each layer depends on the one below it, so you always build **bottom-up**. blcli
 - Local tools: `blcli`, `terraform`, `gcloud`, `kubectl`, `helm`, `gh`, plus `kustomize` and `curl` for the ArgoCD install script
 - `gcloud auth login` and `gcloud auth application-default login` (Terraform uses the latter)
 
-**Have these ready before you start, and fill them into the argocd parameters in `args.yaml`:**
+**Have these ready before you start:**
 
 | What | Used by | Without it |
 |------|---------|------------|
-| A GitHub App (App ID, Installation ID and private key `.pem`) installed on the org that holds the gitops repo | ArgoCD pulling the private gitops repo | ArgoCD install stops with `set GitHubAppID and GitHubAppInstallationID` |
-| A GitHub OAuth App (Client ID and Client Secret) and the GitHub org allowed to sign in | ArgoCD GitHub login (Dex) | The defaults are placeholders (`clientID: XXXXXXX`, `example-org`): it installs but nobody can log in; removing the org restriction makes install stop with `The Dex GitHub connector has no orgs` |
+| A gitops repository (an empty GitHub repo is fine); put its SSH URL `git@github.com:<you>/<repo>.git` in the argocd `GitRepositoryURL` and the gitops app's `SourceRepoURL` | ArgoCD syncs apps from it | ArgoCD cannot find the repository; nothing syncs |
+| A read-only deploy key: installing argocd generates `<workspace>/keys/argocd_github.pub`; add it under the repo's Settings → Deploy keys (leave write access off) | ArgoCD reading the private repo | Sync fails with an authentication error |
 | `slack-webhook-url-infra-alert` in Secret Manager (a Slack Incoming Webhook URL) | Alerts to Slack | Rules are still evaluated, but Alertmanager has no webhook and cannot send alerts |
+
+ArgoCD signs in with its built-in admin user by default; no GitHub login to set up. A growing team can switch to a GitHub App + GitHub login (Dex) + org-based RBAC, configured in [examples/multi-env/](../examples/multi-env/).
 
 **Generate your parameter file:**
 
@@ -56,7 +58,7 @@ Each layer depends on the one below it, so you always build **bottom-up**. blcli
 blcli init-args -r github.com/ggsrc/bl-template -o args.yaml
 ```
 
-`args.yaml` is the single source of truth for your whole infra. Every parameter is described with an example in the template's `args.yaml` files; use `blcli explain` (e.g. `blcli explain -r github.com/ggsrc/bl-template -m kubernetes -c argocd`) when one is unclear. Design details: [ARGS_DESIGN.md](../ARGS_DESIGN.md).
+`args.yaml` is the single source of truth for your whole infra. Note that `init-args` also writes a `.env` next to it: its values (e.g. `BLCLI_ARGOCD_GIT_REPOSITORY_URL`) override the matching `args.yaml` fields at `blcli init`, for every environment. Change both when you change a repository URL, or delete the lines you don't need from `.env`. Every parameter is described with an example in the template's `args.yaml` files; use `blcli explain` (e.g. `blcli explain -r github.com/ggsrc/bl-template -m kubernetes -c argocd`) when one is unclear. Design details: [ARGS_DESIGN.md](../ARGS_DESIGN.md).
 
 > **One environment by default.** The template generates a single `prd` project: one GCP project, one GKE cluster, one platform stack, with monitoring self-contained in that cluster. When your team needs `stg` / `prd` / a shared `corp`, follow [examples/multi-env/](../examples/multi-env/) and add environments the same way. That is the point of templating.
 
@@ -164,7 +166,8 @@ kubectl get pods -n argocd; kubectl get pods -n monitoring-vm; kubectl get pods 
 kubectl get clustersecretstore gcp-secret-store         # READY True: the cluster can read Secret Manager
 kubectl -n monitoring-vm get vmsingle,vmagent,vmalert   # all operational
 kubectl -n grafana port-forward svc/grafana 3000:80     # open http://localhost:3000, log in as admin
-kubectl -n argocd port-forward svc/argocd-server 8080:443   # open https://localhost:8080, log in with GitHub
+kubectl -n argocd port-forward svc/argocd-server 8080:443   # open https://localhost:8080, log in as admin
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d   # admin password
 ```
 
 **Common issues**
@@ -174,7 +177,7 @@ kubectl -n argocd port-forward svc/argocd-server 8080:443   # open https://local
 | `gcp-secret-store` not Ready | Workload Identity mismatch: the component's `ClusterName` must equal the GKE cluster name in Terraform (both `prd-cluster` by default); also check that stage 2 created `sa-sm-accessor` |
 | ExternalSecret shows `SecretSyncedError` | The secret does not exist in Secret Manager yet (e.g. `slack-webhook-url-infra-alert`); create it and wait for the next sync |
 | Pods stuck in `Pending` | Not enough node capacity; `kubectl describe pod` shows why. The main pool scales to 3 nodes; beyond that raise `machineType` |
-| ArgoCD install script exits, or nobody can log in afterwards | See the stage 0 table: GitHub App ID / Installation ID, Dex Client ID and org |
+| ArgoCD install stops with `is an https URL` | The default uses an SSH deploy key, so repository URLs must be `git@github.com:...`, not https |
 
 ---
 
@@ -201,7 +204,7 @@ kubectl -n app get pods                # the app's pods are Running
 
 | Symptom | Cause and fix |
 |---------|---------------|
-| Application shows `repository not found` / `ComparisonError` | `SourceRepoURL` is still the sample `example-org/gitops`; point it at your gitops repo and make sure the GitHub App is installed on it |
+| Application shows `repository not found` / `ComparisonError` / authentication errors | `SourceRepoURL` and `GitRepositoryURL` still point at the sample `example-org/gitops`; set both (and `.env`) to your repository, and make sure `argocd_github.pub` is added as its deploy key |
 | Sync fails with `no matches for kind "VirtualService"` | The app sets `VirtualServiceEnabled: true` but the cluster has no Istio; remove it or install the `istio` component first |
 | Sync rejected for a repo or namespace | ArgoCD's `apps` project only allows the configured gitops repos and the app namespace; add yours with the argocd parameters `AppProjectSourceRepos` / `AppProjectNamespaces` |
 

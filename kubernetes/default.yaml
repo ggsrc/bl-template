@@ -38,36 +38,18 @@ projects:
       - name: 2-argocd
         parameters:
           namespace: argocd
-          argocd-url: https://internal.example.com/argocd
+          argocd-url: https://argocd.example.com
           argocd-version: v3.5.6
-          GitAuthMethod: github-app
-          GitHubAppID: ""  # required: install refuses to run without it
-          GitHubAppInstallationID: ""  # required
-          GitHubAppCredsURL: https://github.com/example-org
-          dex-config:
-            connectors:
-              - type: github
-                id: github
-                name: GitHub
-                config:
-                  clientID: XXXXXXX
-                  orgs:
-                    - name: example-org
-          RBACPolicies:
-            - policy: "p, role:org-admin, applications, *, apps/*, allow"
-            - policy: "p, role:org-admin, logs, get, apps/*, allow"
-            - policy: "p, role:org-admin, projects, get, apps, allow"
-            - policy: "p, role:org-admin, clusters, get, *, allow"
-            - policy: "p, role:org-admin, repositories, get, *, allow"
-            - policy: "p, role:org-backend, applications, get, apps/*, allow"
-            - policy: "p, role:org-backend, applications, sync, apps/*, allow"
-            - policy: "p, role:org-backend, applications, action/*, apps/*, allow"
-            - policy: "p, role:org-backend, logs, get, apps/*, allow"
-          RBACRoleBindings:
-            - group: "example-org:Infra"
-              role: "role:org-admin"
-            - group: "example-org:backend"
-              role: "role:org-backend"
+          # Simplest setup for one person or a small team; nothing to create on GitHub but a deploy key.
+          # Sign in: built-in admin user (no SSO). ArgoCD generates the password:
+          #   kubectl -n argocd port-forward svc/argocd-server 8080:443   -> https://localhost:8080
+          #   kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d
+          AdminEnabled: true
+          # Repository access: one SSH deploy key. The install script generates <workspace>/keys/argocd_github
+          # if it is missing; add argocd_github.pub to the gitops repository as a read-only deploy key.
+          GitAuthMethod: ssh
+          GitRepositoryURL: git@github.com:example-org/gitops.git  # your gitops repository
+          # Growing team: GitHub App credentials + GitHub SSO (Dex) + RBAC, see examples/multi-env.
       - name: 3-victoria-metrics-operator
         parameters:
           namespace: monitoring-vm
