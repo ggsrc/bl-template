@@ -4,6 +4,8 @@ English version: [GETTING_STARTED.md](./GETTING_STARTED.md)
 
 这份文档写给**创业团队和个人开发者**：你可能没有专职的 SRE，但希望从第一天起就有一套"能长大"的基础设施。我们不只告诉你执行哪条命令，更想讲清楚**每一层是什么、为什么需要、在模板里对应哪个目录**，让你真正理解自己的 infra，而不是拿到一堆看不懂的 YAML。
 
+> **想先零成本体验？** [examples/local/](../examples/local/README_zh.md) 用本机的 kind 或 minikube 跑第 3、4 层（平台组件 + GitOps），不需要 GCP 和域名，大约 30 分钟。
+
 ---
 
 ## 全局视图：一套 infra 由哪几层组成

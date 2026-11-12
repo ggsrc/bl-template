@@ -4,6 +4,8 @@
 
 This guide is for **startups and individual developers**: you probably don't have a dedicated SRE, but you want infrastructure that can grow with you from day one. Beyond which command to run, it explains **what each layer is, why you need it, and which directory in this template implements it** — so you understand your own infra instead of inheriting a pile of YAML.
 
+> **Want to try it first, for free?** [examples/local/](../examples/local/README.md) runs layers 3 and 4 (platform + GitOps) on kind or minikube on your laptop, with no GCP and no domain, in about 30 minutes.
+
 ---
 
 ## The big picture: four layers

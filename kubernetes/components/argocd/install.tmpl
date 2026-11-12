@@ -153,6 +153,15 @@ CURRENT_CONTEXT=$(kubectl config current-context)
 info "Current Kubernetes context: ${CURRENT_CONTEXT}"
 warn "Please ensure you are connected to the correct cluster"
 
+# kubeseal fetches the Sealed Secrets controller's certificate. On a fresh cluster the sealed-secret
+# component is applied moments earlier and the controller may not be serving yet ("no endpoints
+# available for service sealed-secrets-controller"), so wait for its rollout first.
+SEALED_SECRETS_NAMESPACE="${SEALED_SECRETS_CONTROLLER_NAMESPACE:-kube-system}"
+if kubectl -n "${SEALED_SECRETS_NAMESPACE}" get deployment sealed-secrets-controller &> /dev/null; then
+    info "Waiting for the Sealed Secrets controller in ${SEALED_SECRETS_NAMESPACE}"
+    kubectl -n "${SEALED_SECRETS_NAMESPACE}" rollout status deployment/sealed-secrets-controller --timeout=300s
+fi
+
 if [ "${GIT_AUTH_METHOD}" = "github-app" ]; then
     # GitHub App: one credential template Secret for every https repository under GitHubAppCredsURL.
     if [ -f "${GEN_GITHUB_APP_SCRIPT}" ] && [ -f "${GITHUB_APP_KEY_PATH}" ]; then
