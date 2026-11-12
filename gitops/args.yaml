@@ -175,6 +175,11 @@ parameters:
                   averageUtilization: 80
       
       # VirtualService configuration
+      VirtualServiceEnabled:
+        type: boolean
+        description: "Render an Istio VirtualService for this app. Requires the istio Kubernetes component; leave false when Istio is not installed, otherwise ArgoCD cannot sync the app"
+        required: false
+        default: false
       VirtualService:
         type: object
         description: "Istio VirtualService configuration"
@@ -438,6 +443,11 @@ parameters:
                   averageUtilization: 80
       
       # VirtualService configuration
+      VirtualServiceEnabled:
+        type: boolean
+        description: "Render an Istio VirtualService for this app. Requires the istio Kubernetes component; leave false when Istio is not installed, otherwise ArgoCD cannot sync the app"
+        required: false
+        default: false
       VirtualService:
         type: object
         description: "Istio VirtualService configuration"

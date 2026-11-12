@@ -49,7 +49,7 @@ blcli init-args -r github.com/ggsrc/bl-template -o args.yaml
 
 `args.yaml` is the single source of truth for your whole infra. Every parameter is described with an example in the template's `args.yaml` files; use `blcli explain` (e.g. `blcli explain -r github.com/ggsrc/bl-template -m kubernetes -c argocd`) when one is unclear. Design details: [ARGS_DESIGN.md](../ARGS_DESIGN.md).
 
-> **Small-team tip: start with one environment.** The template generates `corp / stg / prd` by default — the shape a larger team grows into. Keep only `prd` (or `stg` + `prd`) in `args.yaml` to start, and add environments the same way later. That is the point of templating.
+> **One environment by default.** The template generates a single `prd` project: one GCP project, one GKE cluster, one platform stack, with monitoring self-contained in that cluster. When your team needs `stg` / `prd` / a shared `corp`, follow [examples/multi-env/](../examples/multi-env/) and add environments the same way. That is the point of templating.
 
 ---
 
@@ -85,29 +85,29 @@ Suggested order (also the dependency order):
 
 Per-component guidance: [terraform/TERRAFORM_PROJECT.md](../terraform/TERRAFORM_PROJECT.md).
 
-**Small-team tip:** A single environment needs only `main, backend, provider, variables, vpc, gke, ip, dns, cert, artifacts-registry`. `vpc-peering` matters only when environments must talk to each other (e.g. a shared corp cluster).
+**Default components:** `main, backend, config-gcs-tfbackend, provider, variables, vpc, ip, gke, dns, cert, artifacts-registry, outputs` — everything a single environment needs. Add `firewall`, `iam`, `cdn`, `loki-logs` as needed; `vpc-peering` matters only when environments must talk to each other (e.g. a shared corp cluster).
 
 ---
 
 ## Stage 3: Platform components (`kubernetes/`)
 
-**What:** Between "cluster is up" and "app is live" sits a platform layer. `kubernetes/default.yaml` is the default core stack; the numeric prefix is the install order:
+**What:** Between "cluster is up" and "app is live" sits a platform layer. `kubernetes/default.yaml` is the default core stack (single `prd` environment); the numeric prefix is the install order:
 
 | Order | Component | What it solves |
 |-------|-----------|----------------|
 | 0 | `external-secrets-operator` + `external-secrets` | Sync secrets from GCP Secret Manager; no passwords in Git |
 | 0 | `sealed-secret` | Encrypt the secrets that must live in Git |
-| 1 | `istio` | Unified ingress, mTLS, canary routing |
 | 2 | `argocd` | GitOps: the cluster matches what's in Git |
-| 3–4 | `victoria-metrics-operator` + `victoria-metrics` | Metrics and alerting |
-| corp | `grafana` | Dashboards |
+| 3–4 | `victoria-metrics-operator` + `victoria-metrics` | Metrics collection, storage (VMSingle) and alerting, all in this cluster |
+| 4 | `grafana` | Dashboards |
 
 Optional components (databases, cache, queues, logs, APM, …) are listed in [kubernetes/OPTIONAL_COMPONENTS.md](../kubernetes/OPTIONAL_COMPONENTS.md); add them to `args.yaml` when you need them.
 
 **Small-team tips:**
 
 - **Install from day one:** secret management (external-secrets), ArgoCD, metrics. They get more painful the later you add them.
-- **Can wait:** Istio. With one or two services, GKE's built-in Ingress / Gateway is enough; add Istio when you need mTLS or canaries.
+- **Off by default:** Istio. With one or two services, GKE's built-in Ingress / Gateway is enough. When you need mTLS or canaries, add the `istio` component to `args.yaml` and set `VirtualServiceEnabled: true` on your gitops apps.
+- **Metrics storage:** `storage-mode: local` by default keeps metrics in an in-cluster VMSingle. With several environments, switch to `remote` to ship every cluster's metrics to one central cluster (see [examples/multi-env/](../examples/multi-env/)).
 - **Databases:** Prefer managed (Cloud SQL) early; enable `cnpg` when you want Postgres in-cluster.
 
 ---
@@ -165,7 +165,7 @@ No changes to blcli itself are needed.
 ## FAQ
 
 **I'm a solo developer — is this too heavy?**
-Start with one environment and the core components, trimmed per the small-team tips above. For the lightest possible setup, start with [bl-template-personal](https://github.com/ggsrc/bl-template-personal) and move to this template as your team grows — both speak the same blcli protocol.
+The default is already one environment with the core components; trim further per the small-team tips above. For the lightest possible setup, start with [bl-template-personal](https://github.com/ggsrc/bl-template-personal) and move to this template as your team grows — both speak the same blcli protocol.
 
 **Can I use it without a GCP Organization?**
 Yes. Set `OrganizationID` to `"0"` and use a Billing Account only.

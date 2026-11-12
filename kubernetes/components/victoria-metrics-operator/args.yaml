@@ -2,7 +2,7 @@ version: 1.0.0
 
 # Parameter definitions for the kubernetes/components/victoria-metrics-operator component
 # Per-environment values are rendered into values-override.yaml.tmpl.
-# Typical differences: cluster/env (externalLabels), remoteWrite URL, vmagent resources
+# Typical differences: storageMode, cluster/env (externalLabels), remoteWrite URL, vmagent resources
 
 parameters:
   components:
@@ -23,19 +23,35 @@ parameters:
         required: false
         default: "values.yaml values-override.yaml"
       # Parameters for rendering values-override.yaml.tmpl
+      storageMode:
+        type: string
+        description: "Where metrics are stored. local: VMSingle + VMAlert + VMAlertmanager in this cluster (self-contained, for a single environment). remote: this cluster only scrapes and ships metrics to remoteWriteUrl (a central VictoriaMetrics cluster that also runs alerting)"
+        required: false
+        default: "local"
+        enum: ["local", "remote"]
+      retentionPeriod:
+        type: string
+        description: "VMSingle retention period (storageMode=local only), e.g. 30d, 12w, 1y"
+        required: false
+        default: "30d"
+      storageSize:
+        type: string
+        description: "VMSingle persistent volume size (storageMode=local only)"
+        required: false
+        default: "20Gi"
       cluster:
         type: string
         description: "Cluster label for vmagent externalLabels (e.g. stg, prd)"
         required: false
-        default: "stg"
+        default: "prd"
       env:
         type: string
         description: "Env label for vmagent externalLabels"
         required: false
-        default: "stg"
+        default: "prd"
       remoteWriteUrl:
         type: string
-        description: "VMAgent remote write URL (e.g. http://vminsert:8480/insert/0/prometheus/api/v1/write)"
+        description: "VMAgent remote write URL, used only when storageMode=remote (e.g. http://vminsert:8480/insert/0/prometheus/api/v1/write)"
         required: false
         default: "http://10.10.0.8:8480/insert/0/prometheus/api/v1/write"
       scrapeInterval:

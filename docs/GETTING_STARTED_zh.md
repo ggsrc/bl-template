@@ -49,7 +49,7 @@ blcli init-args -r github.com/ggsrc/bl-template -o args.yaml
 
 `args.yaml` 是你整套 infra 的"唯一事实来源"。每个参数在模板的 `args.yaml` 里都有描述和示例，看不懂某个参数时用 `blcli explain` 查询（例如 `blcli explain -r github.com/ggsrc/bl-template -m kubernetes -c argocd`），设计细节见 [ARGS_DESIGN.md](../ARGS_DESIGN.md)。
 
-> **小团队建议：先从一个环境开始。** 模板默认生成 `corp / stg / prd` 三个项目，这是团队规模变大后的形态。起步时可以在 `args.yaml` 里只保留 `prd`（或 `stg` + `prd`），之后再按同样的方式加环境——这正是模板化的意义。
+> **默认只有一个环境。** 模板默认只生成一个 `prd` 项目：一个 GCP 项目、一个 GKE 集群、一套平台组件，监控也在同一集群内闭环。团队变大、需要 `stg` / `prd` / 共享的 `corp` 时，参考 [examples/multi-env/](../examples/multi-env/) 按同样的方式加环境——这正是模板化的意义。
 
 ---
 
@@ -85,29 +85,29 @@ blcli init-args -r github.com/ggsrc/bl-template -o args.yaml
 
 每个组件选什么、为什么，见 [terraform/TERRAFORM_PROJECT_zh.md](../terraform/TERRAFORM_PROJECT_zh.md)。
 
-**小团队建议：** 单环境起步只需要 `main, backend, provider, variables, vpc, gke, ip, dns, cert, artifacts-registry`。`vpc-peering` 只有在多个环境要互通（例如共用的 corp 集群）时才需要。
+**默认组件：** `main, backend, config-gcs-tfbackend, provider, variables, vpc, ip, gke, dns, cert, artifacts-registry, outputs`——这就是单环境起步所需的全部。`firewall`、`iam`、`cdn`、`loki-logs` 按需添加；`vpc-peering` 只有在多个环境要互通（例如共用的 corp 集群）时才需要。
 
 ---
 
 ## 阶段 3：平台组件（`kubernetes/`）
 
-**是什么：** 集群起来之后、业务上线之前，要先装一层"平台"。`kubernetes/default.yaml` 是默认核心栈，数字前缀就是安装顺序：
+**是什么：** 集群起来之后、业务上线之前，要先装一层"平台"。`kubernetes/default.yaml` 是默认核心栈（单环境 `prd`），数字前缀就是安装顺序：
 
 | 顺序 | 组件 | 它解决的问题 |
 |------|------|--------------|
 | 0 | `external-secrets-operator` + `external-secrets` | 从 GCP Secret Manager 同步密钥进集群，密码不进 Git |
 | 0 | `sealed-secret` | 必须放进 Git 的密钥先加密再提交 |
-| 1 | `istio` | 统一流量入口、mTLS、灰度路由 |
 | 2 | `argocd` | GitOps：Git 里是什么，集群里就是什么 |
-| 3–4 | `victoria-metrics-operator` + `victoria-metrics` | 指标采集与告警 |
-| corp | `grafana` | 看板 |
+| 3–4 | `victoria-metrics-operator` + `victoria-metrics` | 指标采集、存储（VMSingle）与告警，全部在本集群内 |
+| 4 | `grafana` | 看板 |
 
 可选组件（数据库、缓存、消息队列、日志、APM 等）见 [kubernetes/OPTIONAL_COMPONENTS.md](../kubernetes/OPTIONAL_COMPONENTS.md)，需要时在 `args.yaml` 中加上即可。
 
 **小团队建议：**
 
 - **一定要装：** 密钥管理（external-secrets）、ArgoCD、指标监控。这三样越晚补越痛。
-- **可以晚点：** Istio。只有一两个服务时，GKE 自带的 Ingress / Gateway 已经够用；服务变多、需要 mTLS 或灰度时再加。
+- **默认不装：** Istio。只有一两个服务时，GKE 自带的 Ingress / Gateway 已经够用；服务变多、需要 mTLS 或灰度时，在 `args.yaml` 中加上 `istio` 组件，并给 gitops 应用设置 `VirtualServiceEnabled: true`。
+- **监控存储：** 默认 `storage-mode: local`，指标存在本集群的 VMSingle 里。多环境时可以改为 `remote`，把各集群的指标汇总到一个中心集群（见 [examples/multi-env/](../examples/multi-env/)）。
 - **数据库：** 早期优先用托管服务（Cloud SQL）；需要在集群内跑 Postgres 时再启用 `cnpg`。
 
 ---
@@ -165,7 +165,7 @@ blcli 本身不需要改动。
 ## 常见问题
 
 **我只有一个人，用这个会不会太重？**
-可以从单环境、核心组件开始，按上面的"小团队建议"裁剪。如果你只想要最轻量的形态，也可以先看 [bl-template-personal](https://github.com/ggsrc/bl-template-personal)，等团队长大后再迁移到本模板——两者使用同一套 blcli 协议。
+默认就是单环境 + 核心组件，还可以按上面的"小团队建议"进一步裁剪。如果你只想要最轻量的形态，也可以先看 [bl-template-personal](https://github.com/ggsrc/bl-template-personal)，等团队长大后再迁移到本模板——两者使用同一套 blcli 协议。
 
 **没有 GCP Organization 能用吗？**
 可以。`OrganizationID` 设为 `"0"`，只用 Billing Account 即可。

@@ -166,14 +166,15 @@ Defines three main sections:
 
 #### kubernetes/config.yaml
 
-Defines all Kubernetes platform components. **Core stack** entries come from `default.yaml` (multi-env prd/stg/corp). **Optional** components are registered here but not enabled by default — see [kubernetes/OPTIONAL_COMPONENTS.md](kubernetes/OPTIONAL_COMPONENTS.md).
+Defines all Kubernetes platform components. **Core stack** entries come from `default.yaml` (single environment `prd`; for stg/prd/corp see [examples/multi-env/](examples/multi-env/)). **Optional** components are registered here but not enabled by default — see [kubernetes/OPTIONAL_COMPONENTS.md](kubernetes/OPTIONAL_COMPONENTS.md).
 
-**Core (typical default.yaml):** external-secrets-operator, external-secrets, sealed-secret, istio, argocd, victoria-metrics-operator, victoria-metrics, grafana (corp)
+**Core (default.yaml):** external-secrets-operator, external-secrets, sealed-secret, argocd, victoria-metrics-operator (in-cluster VMSingle + alerting), victoria-metrics, grafana. Istio is opt-in.
 
 **Optional (opt-in via args.yaml):**
 
 | Component | Official image / chart | Notes |
 |-----------|------------------------|--------|
+| istio | Istio (istioctl) | Service mesh; set `VirtualServiceEnabled: true` on gitops apps |
 | cnpg | CloudNativePG Operator | PostgreSQL operator |
 | redis | Valkey (official chart) | Shared Redis-compatible cache |
 | paradedb | ParadeDB | Requires cnpg |

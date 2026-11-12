@@ -170,11 +170,11 @@ Defines three main sections:
 
 #### kubernetes/config.yaml
 
-定义 Kubernetes 平台全部组件。**核心栈**由 `default.yaml` 提供（多环境 prd/stg/corp）。**可选组件**仅在 `config.yaml` 注册，默认不写入 args — 详见 [kubernetes/OPTIONAL_COMPONENTS.md](kubernetes/OPTIONAL_COMPONENTS.md)。
+定义 Kubernetes 平台全部组件。**核心栈**由 `default.yaml` 提供（单环境 `prd`；stg/prd/corp 多环境见 [examples/multi-env/](examples/multi-env/)）。**可选组件**仅在 `config.yaml` 注册，默认不写入 args — 详见 [kubernetes/OPTIONAL_COMPONENTS.md](kubernetes/OPTIONAL_COMPONENTS.md)。
 
-**核心（default.yaml 典型）：** external-secrets-operator、external-secrets、sealed-secret、istio、argocd、victoria-metrics-operator、victoria-metrics、grafana（corp）
+**核心（default.yaml）：** external-secrets-operator、external-secrets、sealed-secret、argocd、victoria-metrics-operator（集群内 VMSingle + 告警）、victoria-metrics、grafana。Istio 改为按需启用。
 
-**可选（在 args.yaml 中 opt-in）：** cnpg、redis、paradedb、kafka、juicefs、loki、otel-collector、uptrace、n9e、bytebase；bl-template 另含 navigation。均使用官方上游镜像。
+**可选（在 args.yaml 中 opt-in）：** istio（启用后给 gitops 应用设置 `VirtualServiceEnabled: true`）、cnpg、redis、paradedb、kafka、juicefs、loki、otel-collector、uptrace、n9e、bytebase；bl-template 另含 navigation。均使用官方上游镜像。
 
 #### gitops/config.yaml
 

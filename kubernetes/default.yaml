@@ -1,6 +1,17 @@
-# Optional components (cnpg, redis, paradedb, kafka, loki, otel-collector, n9e, uptrace, bytebase, juicefs, navigation)
-# are registered in kubernetes/config.yaml but NOT enabled here.
-# Add them under projects[].components in your args file when needed.
+# Default: one environment (prd) on one cluster - the smallest stack that is still production-shaped.
+#   0  external-secrets-operator / external-secrets  secrets from GCP Secret Manager, never in Git
+#   0  sealed-secret                                 encrypt the few secrets that must live in Git
+#   2  argocd                                        GitOps: the cluster matches the gitops repo
+#   3  victoria-metrics-operator                     metrics: scrape + store (VMSingle) + alert in-cluster
+#   4  victoria-metrics / grafana                    alert rules and dashboards
+#
+# Not enabled by default (add under projects[].components when you need them):
+#   istio - service mesh: mTLS, canary routing. Add it once you run several services;
+#           also set VirtualServiceEnabled: true on your gitops apps.
+#   cnpg, redis, paradedb, kafka, loki, otel-collector, n9e, uptrace, bytebase, juicefs, navigation
+#   See kubernetes/OPTIONAL_COMPONENTS.md.
+#
+# Growing to stg / prd / corp with a central monitoring cluster? See examples/multi-env/.
 
 version: 1.0.0
 global: {}
@@ -23,11 +34,6 @@ projects:
       - name: 0-sealed-secret
         parameters:
           namespace: sealed-secret
-      - name: 1-istio
-        parameters:
-          namespace: istio
-          istio-version: 1.31.3
-          istio-namespace: istio
       - name: 2-argocd
         parameters:
           namespace: argocd
@@ -65,149 +71,24 @@ projects:
         parameters:
           namespace: monitoring-vm
           release-name: victoriametrics
+          storage-mode: local  # VMSingle + VMAlert + Alertmanager in this cluster
+          retention-period: 30d
+          storage-size: 20Gi
           cluster: prd
           env: prd
-          remote-write-url: "http://10.10.0.8:8480/insert/0/prometheus/api/v1/write"
-          vmagent-cpu-limit: "3"
-          vmagent-memory-limit: "2Gi"
-          vmagent-cpu-request: "1500m"
-          vmagent-memory-request: "1Gi"
+          vmagent-cpu-limit: "1"
+          vmagent-memory-limit: "1Gi"
+          vmagent-cpu-request: "200m"
+          vmagent-memory-request: "256Mi"
       - name: 4-victoria-metrics
         parameters:
           namespace: monitoring-vm
           alert-cluster: prd
-  - name: stg
-    components:
-      - name: 0-external-secrets-operator
-        parameters:
-          namespace: external-secrets
-          release-name: external-secrets
-          replica-count: 1
-          min-helm-version: "v3.18.4"
-          min-kubectl-version: "1.24"
-      - name: 0-external-secrets
-        parameters:
-          namespace: external-secrets
-          project-id: stg
-          secret-manager-service-account-email: sa-sm-accessor@stg.iam.gserviceaccount.com
-          service-account-name: external-secrets-sa
-      - name: 0-sealed-secret
-        parameters:
-          namespace: sealed-secret
-      - name: 1-istio
-        parameters:
-          namespace: istio
-          istio-version: 1.31.3
-          istio-namespace: istio
-      - name: 2-argocd
-        parameters:
-          namespace: argocd
-          argocd-url: https://internal.example.com/argocd
-          argocd-version: v3.5.6
-          GitAuthMethod: github-app
-          GitHubAppID: ""  # required: install refuses to run without it
-          GitHubAppInstallationID: ""  # required
-          GitHubAppCredsURL: https://github.com/example-org
-          dex-config:
-            connectors:
-              - type: github
-                id: github
-                name: GitHub
-                config:
-                  clientID: XXXXXXX
-                  orgs:
-                    - name: example-org
-          RBACPolicies:
-            - policy: "p, role:org-admin, applications, *, apps/*, allow"
-            - policy: "p, role:org-admin, logs, get, apps/*, allow"
-            - policy: "p, role:org-admin, projects, get, apps, allow"
-            - policy: "p, role:org-admin, clusters, get, *, allow"
-            - policy: "p, role:org-admin, repositories, get, *, allow"
-            - policy: "p, role:org-backend, applications, get, apps/*, allow"
-            - policy: "p, role:org-backend, applications, sync, apps/*, allow"
-            - policy: "p, role:org-backend, applications, action/*, apps/*, allow"
-            - policy: "p, role:org-backend, logs, get, apps/*, allow"
-          RBACRoleBindings:
-            - group: "example-org:Infra"
-              role: "role:org-admin"
-            - group: "example-org:backend"
-              role: "role:org-backend"
-      - name: 3-victoria-metrics-operator
-        parameters:
-          namespace: monitoring-vm
-          release-name: victoriametrics
-          cluster: stg
-          env: stg
-          remote-write-url: "http://10.10.0.8:8480/insert/0/prometheus/api/v1/write"
-          vmagent-cpu-limit: "2"
-          vmagent-memory-limit: "2Gi"
-          vmagent-cpu-request: "500m"
-          vmagent-memory-request: "500Mi"
-      - name: 4-victoria-metrics
-        parameters:
-          namespace: monitoring-vm
-          alert-cluster: stg
-  - name: corp
-    components:
-      - name: 0-external-secrets
-        parameters:
-          namespace: external-secrets
-          project-id: corp
-          secret-manager-service-account-email: sa-sm-accessor@corp.iam.gserviceaccount.com
-          service-account-name: external-secrets-sa
-      - name: 0-sealed-secret
-        parameters:
-          namespace: sealed-secret
-      - name: 1-istio
-        parameters:
-          namespace: istio
-          istio-version: 1.31.3
-          istio-namespace: istio
-      - name: 2-argocd
-        parameters:
-          namespace: argocd
-          argocd-url: https://internal.example.com/argocd
-          argocd-version: v3.5.6
-          GitAuthMethod: github-app
-          GitHubAppID: ""  # required: install refuses to run without it
-          GitHubAppInstallationID: ""  # required
-          GitHubAppCredsURL: https://github.com/example-org
-          dex-config:
-            connectors:
-              - type: github
-                id: github
-                name: GitHub
-                config:
-                  clientID: XXXXXXX
-                  orgs:
-                    - name: example-org
-          RBACPolicies:
-            - policy: "p, role:org-admin, applications, *, apps/*, allow"
-            - policy: "p, role:org-admin, logs, get, apps/*, allow"
-            - policy: "p, role:org-admin, projects, get, apps, allow"
-            - policy: "p, role:org-admin, clusters, get, *, allow"
-            - policy: "p, role:org-admin, repositories, get, *, allow"
-            - policy: "p, role:org-backend, applications, get, apps/*, allow"
-            - policy: "p, role:org-backend, applications, sync, apps/*, allow"
-            - policy: "p, role:org-backend, applications, action/*, apps/*, allow"
-            - policy: "p, role:org-backend, logs, get, apps/*, allow"
-          RBACRoleBindings:
-            - group: "example-org:Infra"
-              role: "role:org-admin"
-            - group: "example-org:backend"
-              role: "role:org-backend"
-      - name: 3-victoria-metrics-operator
-        parameters:
-          namespace: monitoring-vm
-          release-name: victoriametrics
-          cluster: corp
-          env: corp
       - name: 4-grafana
         parameters:
           namespace: grafana
           release-name: grafana
           image-tag: "12.4.13"
           root-url: "https://grafana.example.com"
-          vm-datasource-url: "http://vmselect-victoriametrics-vmks.monitoring-vm.svc.cluster.local:8481/select/0/prometheus"
-          loki-datasource-url: "http://loki-gateway.loki.svc.cluster.local"
+          vm-datasource-url: "http://vmsingle-victoriametrics-vmks.monitoring-vm.svc.cluster.local:8429"
           hosted-domain: "example.com"
