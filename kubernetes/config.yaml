@@ -56,7 +56,6 @@ components:
     installType: custom
     dependencies:
       - sealed-secret
-      - external-secrets
   - name: victoria-metrics-operator
     path:
     - kubernetes/components/victoria-metrics-operator/Chart.yaml

@@ -34,7 +34,7 @@
 bl-template  +  args.yaml  +  blcli  →  你的各个环境  →  用 blcli apply 部署
 ```
 
-第一次来？从 **[从 0 到 1 搭建 Infra](docs/GETTING_STARTED_zh.md)** 开始。
+第一次来？从 **[从 0 到 1 搭建 Infra](docs/GETTING_STARTED_zh.md)** 开始，或者先 [在本地体验平台层和 GitOps](examples/local/README_zh.md)：用 kind/minikube，不需要云账号，零成本。
 
 可 fork 本仓定制模块与组件，无需修改 blcli 本身。
 

@@ -1,0 +1,105 @@
+# Local learning path: the platform and GitOps layers on a cluster on your laptop (kind, minikube or
+# Docker Desktop). No GCP, no Terraform, no domain, no cost. See README.md in this directory.
+#
+#   blcli init <bl-template> -a examples/local/args.yaml --modules kubernetes --modules gitops -o ./local-workspace
+#
+# Before running it, replace the two git@github.com:<you>/<repo>.git URLs below with your own gitops repo.
+
+global:
+  GlobalName: local
+
+# No cloud layer locally. blcli requires the section, so it is present and empty.
+terraform: {}
+
+kubernetes:
+  version: 1.0.0
+  projects:
+    - name: local
+      components:
+        # Secrets: the External Secrets operator (CRDs + controller). There is no GCP Secret Manager
+        # locally, so the ClusterSecretStore (external-secrets component) is left out; on GCP it is
+        # what lets the cluster read Secret Manager.
+        - name: 0-external-secrets-operator
+          parameters:
+            namespace: external-secrets
+            release-name: external-secrets
+            replica-count: 1
+        # Secrets that must live in Git are encrypted with the cluster's sealed-secrets key.
+        - name: 0-sealed-secret
+          parameters:
+            namespace: sealed-secret
+        # GitOps: ArgoCD syncs the cluster to your gitops repository.
+        - name: 2-argocd
+          parameters:
+            namespace: argocd
+            argocd-url: https://localhost:8080
+            argocd-version: v3.5.6
+            AdminEnabled: true
+            GitAuthMethod: ssh
+            GitRepositoryURL: git@github.com:example-org/gitops.git  # <- your gitops repository
+        # Metrics: scrape, store (VMSingle) and alert, all in this cluster. Smaller than on GCP.
+        - name: 3-victoria-metrics-operator
+          parameters:
+            namespace: monitoring-vm
+            release-name: victoriametrics
+            storage-mode: local
+            retention-period: 7d
+            storage-size: 5Gi
+            cluster: local
+            env: local
+            vmagent-cpu-limit: "500m"
+            vmagent-memory-limit: "512Mi"
+            vmagent-cpu-request: "100m"
+            vmagent-memory-request: "128Mi"
+        # Alert rules. Slack delivery needs a webhook secret, which does not exist locally; rules are
+        # still evaluated and visible in Grafana / VMAlert.
+        - name: 4-victoria-metrics
+          parameters:
+            namespace: monitoring-vm
+            alert-cluster: local
+        # Dashboards, admin password login.
+        - name: 4-grafana
+          parameters:
+            namespace: grafana
+            release-name: grafana
+            auth-mode: password
+            root-url: http://localhost:3000
+            cookie-secure: false
+            loki-enabled: false
+            vm-datasource-url: http://vmsingle-victoriametrics-vmks.monitoring-vm.svc.cluster.local:8429
+
+gitops:
+  argocd:
+    project:
+      - local
+  apps:
+    - name: hello-world
+      kind: deployment
+      image: hashicorp/http-echo:0.2.3
+      repo: https://github.com/example-org/hello-world.git
+      project:
+        - name: local
+          parameters:
+            SourceRepoURL: git@github.com:example-org/gitops.git  # <- same URL as GitRepositoryURL above
+            SourcePath: local/hello-world
+            ApplicationNamespace: app
+            ApplicationProject: apps
+            ApplicationSyncPolicy: Automatic
+            ContainerArgs:
+              - "-listen=:8080"
+              - "-text=Hello from hello-world"
+            ContainerPorts:
+              - containerPort: 8080
+                name: http
+            ServicePorts:
+              - name: http
+                port: 8080
+                targetPort: 8080
+            LivenessProbe:
+              httpGet:
+                path: /
+                port: 8080
+            ReadinessProbe:
+              httpGet:
+                path: /
+                port: 8080

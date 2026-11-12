@@ -75,6 +75,6 @@ for f in ${VALUES_FILES}; do
     HELM_VALUES="${HELM_VALUES} -f ${f}"
   fi
 done
-helm upgrade --install "${RELEASE_NAME}" . -n "${NAMESPACE}" ${HELM_VALUES} --wait
+helm upgrade --install "${RELEASE_NAME}" . -n "${NAMESPACE}" ${HELM_VALUES} --wait --timeout "${HELM_TIMEOUT:-15m}"
 
 echo "Victoria Metrics K8s Stack installed successfully."

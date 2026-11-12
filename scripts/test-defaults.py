@@ -50,6 +50,8 @@ class Layouts(unittest.TestCase):
             multi[module] = section
         cls.single = cls.generate("single", defaults)
         cls.multi = cls.generate("multi", multi)
+        local = yaml.safe_load((ROOT / "examples/local/args.yaml").read_text())
+        cls.local = cls.generate("local", local, modules=["kubernetes", "gitops"])
 
     @classmethod
     def tearDownClass(cls):
@@ -63,7 +65,7 @@ class Layouts(unittest.TestCase):
         return p
 
     @classmethod
-    def generate(cls, name, args):
+    def generate(cls, name, args, modules=()):
         # Each args file gets its own directory: blcli init auto-loads the .env that init-args wrote next to
         # args.yaml, and its overrides (e.g. BLCLI_ARGOCD_GIT_REPOSITORY_URL) would apply to every case.
         (cls.work / "args" / name).mkdir(parents=True)
@@ -71,7 +73,10 @@ class Layouts(unittest.TestCase):
         f.write_text(yaml.safe_dump(args, sort_keys=False))
         cls.run_command([cls.blcli, "check", "args", "--args", str(f), "-r", str(ROOT)])
         output = cls.work / name
-        cls.run_command([cls.blcli, "init", str(ROOT), "--no-resume", "--args", str(f), "--output", str(output)])
+        command = [cls.blcli, "init", str(ROOT), "--no-resume", "--args", str(f), "--output", str(output)]
+        for m in modules:
+            command += ["--modules", m]
+        cls.run_command(command)
         return output
 
     @staticmethod
@@ -129,6 +134,25 @@ class Layouts(unittest.TestCase):
         self.assertIn(":8429", values["grafana"]["datasources"]["datasources.yaml"]["datasources"][0]["url"])
 
     # examples/multi-env keeps the previous behaviour
+
+    # examples/local: platform and GitOps layers on a laptop cluster, nothing that needs GCP
+
+    def test_local_renders_only_cluster_components(self):
+        self.assertFalse((self.local / "terraform").exists())
+        self.assertEqual(self.components(self.local, "local"), [
+            "0-external-secrets-operator", "0-sealed-secret", "2-argocd",
+            "3-victoria-metrics-operator", "4-grafana", "4-victoria-metrics"])
+        self.assertTrue((self.local / "gitops/local/hello-world/app.yaml").exists())
+
+    def test_local_needs_no_cloud_or_sso(self):
+        method, admin, repos = self.argocd(self.local, "local")
+        self.assertEqual((method, admin), ("ssh", "true"))
+        stack = self.values(self.local / "kubernetes/local/3-victoria-metrics-operator/values-override.yaml")["victoria-metrics-k8s-stack"]
+        self.assertTrue(stack["vmsingle"]["enabled"])
+        grafana = self.values(self.local / "kubernetes/local/4-grafana/values-corp.yaml")
+        self.assertFalse(grafana["googleAuth"]["enabled"])
+        app = self.values(self.local / "gitops/local/hello-world/app.yaml")
+        self.assertIn(app["spec"]["source"]["repoURL"], repos)
 
     def test_multi_env_renders_three_environments(self):
         self.assertEqual(sorted(p.name for p in (self.multi / "kubernetes").iterdir() if p.is_dir()), ["corp", "prd", "stg"])

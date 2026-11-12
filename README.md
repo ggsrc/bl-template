@@ -34,7 +34,7 @@ The official template repository for [blcli](https://github.com/ggsrc/blcli), ai
 bl-template  +  args.yaml  +  blcli  →  your environments  →  apply with blcli
 ```
 
-New here? Start with **[Build Your Infra from 0 to 1](docs/GETTING_STARTED.md)**.
+New here? Start with **[Build Your Infra from 0 to 1](docs/GETTING_STARTED.md)**, or [try the platform and GitOps layers locally](examples/local/README.md) on kind/minikube first: no cloud account, no cost.
 
 Fork this repo to customize modules and components while keeping the same blcli protocol.
 
