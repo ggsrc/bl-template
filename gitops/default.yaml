@@ -11,7 +11,7 @@ apps:
     project: 
     - name: prd
       parameters:
-        SourceRepoURL: https://github.com/example-org/gitops.git
+        SourceRepoURL: git@github.com:example-org/gitops.git  # same URL as the argocd GitRepositoryURL
         SourcePath: prd/hello-world
         ContainerArgs:
           - "-listen=:8080"
