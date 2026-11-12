@@ -1,20 +1,48 @@
 # Per-environment overrides, rendered by blcli.
 # Use together with values.yaml: helm upgrade -i -f values.yaml -f values-override.yaml
+#
+# storageMode:
+#   local  (default) - self-contained: VMSingle stores metrics in this cluster, VMAlert evaluates
+#                      the rules from the victoria-metrics component and VMAlertmanager routes them.
+#                      Suits a single environment / single cluster.
+#   remote           - this cluster only scrapes; VMAgent ships everything to remoteWriteUrl
+#                      (a central VictoriaMetrics cluster, e.g. in a shared corp project), where
+#                      storage and alerting live.
+{{- $mode := default "local" .storageMode }}
 victoria-metrics-k8s-stack:
+{{- if eq $mode "remote" }}
   vmsingle:
     enabled: false
+{{- else }}
+  vmsingle:
+    enabled: true
+    spec:
+      retentionPeriod: "{{ default "30d" .retentionPeriod }}"
+      storage:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: {{ default "20Gi" .storageSize }}
+  vmalert:
+    enabled: true
+  alertmanager:
+    enabled: true
+{{- end }}
   vmcluster:
     enabled: false
   vmagent:
     enabled: true
     spec:
+{{- if eq $mode "remote" }}
       remoteWrite:
         - url: {{ default "http://10.10.0.8:8480/insert/0/prometheus/api/v1/write" .remoteWriteUrl }}
+{{- end }}
       selectAllByDefault: true
       scrapeInterval: {{ default "20s" .scrapeInterval }}
       externalLabels:
-        cluster: {{ default "stg" .cluster }}
-        env: {{ default "stg" .env }}
+        cluster: {{ default "prd" .cluster }}
+        env: {{ default "prd" .env }}
       resources:
         limits:
           cpu: "{{ default "2" .vmagentCpuLimit }}"

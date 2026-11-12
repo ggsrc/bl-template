@@ -48,6 +48,9 @@ jobs:
           blcli init-args "$GITHUB_WORKSPACE" -o workspace/config/args.yaml
           blcli check args --args workspace/config/args.yaml -r "$GITHUB_WORKSPACE"
 
+      - name: Single-environment defaults and examples/multi-env render as intended
+        run: /tmp/test-venv/bin/python scripts/test-defaults.py
+
       - name: Install pinned Helm for offline security checks
         run: |
           curl -fsSL https://get.helm.sh/helm-v3.18.4-linux-amd64.tar.gz -o workspace/helm.tar.gz

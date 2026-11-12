@@ -33,7 +33,23 @@ If you do not render with blcli, create values-corp.yaml yourself by copying and
 
 ## Sign-in
 
+`authMode` picks how people sign in:
+
+- `password`: Grafana's own login form with the built-in `admin` user. Nothing to set up outside the
+  cluster: the chart generates a random admin password on first install and keeps it on upgrades.
+  ```bash
+  kubectl -n grafana get secret grafana -o jsonpath='{.data.admin-password}' | base64 -d
+  kubectl -n grafana port-forward svc/grafana 3000:80   # then open http://localhost:3000
+  ```
+  While you reach Grafana over plain HTTP like this, set `rootUrl: http://localhost:3000` and
+  `cookieSecure: false` (the single-environment default does). Switch both back once Grafana has an HTTPS URL.
+- `google` (component default): Google sign-in only. Needs a Google OAuth client stored in GCP Secret
+  Manager as `grafana-google-auth` (keys `GOOGLE_AUTH_CLIENT_ID`, `GOOGLE_AUTH_CLIENT_SECRET`), synced by
+  the ExternalSecret in `templates/external-secret.yaml`. The rules below apply to this mode.
+
+### Google sign-in
+
 - Google login only admits accounts whose e-mail is in `hostedDomain` (rendered as `auth.google` `allowed_domains`; `hosted_domain` alone is just a hint to Google's account chooser). Set it to your Google Workspace or Cloud Identity domain; the default `example.com` admits nobody.
 - Optional `allowedGroups` (space-separated Google group e-mails) further limits sign-in to members of those groups.
 - With a consumer Gmail account there is no domain to restrict: keep the OAuth consent screen in "Testing" with an explicit list of test users, or keep Grafana private.
-- Session cookies are marked `Secure`, so serve Grafana over HTTPS (`root_url`).
+- Session cookies are marked `Secure` (`cookieSecure`, default true), so serve Grafana over HTTPS (`root_url`).

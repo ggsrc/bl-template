@@ -6,14 +6,14 @@
 
 *One config. Full cloud platform lifecycle.*
 
-面向 [blcli](https://github.com/ggsrc/blcli) 的企业级平台模板 — **当前以 GCP 为首个完整实现**，一份自描述仓库覆盖 Terraform、Kubernetes 与 ArgoCD GitOps。
+面向**创业团队和个人开发者**的 Infra 从 0 到 1 模板 — 基于 [blcli](https://github.com/ggsrc/blcli)，**当前以 GCP 为首个完整实现**，一份自描述仓库覆盖 Terraform、Kubernetes 与 ArgoCD GitOps，并讲清楚每一层为什么存在。
 
 [![GitHub stars](https://img.shields.io/github/stars/ggsrc/bl-template?style=flat-square)](https://github.com/ggsrc/bl-template/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/ggsrc/bl-template?style=flat-square)](https://github.com/ggsrc/bl-template/network/members)
 [![blcli](https://img.shields.io/badge/powered%20by-blcli-blue?style=flat-square)](https://github.com/ggsrc/blcli)
 [![个人版模板](https://img.shields.io/badge/个人版-bl--template--personal-green?style=flat-square)](https://github.com/ggsrc/bl-template-personal)
 
-[快速开始](#blcli-用法说明) · [英文文档](README.md) · [ARGS_DESIGN](ARGS_DESIGN.md)
+[从 0 到 1 指南](docs/GETTING_STARTED_zh.md) · [快速开始](#blcli-用法说明) · [英文文档](README.md) · [ARGS_DESIGN](ARGS_DESIGN.md)
 
 </div>
 
@@ -25,11 +25,16 @@
 
 ## bl-template 是什么？
 
-[blcli](https://github.com/ggsrc/blcli) 的**企业版**官方模板仓。在 GCP Organization 下生成多项目、多环境基础设施：Terraform 管云资源，Kubernetes 管平台组件，GitOps 管 ArgoCD 应用。结构由 `config.yaml`、`args.yaml` 与 Go 模板定义。
+[blcli](https://github.com/ggsrc/blcli) 的官方模板仓，面向**没有专职平台团队、但需要生产级基础设施的创业团队和个人开发者**。它提供两样东西：
+
+1. **能力** — 由 `config.yaml`、`args.yaml` 与 Go 模板生成 Terraform（云资源）、Kubernetes（平台组件）和 GitOps（ArgoCD 应用），再用 blcli 部署。
+2. **理解** — 每一层都有文档：它是什么、为什么需要、什么时候可以先不做。最后你拥有的是一套自己讲得清楚的 infra，而不是黑盒。
 
 ```
-bl-template  +  args.yaml  +  blcli  →  corp / stg / prd  →  用 blcli apply 部署
+bl-template  +  args.yaml  +  blcli  →  你的各个环境  →  用 blcli apply 部署
 ```
+
+第一次来？从 **[从 0 到 1 搭建 Infra](docs/GETTING_STARTED_zh.md)** 开始。
 
 可 fork 本仓定制模块与组件，无需修改 blcli 本身。
 
@@ -37,16 +42,18 @@ bl-template  +  args.yaml  +  blcli  →  corp / stg / prd  →  用 blcli apply
 
 ## 适合谁？
 
-| 用户 | 何时选用 bl-template |
-|------|----------------------|
-| 平台 / SRE 团队 | 多项目 GCP（如 corp、stg、prd）、生产级 ArgoCD GitOps |
-| 已标准化 blcli 的团队 | 需要可 fork 的参考实现 |
-| 个人开发者 | 请用 [bl-template-personal](https://github.com/ggsrc/bl-template-personal) |
+| 用户 | bl-template 能帮你什么 |
+|------|------------------------|
+| 早期创业团队 | 从空的 GCP 账号到 GKE + GitOps + 监控；从单环境平滑扩展到 `stg` / `prd` / `corp`，不用推倒重来 |
+| 个人开发者 | 动手一层层搭起来，理解真实生产环境的 infra 是怎么拼在一起的 |
+| 没有 SRE 的小团队 | 有文档、有取舍的默认配置，不用自己拼模块和清单 |
+| 想要最轻量？ | 先用 [bl-template-personal](https://github.com/ggsrc/bl-template-personal)，团队长大后再迁移过来 |
 
 ---
 
 ## 为什么选这个模板？
 
+- **边搭边学** — [从 0 到 1 指南](docs/GETTING_STARTED_zh.md) 解释每一层，以及小团队哪些可以先不做。
 - **自描述** — `config.yaml` 声明组件与依赖；`args.yaml` 描述参数，供 `init-args` / `explain` 使用。
 - **全栈** — Terraform（init / projects / modules）+ Kubernetes（核心栈 + 可选组件）+ GitOps（应用模板与 ArgoCD Application）。
 - **约定优于配置** — 从 `path` 发现 args、config 里声明依赖顺序、`default.yaml` 提供默认值。
@@ -163,11 +170,11 @@ Defines three main sections:
 
 #### kubernetes/config.yaml
 
-定义 Kubernetes 平台全部组件。**核心栈**由 `default.yaml` 提供（多环境 prd/stg/corp）。**可选组件**仅在 `config.yaml` 注册，默认不写入 args — 详见 [kubernetes/OPTIONAL_COMPONENTS.md](kubernetes/OPTIONAL_COMPONENTS.md)。
+定义 Kubernetes 平台全部组件。**核心栈**由 `default.yaml` 提供（单环境 `prd`；stg/prd/corp 多环境见 [examples/multi-env/](examples/multi-env/)）。**可选组件**仅在 `config.yaml` 注册，默认不写入 args — 详见 [kubernetes/OPTIONAL_COMPONENTS.md](kubernetes/OPTIONAL_COMPONENTS.md)。
 
-**核心（default.yaml 典型）：** external-secrets-operator、external-secrets、sealed-secret、istio、argocd、victoria-metrics-operator、victoria-metrics、grafana（corp）
+**核心（default.yaml）：** external-secrets-operator、external-secrets、sealed-secret、argocd、victoria-metrics-operator（集群内 VMSingle + 告警）、victoria-metrics、grafana。Istio 改为按需启用。
 
-**可选（在 args.yaml 中 opt-in）：** cnpg、redis、paradedb、kafka、juicefs、loki、otel-collector、uptrace、n9e、bytebase；bl-template 另含 navigation。均使用官方上游镜像。
+**可选（在 args.yaml 中 opt-in）：** istio（启用后给 gitops 应用设置 `VirtualServiceEnabled: true`）、cnpg、redis、paradedb、kafka、juicefs、loki、otel-collector、uptrace、n9e、bytebase；bl-template 另含 navigation。均使用官方上游镜像。
 
 #### gitops/config.yaml
 

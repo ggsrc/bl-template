@@ -1,3 +1,8 @@
+# Rendered from templates/external-secret.yaml: sync the Google OAuth client from GCP Secret Manager.
+# values-corp.yaml sets this from authMode (false when authMode=password).
+googleAuth:
+  enabled: true
+
 grafana:
   global:
     # -- Overrides the Docker registry globally for all images

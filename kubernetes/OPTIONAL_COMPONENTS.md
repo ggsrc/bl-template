@@ -27,6 +27,7 @@ Install: in the rendered output directory, run `bash ./install` (Helm components
 
 | Component | Official image / chart | Depends on | Description |
 |------|------------------|------|------|
+| istio | Istio (installed with `istioctl`) | external-secrets-operator | Service mesh: mTLS, canary routing. Also set `VirtualServiceEnabled: true` on gitops apps |
 | cnpg | `ghcr.io/cloudnative-pg/cloudnative-pg` | — | CloudNativePG Operator |
 | redis | Official Valkey chart → `valkey/valkey` | external-secrets | Shared Redis-compatible cache (Valkey) |
 | paradedb | Official ParadeDB chart | cnpg | PostgreSQL + search extensions |
@@ -53,7 +54,7 @@ blcli orders components automatically using `dependencies` in `config.yaml`, for
 | Source | Meaning |
 |------|------|
 | `config.yaml` | Every component the template repository **can** provide |
-| `default.yaml` | The core stack that `init-args` writes to args by default (ESO, Istio, ArgoCD, VM, etc.) |
+| `default.yaml` | The core stack that `init-args` writes to args by default (ESO, sealed-secret, ArgoCD, VictoriaMetrics, Grafana) for a single `prd` environment |
 | Components listed in this file | You must **opt in** to them in args |
 
 For each component's parameters, see `kubernetes/components/<name>/args.yaml` or run `blcli explain -r <repo> -m kubernetes -c <name>`.

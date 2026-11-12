@@ -1,5 +1,14 @@
-# corp environment overrides, rendered by blcli.
+# Environment overrides, rendered by blcli.
 # Use together with values.yaml: helm upgrade -i -f values.yaml -f values-corp.yaml
+#
+# authMode:
+#   google   (default) - Google sign-in only, limited to hostedDomain. Needs the grafana-google-auth
+#                        secret (GOOGLE_AUTH_CLIENT_ID / GOOGLE_AUTH_CLIENT_SECRET) in GCP Secret Manager.
+#   password           - Grafana's own login form with the built-in admin user. The chart generates a
+#                        random admin password once and keeps it across upgrades:
+#                        kubectl -n <namespace> get secret <release> -o jsonpath='{.data.admin-password}' | base64 -d
+googleAuth:
+  enabled: {{ if eq (default "google" .authMode) "password" }}false{{ else }}true{{ end }}
 grafana:
   image:
     registry: docker.io
@@ -106,6 +115,7 @@ grafana:
           timeInterval: 15s
           queryTimeout: 90s
           disableMetricsLookup: false
+{{- if ne (printf "%v" .lokiEnabled) "false" }}
       - name: loki-logs
         type: loki
         access: proxy
@@ -116,10 +126,13 @@ grafana:
           httpHeaderName1: X-Scope-OrgID
         secureJsonData:
           httpHeaderValue1: fake
+{{- end }}
 
+{{- if ne (default "google" .authMode) "password" }}
   envFromSecrets:
   - name: grafana-google-auth
     optional: false
+{{- end }}
 
   grafana.ini:
     paths:
@@ -134,8 +147,19 @@ grafana:
     server:
       root_url: {{ default `https://example.com/grafana` .rootUrl }}
     security:
-      # Session cookies are only sent over HTTPS (root_url is https)
-      cookie_secure: true
+      # Session cookies are only sent over HTTPS. Set cookieSecure: false only while Grafana is reached
+      # over plain HTTP (e.g. kubectl port-forward); turn it back on once it is served over HTTPS.
+      cookie_secure: {{ if eq (printf "%v" .cookieSecure) "false" }}false{{ else }}true{{ end }}
+{{- if eq (default "google" .authMode) "password" }}
+    auth:
+      disable_login_form: false
+    auth.basic:
+      enabled: false
+    auth.anonymous:
+      enabled: false
+    users:
+      allow_sign_up: false
+{{- else }}
     auth:
       disable_login_form: true
     auth.basic:
@@ -160,6 +184,7 @@ grafana:
       allowed_groups: {{ .AllowedGroups | quote }}
       {{- end }}
       use_pkce: true
+{{- end }}
     feature_toggles:
       provisioning: true
       kubernetesDashboards: true

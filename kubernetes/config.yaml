@@ -73,7 +73,6 @@ components:
     check: bash ./validate
     dependencies:
       - external-secrets-operator
-      - istio
   - name: grafana
     path:
     - kubernetes/components/grafana/Chart.yaml
