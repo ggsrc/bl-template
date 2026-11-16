@@ -16,7 +16,7 @@ Infrastructure from 0 to 1 for **startups and indie developers** — a **GCP-fir
 </div>
 
 <!-- ADOPTION:START -->
-**Adoption snapshot (2026-11-09):** 1 GitHub stars · 0 forks · powered by [blcli](https://github.com/ggsrc/blcli)
+**Adoption snapshot (2026-11-16):** 1 GitHub stars · 0 forks · powered by [blcli](https://github.com/ggsrc/blcli)
 <!-- ADOPTION:END -->
 
 For Chinese documentation, see [README_zh.md](./README_zh.md).
