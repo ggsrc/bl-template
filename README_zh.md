@@ -18,7 +18,7 @@
 </div>
 
 <!-- ADOPTION:START -->
-**采用情况（2026-11-16）：** 1 GitHub Stars · 0 Forks · 配合 [blcli](https://github.com/ggsrc/blcli) 使用
+**采用情况（2026-11-23）：** 1 GitHub Stars · 0 Forks · 配合 [blcli](https://github.com/ggsrc/blcli) 使用
 <!-- ADOPTION:END -->
 
 ---
